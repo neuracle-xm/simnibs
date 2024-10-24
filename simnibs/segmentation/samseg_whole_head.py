@@ -1,12 +1,103 @@
 import numpy as np
 import os
 import pickle
-from .Samseg import Samseg
-from .SamsegUtility import writeImage
+from samseg.Samseg import Samseg
+from samseg.SamsegUtility import logTransform, writeImage
+from .simnibs_segmentation_utils import readCroppedImages, maskOutBackground
 import samseg.gems as gems
 eps = np.finfo(float).eps
 
 class SamsegWholeHead(Samseg):
+
+    def __init__(self,
+        imageFileNames,
+        atlasDir,
+        savePath,
+        transformedTemplateFileName,
+        userModelSpecifications={},
+        userOptimizationOptions={},
+        imageToImageTransformMatrix=None,
+        visualizer=None,
+        saveHistory=None,
+        savePosteriors=False,
+        saveWarp=None,
+        saveMesh=None,
+        threshold=None,
+        thresholdSearchString=None,
+        targetIntensity=None,
+        targetSearchStrings=None,
+        modeNames=None,
+        pallidumAsWM=True,
+        saveModelProbabilities=False,
+        gmmFileName=None,
+        ignoreUnknownPriors=False,
+        dissectionPhoto=None,
+        nthreads=1,
+        ):
+            super().__init__(
+            imageFileNames,
+            atlasDir,
+            savePath,
+            userModelSpecifications,
+            userOptimizationOptions,
+            imageToImageTransformMatrix,
+            visualizer,
+            saveHistory,
+            savePosteriors,
+            saveWarp,
+            saveMesh,
+            threshold,
+            thresholdSearchString,
+            targetIntensity,
+            targetSearchStrings,
+            modeNames,
+            pallidumAsWM,
+            saveModelProbabilities,
+            gmmFileName,
+            ignoreUnknownPriors,
+            dissectionPhoto,
+            nthreads)
+            
+            self.transformedTemplateFileName=transformedTemplateFileName
+        
+
+    def preProcessWholeHead(self):
+        # =======================================================================================
+        #
+        # Preprocessing (reading and masking of data)
+        #
+        # =======================================================================================
+
+        # Read the image data from disk. At the same time, construct a 3-D affine transformation (i.e.,
+        # translation, rotation, scaling, and skewing) as well - this transformation will later be used
+        # to initially transform the location of the atlas mesh's nodes into the coordinate system of the image.
+        self.imageBuffers, self.transform, self.voxelSpacing, self.cropping = readCroppedImages(
+            self.imageFileNames,
+            self.transformedTemplateFileName)
+
+        # Background masking: simply setting intensity values outside of a very rough brain mask to zero
+        # ensures that they'll be skipped in all subsequent computations
+        self.imageBuffers, self.mask = maskOutBackground(self.imageBuffers,
+                                                         self.modelSpecifications.atlasFileName,
+                                                         self.transform,
+                                                         self.modelSpecifications.brainMaskingSmoothingSigma,
+                                                         self.modelSpecifications.brainMaskingThreshold,
+                                                         self.probabilisticAtlas)
+
+        # Let's prepare for the bias field correction that is part of the imaging model. It assumes
+        # an additive effect, whereas the MR physics indicate it's a multiplicative one - so we log
+        # transform the data first.
+        self.imageBuffers = logTransform(self.imageBuffers, self.mask)
+
+        # Visualize some stuff
+        if hasattr(self.visualizer, 'show_flag'):
+            self.visualizer.show(
+                mesh=self.probabilisticAtlas.getMesh(self.modelSpecifications.atlasFileName, self.transform),
+                shape=self.imageBuffers.shape,
+                window_id='samsegment mesh', title='Mesh',
+                names=self.modelSpecifications.names, legend_width=350)
+            self.visualizer.show(images=self.imageBuffers, window_id='samsegment images',
+                                 title='Samsegment Masked and Log-Transformed Contrasts')
 
     def standard_segmentation(self):
         posteriors, _, _, _, _ = self.segment()

@@ -1,12 +1,112 @@
+import samseg
 from samseg import gems
-from .ProbabilisticAtlas import ProbabilisticAtlas
-from .SamsegUtility import undoLogTransformAndBiasField, writeImage, maskOutBackground, logTransform, readCroppedImages
-from .GMM import GMM
+from samseg.ProbabilisticAtlas import ProbabilisticAtlas
+from samseg.SamsegUtility import undoLogTransformAndBiasField, writeImage, logTransform
+# 
+from samseg.GMM import GMM
 import numpy as np
 import nibabel as nib
 import gc
 from simnibs.segmentation._cat_c_utils import cat_vbdist
-from simnibs.segmentation.simnibs_samseg.utilities import requireNumpyArray
+from samseg.utilities import requireNumpyArray
+
+def readCroppedImages(imageFileNames, transformedTemplateFileName):
+    # Read the image data from disk. At the same time, construct a 3-D affine transformation (i.e.,
+    # translation, rotation, scaling, and skewing) as well - this transformation will later be used
+    # to initially transform the location of the atlas mesh's nodes into the coordinate system of the image.
+    imageBuffers = []
+    print(imageFileNames)
+    print(transformedTemplateFileName)
+    for imageFileName in imageFileNames:
+        # Get the pointers to image and the corresponding transform
+        image = gems.KvlImage(imageFileName, transformedTemplateFileName)
+        transform = image.transform_matrix
+        cropping = image.crop_slices
+        imageBuffers.append(image.getImageBuffer())
+
+    imageBuffers = np.transpose(imageBuffers, axes=[1, 2, 3, 0])
+
+    # Also read in the voxel spacing -- this is needed since we'll be specifying bias field smoothing kernels,
+    # downsampling steps etc in mm.
+    nonCroppedImage = gems.KvlImage(imageFileNames[0])
+    imageToWorldTransformMatrix = nonCroppedImage.transform_matrix.as_numpy_array
+    voxelSpacing = np.sum(imageToWorldTransformMatrix[0:3, 0:3] ** 2, axis=0) ** (1 / 2)
+
+    #
+    return imageBuffers, transform, voxelSpacing, cropping
+
+def maskOutBackground(imageBuffers, atlasFileName, transform, brainMaskingSmoothingSigma, brainMaskingThreshold,
+                      probabilisticAtlas, visualizer=None, maskOutZeroIntensities=True):
+    # Setup a null visualizer if necessary
+    if visualizer is None:
+        visualizer = samseg.initVisualizer(False, False)
+
+    # Read the affinely coregistered atlas mesh (in reference position)
+    mesh = probabilisticAtlas.getMesh(atlasFileName, transform)
+
+    # Mask away uninteresting voxels. This is done by a poor man's implementation of a dilation operation on
+    # a non-background class mask; followed by a cropping to the area covered by the mesh (needed because
+    # otherwise there will be voxels in the data with prior probability zero of belonging to any class)
+    imageSize = imageBuffers.shape[0:3]
+    ##backgroundPrior = np.zeros(imageSize)
+    ##labelNumber = [0, 54, 44, 46, 43, 51, 50, 42, 45, 49, 52, 48]
+    ##for l in labelNumber:
+    ##    backgroundPrior = backgroundPrior + np.float32(mesh.rasterize_1a(imageSize, l))
+    labelNumber = 0
+    backgroundPrior = mesh.rasterize_1a(imageSize, labelNumber)
+    # Threshold background prior at 0.5 - this helps for atlases built from imperfect (i.e., automatic)
+    # segmentations, whereas background areas don't have zero probability for non-background structures
+    backGroundThreshold = 2 ** 8
+    backGroundPeak = 2 ** 16 - 1
+    backgroundPrior = np.ma.filled(np.ma.masked_greater(backgroundPrior, backGroundThreshold),
+                                   backGroundPeak).astype(np.float32)
+
+    visualizer.show(probabilities=backgroundPrior, images=imageBuffers, window_id='samsegment background',
+                    title='Background Priors')
+
+    smoothingSigmas = [1.0 * brainMaskingSmoothingSigma] * 3
+    smoothedBackgroundPrior = gems.KvlImage.smooth_image_buffer(backgroundPrior, smoothingSigmas)
+    visualizer.show(probabilities=smoothedBackgroundPrior, window_id='samsegment smoothed',
+                    title='Smoothed Background Priors')
+
+    # 65535 = 2^16 - 1. priors are stored as 16bit ints
+    # To put the threshold in perspective: for Gaussian smoothing with a 3D isotropic kernel with variance
+    # diag( sigma^2, sigma^2, sigma^2 ) a single binary "on" voxel at distance sigma results in a value of
+    # 1/( sqrt(2*pi)*sigma )^3 * exp( -1/2 ).
+    # More generally, a single binary "on" voxel at some Eucledian distance d results in a value of
+    # 1/( sqrt(2*pi)*sigma )^3 * exp( -1/2*d^2/sigma^2 ). Turning this around, if we threshold this at some
+    # value "t", a single binary "on" voxel will cause every voxel within Eucledian distance
+    #
+    #   d = sqrt( -2*log( t * ( sqrt(2*pi)*sigma )^3 ) * sigma^2 )
+    #
+    # of it to be included in the mask.
+    #
+    # As an example, for 1mm isotropic data, the choice of sigma=3 and t=0.01 yields ... complex value ->
+    # actually a single "on" voxel will then not make any voxel survive, as the normalizing constant (achieved
+    # at Mahalanobis distance zero) is already < 0.01
+    brainMaskThreshold = 65535.0 * (1.0 - brainMaskingThreshold)
+    brainMask = np.ma.less(smoothedBackgroundPrior, brainMaskThreshold)
+
+    # Crop to area covered by the mesh
+    alphas = mesh.alphas
+    areaCoveredAlphas = [[0.0, 1.0]] * alphas.shape[0]
+    mesh.alphas = areaCoveredAlphas  # temporary replacement of alphas
+    areaCoveredByMesh = mesh.rasterize_1b(imageSize, 1)
+    mesh.alphas = alphas  # restore alphas
+    brainMask = np.logical_and(brainMask, areaCoveredByMesh)
+
+    # If a pixel has a zero intensity in any of the contrasts, that is also masked out across all contrasts
+    if maskOutZeroIntensities:
+        numberOfContrasts = imageBuffers.shape[-1]
+        for contrastNumber in range(numberOfContrasts):
+            brainMask *= imageBuffers[:, :, :, contrastNumber] > 0
+
+    # Mask the images
+    maskedImageBuffers = imageBuffers.copy()
+    maskedImageBuffers[np.logical_not(brainMask), :] = 0
+
+    #
+    return maskedImageBuffers, brainMask
 
 def writeBiasCorrectedImagesAndSegmentation(output_names_bias,
                                             output_name_segmentation,

@@ -12,7 +12,8 @@ import numpy as np
 
 from simnibs import SIMNIBSDIR
 
-from . import simnibs_samseg
+import samseg
+from . import simnibs_segmentation_utils
 from . import charm_utils
 from .. import __version__
 from .. import utils
@@ -147,14 +148,14 @@ def run(
     # by default this is all, but can be changed in the .ini
     num_threads = settings["general"]["threads"]
     if isinstance(num_threads, int) and num_threads > 0:
-        simnibs_samseg.setGlobalDefaultNumberOfThreads(num_threads)
+        samseg.gems.setGlobalDefaultNumberOfThreads(num_threads)
         logger.info("Using %d threads, instead of all available." % num_threads)
 
     # TODO: Setup the visualization tool. This needs some pyqt stuff to be
     # installed. Don't know if we want to expose this in the .ini
     showFigs = False
     showMovies = False
-    visualizer = simnibs_samseg.initVisualizer(showFigs, showMovies)
+    visualizer = samseg.initVisualizer(showFigs, showMovies)
 
     (
         template_name,
@@ -203,6 +204,7 @@ def run(
             noneck,
             world_to_world_transform_matrix=trans_mat,
             init_transform=init_transform,
+            debug=debug,
         )
 
     if segment:
@@ -253,7 +255,7 @@ def run(
         cat_structs = atlas_settings["CAT_structures"]
         tissue_settings = atlas_settings["conductivity_mapping"]
         csf_factor = segment_settings["csf_factor"]
-        simnibs_samseg.simnibs_segmentation_utils.writeBiasCorrectedImagesAndSegmentation(
+        simnibs_segmentation_utils.writeBiasCorrectedImagesAndSegmentation(
             bias_corrected_image_names,
             sub_files.labeling,
             segment_parameters_and_inputs,
@@ -269,7 +271,7 @@ def run(
         # Write out MNI warps
         logger.info("Writing out MNI warps.")
         os.makedirs(sub_files.mni_transf_folder, exist_ok=True)
-        simnibs_samseg.simnibs_segmentation_utils.saveWarpField(
+        simnibs_segmentation_utils.saveWarpField(
             template_name,
             sub_files.mni2conf_nonl,
             sub_files.conf2mni_nonl,

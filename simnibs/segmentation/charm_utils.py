@@ -11,7 +11,10 @@ from scipy.ndimage import affine_transform
 from scipy.ndimage import label
 from scipy.io import loadmat
 
-from . import simnibs_samseg
+import samseg
+from . import simnibs_segmentation_utils
+from .samseg_whole_head import SamsegWholeHead
+from .affine_whole_head import AffineWholeHead, initializationOptionsWholeHead
 from ._thickness import _calc_thickness
 from ._cat_c_utils import sanlm
 from .brain_surface import mask_from_surface
@@ -37,7 +40,8 @@ def _register_atlas_to_input_affine(
     init_transform=None,
     world_to_world_transform_matrix=None,
     scaling_center = [0.0, -100.0, 0.0],
-    k_values = [20.0, 10.0, 5.0]
+    k_values = [20.0, 10.0, 5.0],
+    debug=False,
 ):
 
     # Import the affine registration function
@@ -49,9 +53,9 @@ def _register_atlas_to_input_affine(
     neck_search_bounds = init_atlas_settings["neck_search_bounds"]
     ds_factor = init_atlas_settings["downsampling_factor_affine"]
 
-    affine = simnibs_samseg.AffineWholeHead(T1, affine_mesh_collection_name, template_file_name)
+    affine = AffineWholeHead(T1, affine_mesh_collection_name, template_file_name)
 
-    init_options = simnibs_samseg.initializationOptions(
+    init_options = initializationOptionsWholeHead(
         pitchAngles=thetas_rad,
         scales=scales,
         scalingCenter=scaling_center,
@@ -63,7 +67,7 @@ def _register_atlas_to_input_affine(
         image_to_image_transform,
         world_to_world_transform,
         optimization_summary,
-    ) = affine.registerAtlas(
+    ) = affine.registerAtlasWholeHead(
         worldToWorldTransformMatrix=world_to_world_transform_matrix,
         initTransform=init_transform,
         initializationOptions=init_options,
@@ -73,7 +77,7 @@ def _register_atlas_to_input_affine(
         Ks=k_values
     )
 
-    affine.saveResults(
+    affine.saveResultsWholeHead(
         T1,
         template_file_name,
         save_path,
@@ -90,7 +94,7 @@ def _register_atlas_to_input_affine(
 
     if not noneck:
         logger.info("Adjusting neck.")
-        exitcode = affine.adjust_neck(
+        exitcode = affine.adjust_neckWholeHead(
             T1,
             template_coregistered_name,
             mesh_level1,
@@ -98,6 +102,7 @@ def _register_atlas_to_input_affine(
             neck_search_bounds,
             neck_tissues,
             visualizer,
+            debug,
             downsampling_target=2.0,
         )
         if exitcode == -1:
@@ -126,7 +131,7 @@ def _denoise_input_and_save(input_name, output_name):
 
 def _init_atlas_affine(t1_scan, mni_template, affine_settings):
 
-    registerer = simnibs_samseg.gems.KvlAffineRegistration(
+    registerer = samseg.gems.KvlAffineRegistration(
         affine_settings["translation_scale"],
         affine_settings["max_iter"],
         affine_settings["num_histogram_bins"],
@@ -167,7 +172,7 @@ def _estimate_parameters(
     bg_mask_th = segment_settings["background_mask_threshold"]
     stiffness = segment_settings["mesh_stiffness"]
     covariances = segment_settings["diagonal_covariances"]
-    shared_gmm_parameters = simnibs_samseg.io.kvlReadSharedGMMParameters(gmm_parameters)
+    shared_gmm_parameters = samseg.io.kvlReadSharedGMMParameters(gmm_parameters)
 
     if user_optimization_options is None:
         user_optimization_options = {
@@ -209,6 +214,7 @@ def _estimate_parameters(
         transformedTemplateFileName=template_coregistered_name,
         userModelSpecifications=user_model_specifications,
         userOptimizationOptions=user_optimization_options,
+        imageToImageTransformMatrix=None,
         visualizer=visualizer,
         saveHistory=False,
         saveMesh=False,
@@ -217,9 +223,9 @@ def _estimate_parameters(
     )
 
     logger.info("Starting segmentation.")
-    samsegment = simnibs_samseg.SamsegWholeHead(**samseg_kwargs)
-    samsegment.preProcess()
-    samsegment.process()
+    samsegment = SamsegWholeHead(**samseg_kwargs)
+    samsegment.preProcessWholeHead()
+    samsegment.fitModel()
 
     # Print optimization summary
     optimizationSummary = samsegment.getOptimizationSummary()
@@ -256,7 +262,7 @@ def _post_process_segmentation(
 
     # Next we need to reconstruct the segmentation with the upsampled data
     # and map it into the simnibs tissues
-    upsampled_tissues, upper_part = simnibs_samseg.simnibs_segmentation_utils.segmentUpsampled(
+    upsampled_tissues, upper_part = simnibs_segmentation_utils.segmentUpsampled(
         upsampled_image_names,
         tissue_settings,
         parameters_and_inputs,
@@ -753,7 +759,7 @@ def _get_largest_components(vol, se, vol_limit=0, num_limit=-1, return_sizes=Fal
 
 
 def _registerT1T2(fixed_image, moving_image, output_image):
-    registerer = simnibs_samseg.gems.KvlRigidRegistration()
+    registerer = samseg.gems.KvlRigidRegistration()
     # linear interpolation
     # registerer = samseg.gems.KvlRigidRegistration(
     #     translationScale=-100.,

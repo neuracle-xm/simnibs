@@ -8,9 +8,9 @@ from scipy.io import loadmat
 from ... import SIMNIBSDIR
 from .. import charm_utils
 from ..charm_main import _check_q_and_s_form
-from ..simnibs_samseg import initVisualizer
-from ..simnibs_samseg.io import kvlReadSharedGMMParameters
-from ..simnibs_samseg.simnibs_segmentation_utils import writeBiasCorrectedImagesAndSegmentation
+from samseg import initVisualizer
+from samseg.io import kvlReadSharedGMMParameters
+from ..simnibs_segmentation_utils import writeBiasCorrectedImagesAndSegmentation
 
 @pytest.fixture(scope='module')
 def testernie_nii():
@@ -167,7 +167,8 @@ def test_atlas_affine(tmpdir, testmni_nii, testtemplate_nii, testaffinemesh_msh)
                                                 init_transform=None,
                                                 world_to_world_transform_matrix=None,
                                                 scaling_center=[0, 0, 0],
-                                                k_values=[100])
+                                                k_values=[100],
+                                                debug=False,)
 
     matrices = loadmat(str(tmpdir.join('coregistrationMatrices.mat')))
     w2w = matrices['worldToWorldTransformMatrix']
