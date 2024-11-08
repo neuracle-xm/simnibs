@@ -24,14 +24,21 @@ class OnlineFEM:
     """
     OnlineFEM class for fast FEM calculations using the Pardiso solver of the MKL library
 
+    !!! NOTE !!!
+    TMS:
+        The mesh used in the OnlineFem and in the FemTargetPointCloud have to have the same node coordinates and the same node ordering. 
+        They also have to have the same elements and the same element ordering. 
+    TES:
+        The mesh used in the OnlineFem and in the FemTargetPointCloud have to have the same node coordinates and the same node ordering. 
+
     Parameters
     ----------
     mesh : Msh object or str
         Head mesh or path to it.
     method : str
         Specify simulation type ('TMS' or 'TES')
-    roi : list of RegionOfInterest object [n_roi]
-        Region of interests.
+    roi : list of FemTargetPointCloud object [n_roi]
+        Target coordinates for the E-field calculation.
     anisotropy_type : str
         Type of anisotropy for simulation ('scalar', 'vn', 'mc')
     solver_options : str
@@ -54,12 +61,13 @@ class OnlineFEM:
     """
     def __init__(self, mesh, method, roi, anisotropy_type="scalar", solver_options="pardiso", fn_logger=None,
                  useElements=True, fn_coil=None, dataType=0, coil=None, electrode=None, dirichlet_node=None,
-                 solver_loglevel=logging.DEBUG, cpus=None):
+                 solver_loglevel=logging.DEBUG, cpus=None, cond=None):
         """
         Constructor of the OnlineFEM class
         """
         self.method = method                        # 'TES' or 'TMS'
         self.dataType = dataType                    # calc. magn. of e-field for dataType=0 otherwise return Ex, Ey, Ez
+        self.cond = cond
         self.anisotropy_type = anisotropy_type      # 'scalar', 'dir', 'vn', 'mc'
         self.A = None                               # stiffness matrix
         self.b = None                               # rhs
@@ -139,7 +147,12 @@ class OnlineFEM:
 
         # For TMS we use only tetrahedra (elm_type=4). The triangles (elm_type=3) are removed.
         if self.method == "TMS":
-            self.mesh = remove_triangles_from_mesh(self.mesh)
+            node_nr_before = self.mesh.nodes.nr
+            nodes_before = np.copy(self.mesh.nodes.node_coord)
+            self.mesh = self.mesh.crop_mesh(elm_type=4)
+            # ensure that the nodes did not change
+            assert self.mesh.nodes.nr == node_nr_before, 'The mesh nodes changed when removing triangles! Please make sure the mesh is valid.'
+            assert (self.mesh.nodes.node_coord == nodes_before).all(), 'The mesh nodes changed when removing triangles! Please make sure the mesh is valid.'
 
         # prepare solver and set self.solver
         self._set_matrices_and_prepare_solver()
@@ -719,16 +732,16 @@ class OnlineFEM:
         """
         Set matrices and initialize the pardiso solver for update_position in self.solver.
         """
-
-        # prepare FEM
-        self.simulist = SimuList(mesh=self.mesh)
-
-        # prepare conductivity (scalar or anisotropic)
-        self.simulist.anisotropy_type = self.anisotropy_type
-        self.simulist.fn_tensor_nifti = self.fn_tensor_nifti
-        self.cond = self.simulist.cond2elmdata()
-
-        # TODO: also use the new TMSFEM class here for TMS but implement the fast RHS calculations from here in it
+        
+        if self.cond is None:    
+            # prepare FEM
+            self.simulist = SimuList(mesh=self.mesh)
+    
+            # prepare conductivity (scalar or anisotropic)
+            self.simulist.anisotropy_type = self.anisotropy_type
+            self.simulist.fn_tensor_nifti = self.fn_tensor_nifti
+            self.cond = self.simulist.cond2elmdata()
+        
         if self.method == "TMS":
             self.cond = self.cond.value.squeeze()
 
@@ -739,25 +752,25 @@ class OnlineFEM:
             useElements = self.useElements
             node_coordinates = self.mesh.nodes.node_coord.T
 
-            # # get the coordinates of nodal points/element centers to prepare for the calculation of dadt.
-            # # Use self.coordinates to interpolate the field in calculate_dadt().
+            # get the coordinates of nodal points/element centers to prepare for the calculation of dadt.
+            # Use self.coordinates to interpolate the field in calculate_dadt().
             self.coordinates = get_coordinates(node_coordinates, self.node_numbers, useElements)
 
-            # # set the reshaped_node_numbers (there are two different ways to reshape it and sometimes
-            # # it is more efficient to use one or the other
+            # set the reshaped_node_numbers (there are two different ways to reshape it and sometimes
+            # it is more efficient to use one or the other
             self.reshaped_node_numbers = (self.node_numbers - 1).T.ravel()
             self.reshaped_node_numbersT = (self.node_numbers - 1).ravel()
 
-            # # get the distances between local node [0] and nodes [1], [2] and [3] in each element
+            # get the distances between local node [0] and nodes [1], [2] and [3] in each element
             local_dist, _ = _get_local_distances(self.node_numbers, node_coordinates)
 
-            # # calculate the volume of a tetrahedron given the coordinates of its four nodal points
+            # calculate the volume of a tetrahedron given the coordinates of its four nodal points
             self.volume = np.abs(np.linalg.det(local_dist)) / 6.
 
-            # # get gradient operator
+            # get gradient operator
             self.gradient = _get_gradient(local_dist)
 
-            # # set the force integrals. We use the force integrals to assemble the right hand side force vector
+            # set the force integrals. We use the force integrals to assemble the right hand side force vector
             if self.cond.ndim == 1:
                 self.force_integrals = get_force_integrals(self.volume, self.gradient, self.cond)
                 
@@ -920,82 +933,6 @@ def get_coordinates(node_coordinates, node_numbers, useElements):
     return coordinates
 
 
-def remove_triangles_from_mesh(mesh):
-    """
-    Load the mesh file. For the E field calculation, we use only tetrahedra (elm_type=4).
-    The triangles (elm_type=3) are removed.
-
-    Parameters
-    ----------
-    mesh : Msh object
-        Mesh object
-
-    Returns
-    -------
-    mesh : Msh object
-        Mesh object without triangles
-    """
-
-    # keep the tetrahedra in the mesh file (triangles are removed)
-    mesh = mesh.crop_mesh(elm_type=4)
-
-    assert mesh.elm.node_number_list.max() == mesh.nodes.nr
-
-    # get the nodal index and value with dirichlet boundary condition
-    index_naught = mesh.nodes.node_coord[:, 2].argmin()
-
-    # switch the node with dirichlet bc and the last node
-    mesh.nodes.node_coord[[index_naught, -1]] = mesh.nodes.node_coord[[-1, index_naught]]
-
-    # update the node_number_list
-    mask1 = np.nonzero(mesh.elm.node_number_list == index_naught + 1)
-    mask2 = np.nonzero(mesh.elm.node_number_list == mesh.nodes.nr)
-    mesh.elm.node_number_list[mask1] = mesh.nodes.nr
-    mesh.elm.node_number_list[mask2] = index_naught + 1
-
-    return mesh
-
-
-def get_mesh_with_tetrahedra(mesh_file, logger=None):
-    """
-    Load the mesh file. For the E field calculation, we use only tetrahedra (elm_type=4).
-    The triangles (elm_type=3) are removed.
-
-    Parameters
-    ----------
-    mesh_file : str
-        Filename (incl. path) to .msh file.
-    logger : logger object
-        Logger
-
-    Returns
-    -------
-    mesh : Msh object
-        Mesh object
-    """
-    # read_mesh: load the mesh file; crop_mesh: keep the tetrahedra in the mesh file (triangles are removed)
-    mesh = read_msh(mesh_file).crop_mesh(elm_type=4)
-
-    assert mesh.elm.node_number_list.max() == mesh.nodes.nr
-
-    # get the nodal index and value with dirichlet boundary condition
-    index_naught = mesh.nodes.node_coord[:, 2].argmin()
-
-    # switch the node with dirichlet bc and the last node
-    mesh.nodes.node_coord[[index_naught, -1]] = mesh.nodes.node_coord[[-1, index_naught]]
-
-    # update the node_number_list
-    mask1 = np.nonzero(mesh.elm.node_number_list == index_naught + 1)
-    mask2 = np.nonzero(mesh.elm.node_number_list == mesh.nodes.nr)
-    mesh.elm.node_number_list[mask1] = mesh.nodes.nr
-    mesh.elm.node_number_list[mask2] = index_naught + 1
-
-    if logger is not None:
-        logger.info('Loaded mesh file: ' + mesh_file)
-
-    return mesh
-
-
 def delete_row_csr(mat, i):
     """
     Delete rows from a sparse matrix in Compressed Sparse Row (CSR) format.
@@ -1058,34 +995,35 @@ def delete_col_csr(mat, i):
 
 class FemTargetPointCloud:
     """
-    Region of interest class containing methods to compute the electric field from the electric potential (fast).
-    Either define ROI with nodes and con
+    Class containing methods to compute the electric field at point cloud points from the electric potential at nodes (fast).
+
+    !!! NOTE !!!
+    TMS:
+        The mesh used in the OnlineFem and in the FemTargetPointCloud have to have the same node coordinates and the same node ordering. 
+        They also have to have the same elements and the same element ordering. 
+    TES:
+        The mesh used in the OnlineFem and in the FemTargetPointCloud have to have the same node coordinates and the same node ordering. 
 
     Parameters
     ----------
     mesh : Msh object instance
         Head mesh
-    center : np.ndarray of flloat [n_roi_center x 3]
-        The point coordinates where the e-field is calculated, e.g. element center of triangles or tetrahedra.
+    center : np.ndarray of float [n_roi_center x 3]
+        The point coordinates where the e-field is calculated, e.g. element center of tetrahedra.
     gradient : np.array of float [n_tet_mesh_required x 4 x 3]
-        Gradient operator of the tetrahedral edges.
+        Pre-calculated gradient operator of the tetrahedral edges.
     nearest_neighbor : bool
-        Weather to use SPR interpolation or nearest naigbor
-    out_fill : float or None
-        Value to be given to points outside the volume. If None then use nearest neighbor assigns the nearest value;
-        otherwise assign to out_fill, for example 0)
+        Whether to use SPR interpolation or nearest neighbor
+    fill_nearest : boolean
+        Whether to fill values outside the mesh with the nearest value or assign zeros to these points. 
+        If set to True then use nearest neighbor assigns the nearest value; otherwise assign to 0
 
     Attributes
     ----------
-    center : np.ndarray of flloat [n_roi_center x 3]
+    center : np.ndarray of float [n_roi_center x 3]
         The point coordinates where the e-field is calculated, e.g. element center of triangles or tetrahedra.
-    center : np.ndarray of flloat [n_roi_center]
+    n_center : int
         Number of center points in the ROI.
-    nodes : np.ndarray of float [n_roi_points x 3]
-        Coordinates of points in the ROI
-    con : np.ndarray of float [n_ele x 3(4)], optional, default: None
-        Connectivity list of ROI (triangles or tetrahedra. Not requires by the algorithm. The electric field will
-        be calculated in the provided points only.
     gradient : np.array of float [n_tet_mesh_required x 4 x 3]
         Gradient operator of the tetrahedral edges.
     node_index_list :  [n_tet_mesh_required x 4]
@@ -1093,33 +1031,27 @@ class FemTargetPointCloud:
     sF : sparse matrix of float [n_points_ROI x n_tet_mesh_required ]
         Sparse matrix for SPR interpolation.
     inside : np.array of bool [n_points]
-        Indicator if points are lying inside model.
+        Indicator if points are lying inside the model.
     idx : np.array of int [n_tet_mesh_required]
-        Indices of tetrahedra, which are required for SPR
+        Indices of tetrahedra, in whcih the E-field is calculated
     n_tet_mesh : int
         Number of tetrahedra in the whole head mesh
-    vol : float
-        Volume or area of ROI elements
     """
-    def __init__(self, mesh, center=None, gradient=None, nearest_neighbor=False, out_fill=0):
-        """
-        Initializes RegionOfInterest class instance
-        """
+    def __init__(self, mesh, center=None, gradient=None, nearest_neighbor=False, fill_nearest=False):
         self.center = center
         self.sF = None
-        self.triangles_normals = None
         self.n_center = None
         self.gradient = gradient
+        self.fill_nearest = fill_nearest
 
         if type(self.center) is list:
             self.center = np.array(self.center)
 
         # crop mesh that only tetrahedra are included
         mesh_cropped: Msh = mesh.crop_mesh(elm_type=4)
-
         # ensure that the nodes did not change
-        assert mesh_cropped.nodes.nr == mesh.nodes.nr
-        assert (mesh_cropped.nodes.node_coord == mesh.nodes.node_coord).all()
+        assert mesh_cropped.nodes.nr == mesh.nodes.nr, 'The mesh nodes changed when removing triangles! Please make sure the mesh is valid.'
+        assert (mesh_cropped.nodes.node_coord == mesh.nodes.node_coord).all(), 'The mesh nodes changed when removing triangles! Please make sure the mesh is valid.'
 
         self.n_tet_mesh = mesh_cropped.elm.node_number_list.shape[0]
 
@@ -1134,7 +1066,12 @@ class FemTargetPointCloud:
         if nearest_neighbor:
             th_with_points, bar = mesh_cropped.find_tetrahedron_with_points(center, compute_baricentric=True)
             self.inside = th_with_points != -1
+            self.any_outside = np.any(~self.inside)
             self.idx = th_with_points - 1
+            if self.any_outside:
+                if fill_nearest == 1:  # fill == 'nearest'
+                    _, nearest = mesh_cropped.find_closest_element(center[~self.inside], return_index=True)
+                    self.idx[~self.inside] = nearest - 1
 
             self.gradient = gradient[self.idx]
             self.node_index_list = mesh_cropped.elm.node_number_list[self.idx] - 1
@@ -1142,7 +1079,7 @@ class FemTargetPointCloud:
         else:
             # determine sF matrix for fast interpolation
             # compute sF matrix
-            self._get_sF_matrix(mesh_cropped, self.center, out_fill)
+            self._get_sF_matrix(mesh_cropped, self.center, fill_nearest)
             self.gradient = gradient[self.idx]
             self.node_index_list = mesh_cropped.elm.node_number_list[self.idx] - 1
             self.n_center = self.center.shape[0]
@@ -1150,21 +1087,34 @@ class FemTargetPointCloud:
 
     def calc_fields(self, v, dadt=None, dataType=0):
         """
-        Calculate electric field in ROI from v (and A)
+        Calculate electric field on target points from v (and A)
+
+        !!! NOTE !!!
+        TMS:
+            OnlineFem - Tetrahedra mesh
+            TargetPointCloud - Tetrahedra mesh
+            E calculated from:
+                1. v on the mesh nodes
+                2. da_dt on the mesh tetrahedra
+        TES:
+            OnlineFem - Tetrahedra and Triangle (surface) mesh
+            TargetPointCloud - Tetrahedra mesh
+            E calculated from:
+                1. v on the mesh nodes
 
         Parameters
         ----------
         v : np.ndarray of float [n_nodes_total]
             Electric potential in each node in the whole head model
         dadt : np.ndarray of float, optional, default: None
-            Magnetic vector potential in each node in the whole head model (for TMS)
+            Magnetic vector potential in each element in the whole head model (for TMS)
         dataType : int, optional, default: 0
             Return magnitude of electric field (dataType = 0) otherwise return x, y, z components
 
         Returns
         -------
-        e : np.ndarray of float
-            Electric field in ROI
+        e : np.ndarray of float [center]
+            Electric field in the target positions
         """
         # get the E field in all tetrahedra (v: (number_of_nodes, 1))
         ################################################################################################################
@@ -1199,10 +1149,12 @@ class FemTargetPointCloud:
             spmatmul(self.sF.data, self.sF.indptr, self.sF.indices, fields, e)
         else:
             e = fields
-
+            if not self.fill_nearest and self.any_outside:
+                e[~self.inside] = 0
+        
         return e
 
-    def _get_sF_matrix(self, msh, center, out_fill, tags=None):
+    def _get_sF_matrix(self, msh, center, fill_nearest, tags=None):
         """
         Create a sparse matrix for SPR interpolation from element data to arbitrary positions (here: the surface nodes)
 
@@ -1217,14 +1169,14 @@ class FemTargetPointCloud:
             Loaded mesh.
         center : np.array of float [n_center_ROI x 3]
             The coordinates of the points that we want to interpolate.
-        out_fill : float or None
-            Value to be given to points outside the volume. If None then use nearest neighbor assigns the nearest value;
-            otherwise assign to out_fill, for example 0)
+        fill_nearest : boolean
+            Whether to fill values outside the mesh with the nearest value or assign zeros to these points. 
+            If set to True then use nearest neighbor assigns the nearest value; otherwise assign to 0
         tags : list or None, optional, default: None
             The tissue type defines the selected volume in the loaded mesh. Defaults to None.
         """
 
-        assert out_fill in [0, 1]
+        assert fill_nearest in [False, True]
 
         # Set the volume to be GM. The interpolation will use only the tetrahedra in the volume.
         if tags is None:
@@ -1247,7 +1199,7 @@ class FemTargetPointCloud:
 
         # Finally, fill in the unassigned values
         if np.any(~inside):
-            if out_fill == 1:  # fill == 'nearest'
+            if fill_nearest:  # fill == 'nearest'
                 if tags is not None:
                     is_in = np.in1d(msh.elm.elm_number, th_indices)
                     elm_in_volume = msh.elm.elm_number[is_in]
