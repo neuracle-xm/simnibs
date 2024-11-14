@@ -168,25 +168,25 @@ def read_mat(fn):
                 "Could not access structure type in this .mat file")
 
     if structure_type.lower() == 'session':
-        from ..simulation.sim_struct import SESSION
+        from simnibs.simulation.sim_struct import SESSION
         structure = SESSION(matlab_struct=mat)
     elif structure_type.lower() == 'tdcsleadfield':
-        from ..simulation.sim_struct import TDCSLEADFIELD
+        from simnibs.simulation.sim_struct import TDCSLEADFIELD
         structure = TDCSLEADFIELD(matlab_struct=mat)
     elif structure_type.lower() == 'tmsoptimize':
-        from ..optimization.opt_struct import TMSoptimize
+        from simnibs.optimization.opt_struct import TMSoptimize
         structure = TMSoptimize.read_mat_struct(mat)
     elif structure_type.lower() == 'tdcsoptimize':
-        from ..optimization.opt_struct import TDCSoptimize
+        from simnibs.optimization.opt_struct import TDCSoptimize
         structure = TDCSoptimize.read_mat_struct(mat)
     elif structure_type.lower() == 'tdcsdistributedoptimize':
-        from ..optimization.opt_struct import TDCSDistributedOptimize
+        from simnibs.optimization.opt_struct import TDCSDistributedOptimize
         structure = TDCSDistributedOptimize.read_mat_struct(mat)
     elif structure_type.lower() == 'tmsflexoptimization':
-        from ..optimization.opt_struct import TmsFlexOptimization
+        from simnibs.optimization.opt_struct import TmsFlexOptimization
         structure = TmsFlexOptimization(dict_from_matlab(mat))
     elif structure_type.lower() == 'tesflexoptimization':
-        from ..optimization.opt_struct import TesFlexOptimization
+        from simnibs.optimization.opt_struct import TesFlexOptimization
         structure = TesFlexOptimization(dict_from_matlab(mat))
     elif structure_type.lower() == 'regionofinterest':
         from .region_of_interest import RegionOfInterest

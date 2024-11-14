@@ -13,11 +13,11 @@ import scipy.linalg
 import scipy.optimize
 import scipy.spatial
 
-from ..mesh_tools import mesh_io, gmsh_view
-from ..utils import transformations
-from ..utils.simnibs_logger import logger
-from ..utils.matlab_read import try_to_read_matlab_field, remove_None
-from ..utils.mesh_element_properties import ElementTags
+from simnibs.mesh_tools import mesh_io, gmsh_view
+from simnibs.utils import transformations
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.matlab_read import try_to_read_matlab_field, remove_None
+from simnibs.utils.mesh_element_properties import ElementTags
 
 
 class TDCSoptimize:

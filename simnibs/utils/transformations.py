@@ -33,10 +33,10 @@ import scipy.spatial
 from scipy.sparse import coo_matrix, csr_matrix
 from typing import Union
 
-from ..utils.mesh_element_properties import ElementTags
-from ..utils.simnibs_logger import logger
-from ..utils.file_finder import templates, SubjectFiles, get_reference_surf
-from ..utils.csv_reader import write_csv_positions, read_csv_positions
+from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import templates, SubjectFiles, get_reference_surf
+from simnibs.utils.csv_reader import write_csv_positions, read_csv_positions
 
 __all__ = [
     'warp_volume',
@@ -504,7 +504,7 @@ def warp_volume(image_fn, m2m_folder, out_name,
         Only the fields for the listed tissues are interpolated, rest is set to
         zero. Only applied to mesh inputs. Default: None (all tissues are kept)
     '''
-    from ..mesh_tools.mesh_io import read_msh
+    from simnibs.mesh_tools.mesh_io import read_msh
     names = get_names_from_folder_structure(m2m_folder)
 
     if transformation_direction not in ['subject2mni', 'mni2subject']:
@@ -632,7 +632,7 @@ def interpolate_to_volume(fn_mesh, reference, fn_out, create_masks=False,
         Only the fields for the listed tissues are interpolated, rest is set to
         zero. Default: None (all tissues are kept)
     '''
-    from ..mesh_tools.mesh_io import read_msh, ElementData
+    from simnibs.mesh_tools.mesh_io import read_msh, ElementData
     if os.path.isdir(reference):
         names = get_names_from_folder_structure(reference)
         reference = names['reference_conf']
@@ -1247,7 +1247,7 @@ def warp_coordinates(coordinates, m2m_folder,
     name: list
         Names of positions
     '''
-    from ..mesh_tools.mesh_io import read_msh
+    from simnibs.mesh_tools.mesh_io import read_msh
     names = get_names_from_folder_structure(m2m_folder)
     # Read CSV
     if isinstance(coordinates, str):
@@ -1782,7 +1782,7 @@ def middle_gm_interpolation(
     f_geo: str
         String with file name to geo file that accompanies the mesh
     """
-    from ..mesh_tools import mesh_io
+    from simnibs.mesh_tools import mesh_io
 
     m2m_folder = os.path.abspath(os.path.normpath(m2m_folder))
     subject_files = SubjectFiles(subpath=m2m_folder)
@@ -1995,7 +1995,7 @@ def subject_atlas(atlas_name, m2m_dir, hemi="both"):
     atlas: dict
         Dictionary where atlas['region'] = roi
     """
-    from ..mesh_tools.mesh_io import read_gifti_surface
+    from simnibs.mesh_tools.mesh_io import read_gifti_surface
 
     if atlas_name not in ["a2009s", "DK40", "HCP_MMP1"]:
         raise ValueError("Invalid atlas name")

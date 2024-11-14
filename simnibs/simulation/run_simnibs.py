@@ -1,7 +1,7 @@
 import logging
 import warnings
 import numpy as np
-from ..utils.matlab_read import read_mat
+from simnibs.utils.matlab_read import read_mat
 
 
 def run_simnibs(simnibs_struct, cpus=1):

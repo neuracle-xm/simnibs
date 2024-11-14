@@ -18,10 +18,10 @@ from simnibs.simulation.tms_coil.tms_coil import TmsCoil
 
 from simnibs.utils.mesh_element_properties import ElementTags
 
-from ..mesh_tools import mesh_io
-from ..utils import cond_utils as cond_lib
+from simnibs.mesh_tools import mesh_io
+from simnibs.utils import cond_utils as cond_lib
 import mumps
-from ..utils.simnibs_logger import logger
+from simnibs.utils.simnibs_logger import logger
 
 from petsc4py import PETSc
 from simnibs.simulation import pardiso

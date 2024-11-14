@@ -6,7 +6,7 @@ import threading
 import numpy as np
 import shutil
 
-from ..utils.file_finder import path2bin, Templates
+from simnibs.utils.file_finder import path2bin, Templates
 
 class Visualization:
     ''' Defines a visualization for a 3D mesh

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 
-from .. import _cat_c_utils
+from simnibs.segmentation import _cat_c_utils
 
 @pytest.fixture
 def cube_image():

@@ -8,8 +8,8 @@ import pytest
 
 import simnibs.utils.cond_utils
 
-from ... import SIMNIBSDIR
-from ...mesh_tools import mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.mesh_tools import mesh_io
 
 @pytest.fixture
 def sphere3_msh():

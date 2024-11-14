@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import ADMlib
+from simnibs.optimization import ADMlib
 
 # Direct implementation of eq S5 in
 # https://www.biorxiv.org/content/10.1101/2020.05.27.120022v2

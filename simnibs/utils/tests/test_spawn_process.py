@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from .. import spawn_process
+from simnibs.utils import spawn_process
 
 
 def test_spawn_process_0():

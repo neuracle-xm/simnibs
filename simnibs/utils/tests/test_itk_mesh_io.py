@@ -3,8 +3,8 @@ import os
 import numpy as np
 import pytest
 
-from ... import SIMNIBSDIR
-from .. import itk_mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.utils import itk_mesh_io
 
 @pytest.fixture
 def atlas_itk_msh_fn():

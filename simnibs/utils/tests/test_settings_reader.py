@@ -1,6 +1,6 @@
 import tempfile
 
-from .. import settings_reader
+from simnibs.utils import settings_reader
 
 
 class TestReadIni:

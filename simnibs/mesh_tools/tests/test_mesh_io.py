@@ -7,9 +7,9 @@ import h5py
 import pytest
 from scipy.spatial import ConvexHull
 
-from ... import SIMNIBSDIR
-from .. import mesh_io
-from ...utils import itk_mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.mesh_tools import mesh_io
+from simnibs.utils import itk_mesh_io
 
 
 @pytest.fixture(scope='module')

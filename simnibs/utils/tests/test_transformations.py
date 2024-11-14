@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from scipy.spatial import cKDTree
 
-from ... import SIMNIBSDIR
-from ...mesh_tools import mesh_io
-from .. import transformations
+from simnibs import SIMNIBSDIR
+from simnibs.mesh_tools import mesh_io
+from simnibs.utils import transformations
 
 
 @pytest.fixture

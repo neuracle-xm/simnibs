@@ -24,18 +24,18 @@ import time
 import logging
 import numpy as np
 
-from .. import SIMNIBSDIR
-from ..simulation import sim_struct
-from ..utils.cond_utils import standard_cond
-from ..simulation.run_simnibs import run_simnibs
+from simnibs import SIMNIBSDIR
+from simnibs.simulation import sim_struct
+from simnibs.utils.cond_utils import standard_cond
+from simnibs.simulation.run_simnibs import run_simnibs
 from . import electrodeGUI
 from . import head_model_OGL
 from . import simulation_menu
-from .. import __version__
-from ..utils.simnibs_logger import logger
-from ..utils.file_finder import SubjectFiles, path2bin
-from ..utils.matlab_read import read_mat
-from ..utils.mesh_element_properties import ElementTags
+from simnibs import __version__
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import SubjectFiles, path2bin
+from simnibs.utils.matlab_read import read_mat
+from simnibs.utils.mesh_element_properties import ElementTags
 
 
 class TDCS_GUI(QtWidgets.QMainWindow):

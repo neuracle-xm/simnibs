@@ -4,7 +4,7 @@ from __future__ import division
 import pytest
 import numpy as np
 
-from .. import analytical_solutions
+from simnibs.simulation import analytical_solutions
 import scipy.special
 
 

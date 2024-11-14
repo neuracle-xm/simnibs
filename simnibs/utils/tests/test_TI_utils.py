@@ -9,9 +9,9 @@ import os
 import numpy as np
 import pytest
 import h5py 
-from .. import TI_utils as TI
-from ...mesh_tools import mesh_io
-from ... import SIMNIBSDIR
+from simnibs.utils import TI_utils as TI
+from simnibs.mesh_tools import mesh_io
+from simnibs import SIMNIBSDIR
 
 @pytest.fixture()
 def sphere_surf():

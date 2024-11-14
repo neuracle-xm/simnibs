@@ -3,11 +3,11 @@ import copy
 import numpy as np
 import simnibs
 from .current_estimator import CurrentEstimator
-from ...simulation.sim_struct import SESSION
+from simnibs.simulation.sim_struct import SESSION
 from .ellipsoid import subject2ellipsoid, ellipsoid2subject
-from ...mesh_tools.surface import Surface
+from simnibs.mesh_tools.surface import Surface
 from .ellipsoid import Ellipsoid
-from ...utils.file_finder import Templates
+from simnibs.utils.file_finder import Templates
 
 
 class ElectrodeLayout:

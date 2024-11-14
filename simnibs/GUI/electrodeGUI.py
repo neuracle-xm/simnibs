@@ -30,7 +30,7 @@ import copy
 import sys
 import numpy
 
-from ..simulation import sim_struct
+from simnibs.simulation import sim_struct
 
 
 class Ui_Electrode(QtWidgets.QDialog):

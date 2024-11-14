@@ -6,9 +6,9 @@ from mock import Mock, patch
 
 import pytest
 
-from ... import SIMNIBSDIR
-from .. import gpc as simnibs_gpc
-from .. import sim_struct
+from simnibs import SIMNIBSDIR
+from simnibs.simulation import gpc as simnibs_gpc
+from simnibs.simulation import sim_struct
 from simnibs.mesh_tools import mesh_io
 
 @pytest.fixture(scope='module')

@@ -32,11 +32,11 @@ from simnibs.utils import file_finder
 from simnibs.utils import simnibs_logger
 from simnibs.utils.roi_result_visualization import RoiResultVisualization
 
-from ..simulation.sim_struct import POSITION
-from ..utils.simnibs_logger import logger
-from ..utils.file_finder import SubjectFiles
-from ..utils.mesh_element_properties import ElementTags
-from .. import __version__
+from simnibs.simulation.sim_struct import POSITION
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import SubjectFiles
+from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs import __version__
 
 
 class TmsFlexOptimization:

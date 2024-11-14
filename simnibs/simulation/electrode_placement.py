@@ -28,8 +28,8 @@ import numpy as np
 import scipy.spatial
 
 from simnibs.utils.mesh_element_properties import ElementTags
-from ..mesh_tools.mesh_io import _hash_rows
-from ..utils.transformations import project_points_on_surface
+from simnibs.mesh_tools.mesh_io import _hash_rows
+from simnibs.utils.transformations import project_points_on_surface
 
 
 def _remove_unconnected_triangles(mesh, roi_triangles, center,

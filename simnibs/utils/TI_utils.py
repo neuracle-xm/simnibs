@@ -8,7 +8,7 @@ Created on Thu Jun 23 17:41:21 2022
 import h5py
 import numpy as np
 
-from ..mesh_tools import mesh_io
+from simnibs.mesh_tools import mesh_io
 
 
 def load_leadfield(leadfield_hdf, 

@@ -47,10 +47,10 @@ import h5py
 from simnibs.utils import file_finder
 from simnibs.utils.mesh_element_properties import ElementTags
 
-from ..utils.spawn_process import spawn_process
-from ..utils.transformations import nifti_transform
+from simnibs.utils.spawn_process import spawn_process
+from simnibs.utils.transformations import nifti_transform
 from . import gmsh_view
-from ..utils.file_finder import HEMISPHERES, get_reference_surf, path2bin, SubjectFiles, FreeSurferSubject
+from simnibs.utils.file_finder import HEMISPHERES, get_reference_surf, path2bin, SubjectFiles, FreeSurferSubject
 from . import cython_msh
 from . import cgal
 

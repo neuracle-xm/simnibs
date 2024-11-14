@@ -10,14 +10,14 @@ from simnibs.simulation.tms_coil.tms_coil import TmsCoil
 from simnibs.simulation.tms_coil.tms_coil_element import DipoleElements
 
 from . import ADMlib
-from ..simulation import fem
-from ..utils import cond_utils
-from ..simulation.sim_struct import SESSION, TMSLIST, SimuList, save_matlab_sim_struct
-from ..mesh_tools import mesh_io
-from ..utils.simnibs_logger import logger
-from ..utils.file_finder import SubjectFiles
-from ..utils.matlab_read import try_to_read_matlab_field, remove_None
-from ..utils.mesh_element_properties import ElementTags
+from simnibs.simulation import fem
+from simnibs.utils import cond_utils
+from simnibs.simulation.sim_struct import SESSION, TMSLIST, SimuList, save_matlab_sim_struct
+from simnibs.mesh_tools import mesh_io
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import SubjectFiles
+from simnibs.utils.matlab_read import try_to_read_matlab_field, remove_None
+from simnibs.utils.mesh_element_properties import ElementTags
 
 class TMSoptimize:
     """

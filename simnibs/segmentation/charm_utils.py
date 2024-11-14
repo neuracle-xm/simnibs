@@ -15,8 +15,8 @@ from . import simnibs_samseg
 from ._thickness import _calc_thickness
 from ._cat_c_utils import sanlm
 from .brain_surface import mask_from_surface
-from ..utils.simnibs_logger import logger
-from ..utils.transformations import resample_vol, volumetric_affine
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.transformations import resample_vol, volumetric_affine
 from simnibs.utils.file_finder import SubjectFiles
 
 from simnibs.mesh_tools.mesh_io import load_subject_surfaces

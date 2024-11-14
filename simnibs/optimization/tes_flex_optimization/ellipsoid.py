@@ -9,8 +9,8 @@ import warnings
 warnings.filterwarnings("ignore")
 warnings.filterwarnings('ignore', 'The iteration is not making good progress')
 
-from ...mesh_tools import cgal
-from ...mesh_tools.surface import Surface
+from simnibs.mesh_tools import cgal
+from simnibs.mesh_tools.surface import Surface
 
 
 class Ellipsoid():

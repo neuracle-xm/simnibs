@@ -13,12 +13,12 @@ from simnibs.utils.mesh_element_properties import ElementTags
 
 from . import mesh_io
 from . import cgal
-from ..utils import file_finder
-from ..utils.spawn_process import spawn_process
-from ..utils.simnibs_logger import logger, format_time
-from ..segmentation.brain_surface import dilate, erosion
-from ..segmentation._thickness import _calc_thickness
-from ..utils.transformations import get_vox_size
+from simnibs.utils import file_finder
+from simnibs.utils.spawn_process import spawn_process
+from simnibs.utils.simnibs_logger import logger, format_time
+from simnibs.segmentation.brain_surface import dilate, erosion
+from simnibs.segmentation._thickness import _calc_thickness
+from simnibs.utils.transformations import get_vox_size
 
 
 class MeshingError(ValueError):
