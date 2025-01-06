@@ -13,7 +13,7 @@ from simnibs.segmentation.marching_cube import marching_cubes_lewiner
 from simnibs.simulation.tms_coil.tcd_element import TcdElement
 from simnibs.simulation.tms_coil.tms_coil_constants import TmsCoilElementTag
 
-from ...mesh_tools.mesh_io import Elements, Msh, Nodes
+from simnibs.mesh_tools.mesh_io import Elements, Msh, Nodes
 
 
 class TmsCoilModel(TcdElement):

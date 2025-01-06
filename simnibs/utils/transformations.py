@@ -33,10 +33,10 @@ import scipy.spatial
 from scipy.sparse import coo_matrix, csr_matrix
 from typing import Union
 
-from ..utils.mesh_element_properties import ElementTags
-from ..utils.simnibs_logger import logger
-from ..utils.file_finder import templates, SubjectFiles, get_reference_surf
-from ..utils.csv_reader import write_csv_positions, read_csv_positions
+from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import templates, SubjectFiles, get_reference_surf
+from simnibs.utils.csv_reader import write_csv_positions, read_csv_positions
 
 __all__ = [
     'warp_volume',
@@ -52,7 +52,8 @@ __all__ = [
 def volumetric_nonlinear(image, deformation, target_space_affine=None,
                          target_dimensions=None, intorder=1, cpus=1,
                          inverse_deformation=None,
-                         keep_vector_length=True):
+                         keep_vector_length=True,
+                         fix_boundary_zeros=True):
     ''' Applies a volumetric non-linear transformation
 
     Parameters
@@ -76,9 +77,13 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
         original space and specifies in each voxel the equivalent coordinates (x, y, z)
         of the target space. This is used ony to rotate vectors accordingly. If not set,
         vectors wil not be rotated
-    keep_vector_length: bool
+    keep_vector_length: bool (Optional)
         Whether to keep the length of the vectors unchanged. Only comes into effect if the
-        image is 3 dimensional and inverse_deformation is set.
+        image is 3 dimensional and inverse_deformation is set. (Default: True)
+    fix_boundary_zeros: bool (Optional)
+        Whether to replace zeros at boundaries of deformation field by values
+        of clostest non-zero voxel (Default: True)
+    
     Returns
     ------
     outdata: ndarray
@@ -89,7 +94,12 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
     df_data, df_affine = deformation
     if len(df_data.shape) > 4:
         df_data = df_data.squeeze()
-
+    
+    # boundaries of deformation fields sometimes contain voxels with 0,0,0
+    # --> replace by Infs
+    if fix_boundary_zeros:
+        df_data = _fix_boundary_zeros(df_data)
+    
     # If the resolution is to be changed
     if target_dimensions is None:
         target_dimensions = df_data.shape[:3]
@@ -110,7 +120,7 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
         f = partial(scipy.ndimage.map_coordinates,
                     coordinates=t,
                     output=np.float32, order=1,
-                    mode='constant', cval=np.nan)
+                    mode='constant', cval=np.inf)
         voxvals = np.array([f(df_data[..., i]) for i in range(3)])
         # Figure out the voxel coordinates in original space
         iM = np.linalg.inv(im_affine)
@@ -166,10 +176,39 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
             im_data = im_data_rotated
 
     # Interpolate to the target space
+    coords[np.isnan(coords)] = np.inf # inf is for sure outside volume, behavior for nan is unclear
     outdata = _interpolate(im_data, coords, intorder, target_dimensions, cpus)
     del im_data
     gc.collect()
     return outdata
+
+
+def _fix_boundary_zeros(df_data):
+    """
+    replace zeros at boundaries of deformation fields by Inf
+
+    Parameters
+    ----------
+    df_data : array
+        deformation field image
+
+    Returns
+    -------
+    df_data : array
+        updated deformation field image
+
+    """
+    assert df_data.ndim == 4
+    assert df_data.shape[3] == 3
+    
+    mask_imgregion = ~np.all(df_data == 0, axis=3)
+    mask_imgregion = scipy.ndimage.binary_fill_holes(mask_imgregion)    
+    if not np.all(mask_imgregion):
+        df_data[~mask_imgregion,:] = np.inf
+    del mask_imgregion
+    gc.collect()
+    
+    return df_data
 
 
 def volumetric_affine(image, affine, target_space_affine,
@@ -249,7 +288,7 @@ def _interpolate(im_data, coords, intorder, outdim, cpus=1):
 
 
 def nifti_transform(image, warp, ref, out=None, mask=None, order=1, inverse_warp=None,
-                    binary=False):
+                    binary=False, fix_boundary_zeros=True):
     ''' Transforms a nifti file to the reference space usign the defined warp
 
     Parameters
@@ -275,6 +314,13 @@ def nifti_transform(image, warp, ref, out=None, mask=None, order=1, inverse_warp
         Name of nifti file with inverse the transformation. Used to rotate vectors to the
         target space in the case of non-liner transformations. If the transformation is
         linear, the inverse matrix is used.
+    binary: bool (optional)
+        If True, thresholds the image at 0.5 and converts to np.uint8. (Default: False)
+    fix_boundary_zeros: bool (Optional)
+        Whether to replace zeros at boundaries of deformation field by values
+        of clostest non-zero voxel; relevant only for non-linear transforms
+        (Default: True)
+            
     Returns
     ------
     img: nibabel.Nifti1Pair
@@ -331,7 +377,8 @@ def nifti_transform(image, warp, ref, out=None, mask=None, order=1, inverse_warp
             target_space_affine=reference_nifti.affine,
             target_dimensions=reference_nifti.header['dim'][1:4],
             intorder=order,
-            inverse_deformation=inverse_warp)
+            inverse_deformation=inverse_warp,
+            fix_boundary_zeros=fix_boundary_zeros)
 
     if binary:
         image = (image >= .5).astype(np.uint8)
@@ -457,7 +504,7 @@ def warp_volume(image_fn, m2m_folder, out_name,
         Only the fields for the listed tissues are interpolated, rest is set to
         zero. Only applied to mesh inputs. Default: None (all tissues are kept)
     '''
-    from ..mesh_tools.mesh_io import read_msh
+    from simnibs.mesh_tools.mesh_io import read_msh
     names = get_names_from_folder_structure(m2m_folder)
 
     if transformation_direction not in ['subject2mni', 'mni2subject']:
@@ -585,7 +632,7 @@ def interpolate_to_volume(fn_mesh, reference, fn_out, create_masks=False,
         Only the fields for the listed tissues are interpolated, rest is set to
         zero. Default: None (all tissues are kept)
     '''
-    from ..mesh_tools.mesh_io import read_msh, ElementData
+    from simnibs.mesh_tools.mesh_io import read_msh, ElementData
     if os.path.isdir(reference):
         names = get_names_from_folder_structure(reference)
         reference = names['reference_conf']
@@ -1200,7 +1247,7 @@ def warp_coordinates(coordinates, m2m_folder,
     name: list
         Names of positions
     '''
-    from ..mesh_tools.mesh_io import read_msh
+    from simnibs.mesh_tools.mesh_io import read_msh
     names = get_names_from_folder_structure(m2m_folder)
     # Read CSV
     if isinstance(coordinates, str):
@@ -1735,7 +1782,7 @@ def middle_gm_interpolation(
     f_geo: str
         String with file name to geo file that accompanies the mesh
     """
-    from ..mesh_tools import mesh_io
+    from simnibs.mesh_tools import mesh_io
 
     m2m_folder = os.path.abspath(os.path.normpath(m2m_folder))
     subject_files = SubjectFiles(subpath=m2m_folder)
@@ -1948,7 +1995,7 @@ def subject_atlas(atlas_name, m2m_dir, hemi="both"):
     atlas: dict
         Dictionary where atlas['region'] = roi
     """
-    from ..mesh_tools.mesh_io import read_gifti_surface
+    from simnibs.mesh_tools.mesh_io import read_gifti_surface
 
     if atlas_name not in ["a2009s", "DK40", "HCP_MMP1"]:
         raise ValueError("Invalid atlas name")

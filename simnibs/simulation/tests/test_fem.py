@@ -9,10 +9,10 @@ import numpy as np
 import scipy.sparse.linalg as spalg
 import scipy.sparse as sparse
 
-from ... import SIMNIBSDIR
-from .. import fem
-from .. import analytical_solutions
-from ...mesh_tools import mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.simulation import fem
+from simnibs.simulation import analytical_solutions
+from simnibs.mesh_tools import mesh_io
 
 @pytest.fixture
 def sphere3_msh():

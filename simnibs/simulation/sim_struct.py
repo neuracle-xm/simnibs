@@ -38,18 +38,18 @@ import simnibs.utils.cond_utils
 from simnibs.utils.cond_utils import COND
 from simnibs.utils.mesh_element_properties import ElementTags
 
-from ..mesh_tools import mesh_io
-from ..utils import transformations
-from ..utils import simnibs_logger
-from ..utils import file_finder
-from ..utils.simnibs_logger import logger
-from ..utils.file_finder import SubjectFiles
-from ..utils.matlab_read import try_to_read_matlab_field, remove_None
-from ..utils.csv_reader import read_csv_positions, _get_eeg_positions
-from ..utils.transformations import project_points_on_surface
+from simnibs.mesh_tools import mesh_io
+from simnibs.utils import transformations
+from simnibs.utils import simnibs_logger
+from simnibs.utils import file_finder
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import SubjectFiles
+from simnibs.utils.matlab_read import try_to_read_matlab_field, remove_None
+from simnibs.utils.csv_reader import read_csv_positions, _get_eeg_positions
+from simnibs.utils.transformations import project_points_on_surface
 from . import fem
 from . import electrode_placement
-from .. import  __version__
+from simnibs import __version__
 
 class SESSION(object):
     """Class that defines a set of simnibs simulations
@@ -2622,7 +2622,7 @@ class TDCSLEADFIELD(LEADFIELD):
         roi_msh = w_elec.crop_mesh(roi_fill)
 
         # 'roi':  the GM and eye surfaces ([self.tissues + [2])
-        in_roi = np.in1d(roi_msh.elm.tag1, roi)
+        in_roi = np.isin(roi_msh.elm.tag1, roi)
 
         # th_indices': the volume in the 'roi_msh'
         th_indices = roi_msh.elm.elm_number[in_roi]

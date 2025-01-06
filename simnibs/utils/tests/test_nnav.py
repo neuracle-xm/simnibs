@@ -4,9 +4,9 @@ import numpy as np
 import tempfile
 import warnings
 
-from ... import SIMNIBSDIR
-from ...simulation.sim_struct import TMSLIST, POSITION
-from ..nnav import localite, softaxic, brainsight, ant
+from simnibs import SIMNIBSDIR
+from simnibs.simulation.sim_struct import TMSLIST, POSITION
+from simnibs.utils.nnav import localite, softaxic, brainsight, ant
 
 
 FIXTURE_DIR = os.path.join(

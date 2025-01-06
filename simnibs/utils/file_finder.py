@@ -24,7 +24,7 @@ import os
 import re
 import numpy as np
 import nibabel
-from .. import SIMNIBSDIR
+from simnibs import SIMNIBSDIR
 
 __all__ = [
     "templates",

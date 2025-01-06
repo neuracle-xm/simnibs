@@ -508,22 +508,22 @@ class TesFlexOptimization:
         )
         self._prepared = True
         
-    def _set_logger(self, fname_prefix='simnibs_simulation', summary=True):
+    def _set_logger(self, fname_prefix='simnibs_optimization', summary=True):
         """
         Set-up logger to write to a file
 
         Parameters
         ----------
         fname_prefix: str, optional
-            Prefix of log-file. Defaults to 'simnibs_simulation'.
+            Prefix of log-file. Defaults to 'simnibs_optimization'.
         summary: bool, optional
             Create summary file 'fields_summary.txt'. Default: True.
         """
         if not os.path.isdir(self.output_folder):
             os.makedirs(self.output_folder)
         log_fn = os.path.join(
-            self.output_folder,
-            fname_prefix + '_{0}.log'.format(self.time_str))
+            self.output_folder, f"{fname_prefix}_{self.time_str}.log"
+        )
         fh = logging.FileHandler(log_fn, mode='w')
         formatter = logging.Formatter(
             f'[ %(name)s {__version__} - %(asctime)s - %(process)d ]%(levelname)s: %(message)s')
@@ -536,7 +536,7 @@ class TesFlexOptimization:
             fn_summary = os.path.join(self.output_folder, 'summary.txt')
             fh_s = logging.FileHandler(fn_summary, mode='w')
             fh_s.setFormatter(logging.Formatter('%(message)s'))
-            fh_s.setLevel(26) # 25 is used by normal FEM for summary; using 26 here to not inlucde those summaries
+            fh_s.setLevel(26) # 25 is used by normal FEM for summary; using 26 here to not induced those summaries
             logger.addHandler(fh_s)
             self._log_handlers += [fh_s]
         simnibs_logger.register_excepthook(logger)
@@ -1530,7 +1530,6 @@ class TesFlexOptimization:
         lb = np.delete(lb, idx_alpha_remove)
         ub = np.delete(ub, idx_alpha_remove)
 
-        # TODO: think this works only for one channel_stim right now (HDTES), test with 2 channel stim and adapt (KW)
         # add bounds of geometry parameters of electrode (if any)
         for i_channel_stim in range(self.n_channel_stim):
             if self.electrode[i_channel_stim]._any_free_geometry:
@@ -1589,7 +1588,6 @@ class TesFlexOptimization:
                 )
                 i_para += i_para_increment
 
-        # TODO: same here I think it only works for one channel_stim (KW)
         # extract geometrical electrode parameters from optimal parameters and update electrode
         for i_channel_stim in range(self.n_channel_stim):
             if self.electrode[i_channel_stim]._any_free_geometry:

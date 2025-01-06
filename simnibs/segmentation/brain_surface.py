@@ -26,12 +26,12 @@ import time
 
 from . import _cat_c_utils
 from .marching_cube import marching_cube
-from ..mesh_tools import mesh_io
-from ..utils import file_finder
-from ..utils.simnibs_logger import logger
-from ..utils.spawn_process import spawn_process
-from ..utils.transformations import resample_vol, crop_vol, normalize
-from ..utils import mesh_element_properties
+from simnibs.mesh_tools import mesh_io
+from simnibs.utils import file_finder
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.spawn_process import spawn_process
+from simnibs.utils.transformations import resample_vol, crop_vol, normalize
+from simnibs.utils import mesh_element_properties
 
 
 # --------------- expansion from central to pial surface ------------------

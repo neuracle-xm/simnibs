@@ -11,9 +11,9 @@ import nibabel
 
 import simnibs.utils.cond_utils
 
-from ... import SIMNIBSDIR
-from .. import sim_struct
-from ...mesh_tools import mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.simulation import sim_struct
+from simnibs.mesh_tools import mesh_io
 
 @pytest.fixture(scope='module')
 def sphere3_fn():

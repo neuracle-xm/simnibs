@@ -5,8 +5,8 @@ import scipy.optimize
 import pytest
 import warnings
 
-from .. import tdcs_optimization
-from ...simulation.analytical_solutions import fibonacci_sphere
+from simnibs.optimization import tdcs_optimization
+from simnibs.simulation.analytical_solutions import fibonacci_sphere
 
 NUM_TOL = 1e-8
 

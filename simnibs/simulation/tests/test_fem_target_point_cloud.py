@@ -2,9 +2,9 @@ import os
 import pytest
 import simnibs
 import numpy as np
-from ...mesh_tools import mesh_io
-from ... import SIMNIBSDIR
-from ..onlinefem import FemTargetPointCloud
+from simnibs.mesh_tools import mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.simulation.onlinefem import FemTargetPointCloud
 
 
 class TestRegionOfInterest:

@@ -136,8 +136,11 @@ class OnlineFEM:
             raise TypeError("'mesh' parameter has to be either path to .msh file or SimNIBS mesh object.")
 
         # get subject specific filenames
-        self.ff_subject = SubjectFiles(fnamehead=self.mesh.fn)
-        self.fn_tensor_nifti = self.ff_subject.tensor_file
+        if self.mesh.fn:
+            ff_subject = SubjectFiles(fnamehead=self.mesh.fn)
+            self.fn_tensor_nifti = ff_subject.tensor_file
+        else:
+            self.fn_tensor_nifti = None
 
         # get Dirichlet node index where V=0 (close to center of gravity of mesh but not on a surface)
         if dirichlet_node is None:
@@ -1182,7 +1185,7 @@ class FemTargetPointCloud:
         if tags is None:
             th_indices = msh.elm.elm_number
         else:
-            th_indices = msh.elm.elm_number[np.in1d(msh.elm.tag1, tags)]
+            th_indices = msh.elm.elm_number[np.isin(msh.elm.tag1, tags)]
 
         th_with_points, bar = msh.find_tetrahedron_with_points(center, compute_baricentric=True)
         inside = np.isin(th_with_points, th_indices)
@@ -1201,7 +1204,7 @@ class FemTargetPointCloud:
         if np.any(~inside):
             if fill_nearest:  # fill == 'nearest'
                 if tags is not None:
-                    is_in = np.in1d(msh.elm.elm_number, th_indices)
+                    is_in = np.isin(msh.elm.elm_number, th_indices)
                     elm_in_volume = msh.elm.elm_number[is_in]
                     m_in_volume = msh.crop_mesh(elements=elm_in_volume)
 
@@ -1309,7 +1312,7 @@ class FemTargetPointCloud:
 
         # Get the point in the outside surface
         points_outside = np.unique(msh.elm.get_outside_faces())
-        outside_points_mask = np.in1d(msh.elm[msh.elm.tetrahedra],
+        outside_points_mask = np.isin(msh.elm[msh.elm.tetrahedra],
                                       points_outside).reshape(-1, 4)
 
         th_indices = msh.elm.tetrahedra

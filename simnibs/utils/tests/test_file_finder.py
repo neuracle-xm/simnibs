@@ -4,7 +4,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from .. import file_finder
+from simnibs.utils import file_finder
 
 
 class TestTemplates:

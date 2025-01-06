@@ -15,26 +15,17 @@ from simnibs import SIMNIBSDIR
 import samseg
 from . import simnibs_segmentation_utils
 from . import charm_utils
-from .. import __version__
-from .. import utils
-from ..utils.simnibs_logger import logger
-from ..utils import file_finder
-from ..utils import transformations
-from ..utils.transformations import crop_vol
-from ..utils.spawn_process import spawn_process
-from ..mesh_tools.meshing import create_mesh
-from ..mesh_tools.mesh_io import (
-    load_freesurfer_surfaces,
-    read_gifti_surface,
-    write_gifti_surface,
-    write_msh,
-    read_off,
-    write_off,
-    Msh,
-    ElementData,
-)
-from ..utils import cond_utils
-from ..utils import html_writer
+from simnibs import __version__
+from simnibs import utils
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils import file_finder
+from simnibs.utils import transformations
+from simnibs.utils.transformations import crop_vol
+from simnibs.utils.spawn_process import spawn_process
+from simnibs.mesh_tools.meshing import create_mesh
+from simnibs.mesh_tools.mesh_io import load_freesurfer_surfaces, read_gifti_surface, write_gifti_surface, write_msh, read_off, write_off, Msh, ElementData
+from simnibs.utils import cond_utils
+from simnibs.utils import html_writer
 from simnibs.segmentation import brain_surface
 
 def run(
@@ -633,6 +624,7 @@ def run(
             out=sub_files.final_labels_MNI,
             out_original=sub_files.final_labels,
             method="assign",
+            order=0,
             reference_original=sub_files.reference_volume,
         )
 

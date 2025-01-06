@@ -22,7 +22,7 @@ from simnibs.simulation.tms_coil.tms_coil_element import (
 from simnibs.simulation.tms_coil.tms_coil_model import TmsCoilModel
 from simnibs.simulation.tms_coil.tms_stimulator import TmsStimulator
 
-from .... import SIMNIBSDIR
+from simnibs import SIMNIBSDIR
 
 
 @pytest.fixture(scope="module")

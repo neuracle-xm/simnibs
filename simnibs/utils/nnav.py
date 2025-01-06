@@ -15,8 +15,8 @@ import json
 from datetime import datetime
 import xml.etree.ElementTree as ET
 
-from ..simulation.sim_struct import TMSLIST, POSITION
-from .. import __version__ as simnibs_v
+from simnibs.simulation.sim_struct import TMSLIST, POSITION
+from simnibs import __version__ as simnibs_v
 from .file_finder import SubjectFiles
 
 

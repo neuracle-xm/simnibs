@@ -30,8 +30,8 @@ import numpy
 
 from simnibs.simulation.tms_coil.tms_coil import TmsCoil
 
-from ..mesh_tools import surface, mesh_io
-from ..utils.csv_reader import read_csv_positions
+from simnibs.mesh_tools import surface, mesh_io
+from simnibs.utils.csv_reader import read_csv_positions
 
 global YELLOW
 global BLUE

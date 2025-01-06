@@ -3,9 +3,9 @@ import numpy as np
 import pytest
 import scipy.spatial
 
-from ... import SIMNIBSDIR
-from .. import tms_optimization
-from ...mesh_tools import mesh_io
+from simnibs import SIMNIBSDIR
+from simnibs.optimization import tms_optimization
+from simnibs.mesh_tools import mesh_io
 
 
 @pytest.fixture

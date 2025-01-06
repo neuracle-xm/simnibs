@@ -15,11 +15,11 @@ if sys.version_info >= (3, ):
 else:
     base64decode = base64.decodestring
 
-from ..mesh_tools import mesh_io
+from simnibs.mesh_tools import mesh_io
 from . import _marching_cubes_lewiner_luts as mcluts
 from . import _marching_cubes_lewiner_cy as _marching_cubes_lewiner_cy
-from ..utils.spawn_process import spawn_process
-from ..utils import file_finder
+from simnibs.utils.spawn_process import spawn_process
+from simnibs.utils import file_finder
 
 
 def marching_cube(volume, affine=None, level=None, step_size=1, only_largest_component=False, n_uniform=0):
