@@ -27,7 +27,8 @@ import stat
 import re
 import subprocess
 import tempfile
-
+import json
+from pathlib import Path
 from simnibs import SIMNIBSDIR
 from simnibs import __version__
 from simnibs import file_finder
@@ -115,6 +116,20 @@ def create_scripts(dest_dir):
         os.symlink(
             sys.executable,
             os.path.join(dest_dir, 'simnibs_python'))
+        
+    # simnibs_jupyter link
+    if sys.platform == 'win32':
+        executables_dir = os.path.dirname(sys.executable)
+        python_interpreter = f'"{os.path.join(executables_dir, "python.exe")}"'
+        with open(os.path.join(dest_dir, 'simnibs_jupyter.cmd'), 'w') as f:
+            f.write("@echo off\n")
+            f.write(f'"{python_interpreter}" -m jupyter lab')
+    else:
+        if os.path.lexists(os.path.join(dest_dir, 'simnibs_jupyter')):
+            os.remove(os.path.join(dest_dir, 'simnibs_jupyter'))
+        os.symlink(
+            os.path.join(os.path.dirname(sys.executable), 'jupyter-lab'),
+            os.path.join(dest_dir, 'simnibs_jupyter'))
 
 
 def _write_unix_sh(python_cli, bash_cli, commands='"$@"'):
@@ -573,18 +588,22 @@ def setup_file_association(force=False, silent=False):
             winreg.CreateKey(reg, rf'SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command')
             winreg.SetValue(reg, rf'SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command', winreg.REG_SZ, f'"{gmsh_bin}" "%1"')
             for ext in extensions:
-                try:
-                    value = winreg.QueryValue(reg, ext)
-                except FileNotFoundError:
+                if force:
                     register = True
                 else:
-                    if value:
-                        register = _get_input(
-                            f'Found other association for "{ext}" files, overwrite it?',
-                            silent
-                        )
-                    else:
+                    try:
+                        value = winreg.QueryValue(reg, ext)
+                    except FileNotFoundError:
                         register = True
+                    else:
+                        if value:
+                            register = _get_input(
+                                f'Found other association for "{ext}" files, overwrite it?',
+                                silent
+                            )
+                        else:
+                            register = True
+                            
                 if register:
                     winreg.CreateKey(reg, ext)
                     winreg.SetValue(reg, ext, winreg.REG_SZ, fr'SimNIBS.Gmsh.v{MINOR_VERSION}')
@@ -885,6 +904,36 @@ if GUI:
         else:
             raise Exception('uninstall cancelled by user')
 
+def _fix_kernel_config(jupyter_core_paths: list[str], install_dir: str) -> None:
+    """ This function takes in a list of core jupyter paths,
+    finds the one that points to the simnibs install locations
+    (if it exists) and fixes the python interpreter path in the
+    kernel config json.
+    """
+
+    simnibs_env_path = list(filter(lambda x: 'simnibs_env' in x, jupyter_core_paths))
+    # If the path doesn't exist just stop
+    if not simnibs_env_path:
+        return
+
+    config_json = Path(simnibs_env_path[0]) / 'kernels' / 'python3' / 'kernel.json'
+
+    # Double-check that this thing exists
+    if config_json.exists():
+        with open(config_json) as f:
+            config = json.load(f)
+
+        # This is the field we need to set correctly
+        # It's basically just missing the install_dir
+        config['argv'][0] = os.path.join(install_dir, config['argv'][0])
+        # and set an informative name
+        config['display_name'] = "SimNIBS python"
+
+        # Dump it back
+        with open(config_json, 'w') as f:
+            json.dump(config, f)
+
+
 def install(install_dir,
             force,
             silent,
@@ -920,6 +969,15 @@ def install(install_dir,
         subprocess.run([pythonw, '-m', 'pytest'] + test_call)
     shutil.rmtree(os.path.join(install_dir, '.pytest_cache'), True)
     create_scripts(scripts_dir)
+
+    # Check for jupyter kernel specs json file and fix it (if it exists)
+    # Try importing the jupyter paths, if it fails just skip the fixing
+    try:
+        from jupyter_core.paths import jupyter_path
+        _fix_kernel_config(jupyter_path(), install_dir)
+    except ImportError:
+        print('Jupyter not found. Will skip kernel configuration')
+
     if add_to_path:
         try:
             added_to_path = path_setup(scripts_dir, force, silent)

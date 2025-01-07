@@ -136,14 +136,15 @@ It builds upon 3rd party open-source and free code and binaries from :ref:`sever
  News
 ======
 
-  * **Version 4.5.0** introduces exciting new optimization methods for :ref:`TMS <tms_flex_opt>`  and :ref:`TES <tes_flex_opt>`. 
+**Version 4.5.0** includes:
+
+* Exciting new optimization methods for :ref:`TMS <tms_flex_opt>`  and :ref:`TES <tes_flex_opt>`.
 	* :ref:`Optimization of TMS coil positions also for bent and flexible coils <tms_flex_opt>`, thereby systematically avoiding intersections of the coil with the head.
 	* :ref:`Leadfield-free optimization of TES montages <tes_flex_opt>`, including those with rectangular electrodes, center-surround montages, temporal interference stimulation and electrode arrays for tumor treating field therapies.
-  * **Version 4.5.0** contains several new TMS coil models and new :ref:`datasets <dataset>`.
-  * **Version 4.5.0** introduces a new format for TMS coil models (.tcd) that supports flexible and multi-element coils and simplifies the creation of custom coil models (example scripts are provided).
-  * **Version 4.5.0** comes with a tutorial for calculating :ref:`EEG leadfields <eeg_leadfields>` with SimNIBS for use in `FieldTrip <https://www.fieldtriptoolbox.org/>`_ and `MNE-Python <https://mne.tools/stable/index.html>`_ .
-  * Version 4.1.0 improved the mesh quality and added the option to use FreeSurfer results for more accurate representation of smaller sulci in the head meshes.
-  * Version 4.0.0 introduced our new head modeling approach :ref:`charm <head_modeling_tutorial>` that is more accurate for non-brain tissues and includes additional tissue types such as large blood vessels and spongy bone, compared to our previous pipelines.
+* Several new TMS coil models and new :ref:`datasets <dataset>`.
+* New format for TMS coil models (.tcd) that supports flexible and multi-element coils and simplifies the creation of custom coil models (example scripts are provided).
+* Tutorial for calculating :ref:`EEG leadfields <eeg_leadfields>` with SimNIBS for use in `FieldTrip <https://www.fieldtriptoolbox.org/>`_ and `MNE-Python <https://mne.tools/stable/index.html>`_ .
+* JupyterLab to make SimNIBS scripting in Python more straightforward.
 
 Please see details in the :ref:`changelog <changelog>`.
 

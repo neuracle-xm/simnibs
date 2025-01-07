@@ -17,26 +17,13 @@ Running Scripts
 Python
 ''''''
 
-Run SimNIBS *Python* scripts using the :ref:`simnibs_python <simnibs_python_cli>` command so that your scripts run in the correct *Python* interpreter.
+Typing 
+  .. code-block:: bash
 
-Spyder IDE Setup (optional)
-............................
+   simnibs_jupyter
 
-You can install the `Spyder IDE <https://www.spyder-ide.org>`_ editor by running
-
-.. code-block::
-
-  simnibs_python -m pip install spyder==5.3.1
-
-\
-
-To start Spyder, run
-
-.. code-block::
-
-  simnibs_python -m spyder.app.start
-
-\
+\  
+in a terminal window will start up JupyterLab with the correct *Python* interpreter. Alternatively, you can use :ref:`simnibs_python <simnibs_python_cli>` to run SimNIBS *Python* scripts. In case you have Spyder installed, you can also :ref:`set it up to use the SimNIBS installation <setup_spyder>`.
 
 MATLAB
 ''''''
