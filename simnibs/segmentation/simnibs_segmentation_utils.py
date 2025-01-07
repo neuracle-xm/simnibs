@@ -41,7 +41,6 @@ def getModelSpecificationsWholeHead(atlasDir, userModelSpecifications={}):
     }
 
     modelSpecifications.update(userModelSpecifications)
-    breakpoint()
     return modelSpecifications
 
 
