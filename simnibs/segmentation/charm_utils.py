@@ -178,8 +178,8 @@ def _estimate_parameters(
     bg_mask_th = segment_settings["background_mask_threshold"]
     stiffness = segment_settings["mesh_stiffness"]
     covariances = segment_settings["diagonal_covariances"]
-    # shared_gmm_parameters = gmm_parameters
-    shared_gmm_parameters = samseg.io.kvlReadSharedGMMParameters(gmm_parameters)
+    shared_gmm_parameters = gmm_parameters
+    # shared_gmm_parameters = samseg.io.kvlReadSharedGMMParameters(gmm_parameters)
 
     if user_optimization_options is None:
         user_optimization_options = {
@@ -213,7 +213,8 @@ def _estimate_parameters(
             "brainMaskingThreshold": bg_mask_th,
             "K": stiffness,
             "useDiagonalCovarianceMatrices": covariances,
-            "sharedGMMParameters": shared_gmm_parameters,
+            # "sharedGMMParameters": shared_gmm_parameters,
+            "sharedGMMParameters": samseg.io.kvlReadSharedGMMParameters(gmm_parameters),
         }
 
     samseg_kwargs = dict(
@@ -221,7 +222,6 @@ def _estimate_parameters(
         atlasDir=path_to_atlas_folder,
         savePath=path_to_segment_folder,
         transformedTemplateFileName=template_coregistered_name,
-        sharedGMMParameters=gmm_parameters,
         userModelSpecifications=user_model_specifications,
         userOptimizationOptions=user_optimization_options,
         imageToImageTransformMatrix=None,

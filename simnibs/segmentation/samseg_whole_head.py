@@ -2,9 +2,16 @@ import numpy as np
 import os
 import pickle
 from samseg.Samseg import Samseg
-from samseg.SamsegUtility import logTransform, writeImage
-from .simnibs_segmentation_utils import readCroppedImages, maskOutBackground
+from samseg.SamsegUtility import logTransform, writeImage, getOptimizationOptions
+from simnibs.segmentation.simnibs_segmentation_utils import readCroppedImages, maskOutBackground, getModelSpecificationsWholeHead
+from samseg.Affine import Affine
+from samseg.ProbabilisticAtlas import ProbabilisticAtlas
+from samseg.utilities import Specification
 import samseg.gems as gems
+import logging
+from samseg.figures import initVisualizer
+
+
 eps = np.finfo(float).eps
 
 class SamsegWholeHead(Samseg):
@@ -14,7 +21,6 @@ class SamsegWholeHead(Samseg):
         atlasDir,
         savePath,
         transformedTemplateFileName,
-        sharedGMMParameters,
         userModelSpecifications={},
         userOptimizationOptions={},
         imageToImageTransformMatrix=None,
@@ -35,30 +41,107 @@ class SamsegWholeHead(Samseg):
         dissectionPhoto=None,
         nthreads=1,
         ):
-            super().__init__(
-            imageFileNames,
-            atlasDir,
-            savePath,
-            sharedGMMParameters,
-            userModelSpecifications,
-            userOptimizationOptions,
-            imageToImageTransformMatrix,
-            visualizer,
-            saveHistory,
-            savePosteriors,
-            saveWarp,
-            saveMesh,
-            threshold,
-            thresholdSearchString,
-            targetIntensity,
-            targetSearchStrings,
-            modeNames,
-            pallidumAsWM,
-            saveModelProbabilities,
-            gmmFileName,
-            ignoreUnknownPriors,
-            dissectionPhoto,
-            nthreads)
+            # super().__init__(
+            # imageFileNames,
+            # atlasDir,
+            # savePath,
+            # userModelSpecifications,
+            # userOptimizationOptions,
+            # imageToImageTransformMatrix,
+            # visualizer,
+            # saveHistory,
+            # savePosteriors,
+            # saveWarp,
+            # saveMesh,
+            # threshold,
+            # thresholdSearchString,
+            # targetIntensity,
+            # targetSearchStrings,
+            # modeNames,
+            # pallidumAsWM,
+            # saveModelProbabilities,
+            # gmmFileName,
+            # ignoreUnknownPriors,
+            # dissectionPhoto,
+            # nthreads)
+
+            # def __init__(self, imageFileNames, atlasDir, savePath, userModelSpecifications=None, userOptimizationOptions=None,
+            #      transformedTemplateFileName=None, visualizer=None, saveHistory=None, savePosteriors=None,
+            #      saveWarp=None, saveMesh=None, threshold=None, thresholdSearchString=None,
+            #      targetIntensity=None, targetSearchStrings=None):
+
+            # Store input parameters as class variables
+            self.imageFileNames = imageFileNames
+            self.savePath = savePath
+            self.atlasDir = atlasDir
+            self.threshold = threshold
+            self.thresholdSearchString = thresholdSearchString
+            self.targetIntensity = targetIntensity
+            self.targetSearchStrings = targetSearchStrings
+
+            # Initialize some objects
+            self.affine = Affine( imageFileName=self.imageFileNames[0],
+                                meshCollectionFileName=os.path.join(self.atlasDir, 'atlasForAffineRegistration.txt.gz'),
+                                templateFileName=os.path.join(self.atlasDir, 'template.nii' ) )
+            self.probabilisticAtlas = ProbabilisticAtlas()
+
+            # Get full model specifications and optimization options (using default unless overridden by user)
+            self.modelSpecifications = getModelSpecificationsWholeHead(atlasDir, userModelSpecifications)
+            self.optimizationOptions = getOptimizationOptions(atlasDir, userOptimizationOptions)
+
+            # Get transformed template, if any
+            self.transformedTemplateFileName = transformedTemplateFileName
+            
+            logger = logging.getLogger(__name__)
+            # Print specifications
+            logger.info('##----------------------------------------------')
+            logger.info('              Samsegment Options')
+            logger.info('##----------------------------------------------')
+            logger.info('output directory:' + savePath)
+            logger.info('input images: {}'.format(imageFileNames))
+            if self.transformedTemplateFileName is not None:
+                logger.info('transformed template:' + self.transformedTemplateFileName)
+            logger.info('modelSpecifications:' +  str(self.modelSpecifications))
+            logger.info('optimizationOptions:' + str(self.optimizationOptions))
+
+            # Convert modelSpecifications from dictionary into something more convenient to access
+            self.modelSpecifications = Specification(self.modelSpecifications)
+
+            # Setup a null visualizer if necessary
+            if visualizer is None:
+                self.visualizer = initVisualizer(False, False)
+            else:
+                self.visualizer = visualizer
+
+            self.saveHistory = saveHistory
+            self.savePosteriors = savePosteriors
+            self.saveWarp = saveWarp
+            self.saveMesh = saveMesh
+
+            # Make sure we can write in the target/results directory
+            os.makedirs(savePath, exist_ok=True)
+
+            # Class variables that will be used later
+            self.biasField = None
+            self.gmm = None
+            self.imageBuffers = None
+            self.mask = None
+            self.classFractions = None
+            self.cropping = None
+            self.transform = None
+            self.voxelSpacing = None
+            self.optimizationSummary = None
+            self.optimizationHistory = None
+            self.deformation = None
+            self.deformationAtlasFileName = None
+
+            # Samseg class variables not used in SimNIBS
+            self.modeNames = modeNames
+            self.saveModelProbabilities = saveModelProbabilities
+            self.ignoreUnknownPriors = ignoreUnknownPriors
+            self.dissectionPhoto = dissectionPhoto
+            self.nthreads = nthreads
+
             
             self.transformedTemplateFileName=transformedTemplateFileName
         

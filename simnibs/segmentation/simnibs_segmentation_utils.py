@@ -2,13 +2,48 @@ import samseg
 from samseg import gems
 from samseg.ProbabilisticAtlas import ProbabilisticAtlas
 from samseg.SamsegUtility import undoLogTransformAndBiasField, writeImage, logTransform
+from samseg.io import kvlReadCompressionLookupTable, kvlReadSharedGMMParameters
 # 
+import os
 from samseg.GMM import GMM
 import numpy as np
 import nibabel as nib
 import gc
 from simnibs.segmentation._cat_c_utils import cat_vbdist
 from samseg.utilities import requireNumpyArray
+
+def getModelSpecificationsWholeHead(atlasDir, userModelSpecifications={}):
+
+    # Create default model specifications as a dictionary
+    if 'FreeSurferLabels' not in userModelSpecifications.keys():
+        FreeSurferLabels, names, colors = kvlReadCompressionLookupTable(os.path.join(atlasDir, 'compressionLookupTable.txt'))
+    else:
+        FreeSurferLabels = None
+        names = None
+        colors = None
+    if 'sharedGMMParameters' not in userModelSpecifications.keys():
+        sharedGMMParameters = kvlReadSharedGMMParameters(os.path.join(atlasDir, 'sharedGMMParameters.txt'))
+    else:
+        sharedGMMParameters = None
+
+    modelSpecifications = {
+        'FreeSurferLabels': FreeSurferLabels,
+        'atlasFileName': os.path.join(atlasDir, 'atlas_level2.txt.gz'),
+        'names': names,
+        'colors': colors,
+        'sharedGMMParameters': sharedGMMParameters,
+        'useDiagonalCovarianceMatrices': True,
+        'brainMaskingSmoothingSigma': 3.0,  # sqrt of the variance of a Gaussian blurring kernel
+        'brainMaskingThreshold': 0.01,
+        'K': 0.1,  # stiffness of the mesh
+        'biasFieldSmoothingKernelSize': 50,  # distance in mm of sinc function center to first zero crossing
+        'whiteMatterAndCortexSmoothingSigma': 0 # Samseg requires this attribute
+    }
+
+    modelSpecifications.update(userModelSpecifications)
+    breakpoint()
+    return modelSpecifications
+
 
 def readCroppedImages(imageFileNames, transformedTemplateFileName):
     # Read the image data from disk. At the same time, construct a 3-D affine transformation (i.e.,
