@@ -8,9 +8,9 @@ from scipy.io import loadmat
 from simnibs import SIMNIBSDIR
 from simnibs.segmentation import charm_utils
 from simnibs.segmentation.charm_main import _check_q_and_s_form
-from simnibs.segmentation.simnibs_samseg import initVisualizer
-from simnibs.segmentation.simnibs_samseg.io import kvlReadSharedGMMParameters
-from simnibs.segmentation.simnibs_samseg.simnibs_segmentation_utils import writeBiasCorrectedImagesAndSegmentation
+from samseg import initVisualizer
+from samseg.io import kvlReadSharedGMMParameters
+from simnibs.segmentation.simnibs_segmentation_utils import writeBiasCorrectedImagesAndSegmentation
 
 @pytest.fixture(scope='module')
 def testernie_nii():
