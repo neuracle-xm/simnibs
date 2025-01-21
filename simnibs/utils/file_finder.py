@@ -430,7 +430,6 @@ class SubjectFiles:
         self.tensor_file = os.path.join(self.subpath, "DTI_coregT1_tensor.nii.gz")
 
         # transformations
-
         self.mni_transf_folder = os.path.join(self.subpath, "toMNI")
 
         self.mni2conf_nonl = os.path.join(
@@ -458,6 +457,8 @@ class SubjectFiles:
         # segmentation
 
         self.segmentation_folder = os.path.join(self.subpath, "segmentation")
+
+        self.coregistration_matrices = os.path.join(self.segmentation_folder, "coregistrationMatrices.mat")
 
         self.T1_denoised = os.path.join(self.segmentation_folder, "T1_denoised.nii.gz")
         self.T2_reg_denoised = os.path.join(
