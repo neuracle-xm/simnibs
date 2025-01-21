@@ -3,7 +3,7 @@ from samseg import gems
 from samseg.ProbabilisticAtlas import ProbabilisticAtlas
 from samseg.SamsegUtility import undoLogTransformAndBiasField, writeImage, logTransform
 from samseg.io import kvlReadCompressionLookupTable, kvlReadSharedGMMParameters
-# 
+#
 import os
 from samseg.GMM import GMM
 import numpy as np
@@ -146,9 +146,9 @@ def writeBiasCorrectedImagesAndSegmentation(output_names_bias,
                                             output_name_segmentation,
                                             parameters_and_inputs,
                                             tissue_settings,
-                                            csf_factor,
-                                            cat_structure_options=None,
-                                            cat_images=None):
+                                            csf_factor
+                                            ):
+
 
     # We need an init of the probabilistic segmentation class
     # to call instance methods
@@ -198,31 +198,17 @@ def writeBiasCorrectedImagesAndSegmentation(output_names_bias,
                                 dtype=np.uint16)
     segmentation_tissues = tissue_settings['segmentation_tissues']
     csf_tissues = segmentation_tissues['CSF']
-    if cat_structure_options is not None:
-        segmentation, cat_norm_scan_masks = _calculateSegmentationLoop(
-                                            imageBuffers - biasFields,
-                                            mask, fractionsTable, mesh,
-                                            numberOfGaussiansPerClass,
-                                            means, variances, mixtureWeights,
-                                            FreeSurferLabels, bg_label,
-                                            csf_tissues, csf_factor,
-                                            cat_opts=cat_structure_options)
-    else:
-        segmentation = _calculateSegmentationLoop(
-                        imageBuffers - biasFields,
-                        mask, fractionsTable, mesh,
-                        numberOfGaussiansPerClass,
-                        means, variances, mixtureWeights,
-                        FreeSurferLabels, bg_label,
-                        csf_tissues, csf_factor)
+
+    segmentation = _calculateSegmentationLoop(
+                    imageBuffers - biasFields,
+                    mask, fractionsTable, mesh,
+                    numberOfGaussiansPerClass,
+                    means, variances, mixtureWeights,
+                    FreeSurferLabels, bg_label,
+                    csf_tissues, csf_factor)
 
     writeImage(output_name_segmentation,
                segmentation, cropping, exampleImage)
-
-    if cat_structure_options is not None and cat_images is not None:
-        for inds, name in enumerate(cat_images):
-            writeImage(name, cat_norm_scan_masks[inds], cropping, exampleImage)
-
 
 def segmentUpsampled(input_bias_corrected, tissue_settings,
                      parameters_and_inputs, transformedTemplateFileName,
