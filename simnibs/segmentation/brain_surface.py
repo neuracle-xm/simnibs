@@ -1,6 +1,9 @@
+import functools
 import itertools
-import nibabel as nib
+from multiprocessing import Pool
 import numpy as np
+import nibabel as nib
+import nibabel.processing
 import os
 import scipy.sparse
 from scipy.spatial import cKDTree, ConvexHull
@@ -13,16 +16,9 @@ from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import normalize
 
-import functools
-from multiprocessing import Pool
-
-import nibabel.processing
-import torch
-
 from brainsynth.dataset import GenericDataset
-from brainnet.utilities import apply_affine, recursively_apply_function
-from brainnet.prediction.brainnet_predict_v1 import PredictionStep
-from brainnet.resources import PretrainedModels
+from brainnet.prediction import PretrainedModels
+from brainnet.prediction.brainnet_predict import PredictionStep
 
 from cortech import Surface, Hemisphere
 
@@ -37,20 +33,11 @@ class SimNIBSDataset(GenericDataset):
         images = [getattr(m2m, image) for m2m in m2m_dirs]
         mni_transform = [m2m.coregistration_matrices for m2m in m2m_dirs]
 
-        # self.template_mri_to_vox = torch.linalg.inv(torch.tensor(nib.load(
-        #     Path(file_finder.templates.charm_atlas_path)
-        #     / "charm_atlas_mni"
-        #     / "template.nii"
-        # ).affine.astype(np.float32)))
-
         super().__init__(images, mni_transform, "mni2sub", "mni152", hemi)
         self.m2m_dirs = m2m_dirs
 
     def _load_mni_transform(self, index):
-        # mni_transform is mni voxel to subject voxel space
-        # return torch.tensor(
-        #     nib.load(self.mni_transform[index]).affine.astype(np.float32)
-        # ) @ self._mni_preprocess(self.template_mri_to_vox)
+        # worldToWorldTransformMatrix is mni to subject space
         return scipy.io.loadmat(self.mni_transform[index])["worldToWorldTransformMatrix"]
 
     def preprocess_image(self, img):
@@ -78,12 +65,6 @@ def cortical_surface_estimation(
     -------
 
     """
-    # out_order = 6
-
-    device = torch.device(device)
-
-    # Dataset
-    # ds = GenericDataset(images=["image0.nii.gz", "image1.nii.gz"], mni_transform=["mnitrans0.txt", "mnitrans1.txt"])
     dataset = SimNIBSDataset(m2m_dirs)
 
     name = model_name
@@ -96,15 +77,8 @@ def cortical_surface_estimation(
 
     predictions = []
     for batch in dataset:
-        y_pred, vox_to_mri = predict_step(None, batch)
+        y_pred, _ = predict_step(None, batch)
         y_pred = y_pred["surface"]
-
-        # convert from voxel to MRI space
-        for func in [
-            functools.partial(apply_affine, vox_to_mri),
-            functools.partial(torch.squeeze, dim=0),
-        ]:
-            y_pred = recursively_apply_function(y_pred, func)
 
         hemispheres = {}
         for hemi, surfaces in y_pred.items():
