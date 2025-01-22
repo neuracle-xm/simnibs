@@ -6,10 +6,7 @@
 
 from scipy import ndimage as ndi
 import numpy as np
-import cython
-import time
 
-import nibabel
 from multiprocessing.pool import ThreadPool
 import multiprocessing
 
@@ -35,7 +32,7 @@ def _calc_thickness(label_img, parallel=True):
                 thickness += _thickness_3d_binary_image(
                     (label_img == t).astype(np.uint8)
                     )
-            
+
     # If for some reason a voxel had unasigned thickness
     thickness[np.isinf(thickness)] = 1
     return thickness
@@ -67,12 +64,12 @@ def _thickness_3d_binary_image_par(image):
     pool = ThreadPool(multiprocessing.cpu_count())
     #Preallocate list for threads, just to make code cleaner
     threads = [None for i in range(3)]
-    
+
     thickness = np.zeros_like(image, dtype=np.float32)
     thickness[image > 0] = np.inf
     # Calculate thickness per-slice along 3 different cuts
     # and take the smallest one
-    
+
     for i in range(3):
         #Initialize list of threads for each slice (may not all be used)
         threads[i]=[None for j in range(image.shape[i])]
@@ -100,7 +97,7 @@ def _thickness_slice(np.ndarray[np.uint8_t, ndim=2] slice_):
 
     if not np.any(slice_):
         return np.zeros_like(slice_, dtype=np.float32)
-    
+
     ma, distances = medial_axis(
         slice_, return_distance=True
     )
