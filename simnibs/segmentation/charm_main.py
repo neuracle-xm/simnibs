@@ -2,19 +2,15 @@ import logging
 import os
 import shutil
 import time
-import subprocess
 import nibabel as nib
 import glob
-import sys
-import tempfile
 import re
 import numpy as np
 
-from simnibs import SIMNIBSDIR
-
 import samseg
-from . import simnibs_segmentation_utils
-from . import charm_utils
+
+from simnibs import SIMNIBSDIR
+from simnibs.segmentation import charm_utils, simnibs_segmentation_utils
 from simnibs import __version__
 from simnibs import utils
 from simnibs.utils.simnibs_logger import logger
@@ -341,9 +337,9 @@ def run(
         os.makedirs(sub_files.surface_folder, exist_ok=True)
 
         if fs_dir:
-            fs_sub = file_finder.FreeSurferSubject(fs_dir)
-
             logger.info("Using surfaces from FreeSurfer")
+
+            fs_sub = file_finder.FreeSurferSubject(fs_dir)
             logger.info(f"FreeSurfer subject directory is {fs_sub.root.resolve()}")
 
             surfaces = {
@@ -370,8 +366,10 @@ def run(
 
             hemispheres = brain_surface.cortical_surface_estimation(
                 [sub_files],
-                model_name, model_contrast, model_resolution
-                device=device,
+                "topofit",
+                surface_settings["topofit_contrast"],
+                surface_settings["topofit_resolution"],
+                surface_settings["topofit_device"],
             )
             hemispheres = hemispheres[0]
 
@@ -380,7 +378,12 @@ def run(
             # - decouple white and pial surface
 
             logger.info("Estimating the central gray matter surface")
-            central = brain_surface.central_surface_estimation(hemispheres)
+
+            central = brain_surface.central_surface_estimation(
+                hemispheres,
+                surface_settings["central_surface_fraction"],
+                surface_settings["central_surface_method"],
+            )
 
             for h,s in hemispheres.items():
                 m = make_surface_mesh(s.white.vertices, s.white.faces + 1)
@@ -393,11 +396,12 @@ def run(
                 write_gifti_surface(m, sub_files.surfaces["central"][h])
 
             logger.info("Generating spherical registrations")
-            brain_surface.spherical_registration_cat_parallel(sub_files)
+            brain_surface.spherical_registration_cat_parallel(
+                sub_files, surface_settings["spherical_registration_process_pool"]
+            )
 
         if surface_settings["update_segmentation_from_surfaces"]:
             logger.info("Updating the segmentation using the cortical surfaces")
-
             charm_utils.update_labeling_from_cortical_surfaces(
                 sub_files,
                 surface_settings["protect"],

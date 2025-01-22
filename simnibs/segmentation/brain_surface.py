@@ -20,15 +20,11 @@ import nibabel.processing
 import torch
 
 from brainsynth.dataset import GenericDataset
-from brainnet.utilities import recursively_apply_function
+from brainnet.utilities import apply_affine, recursively_apply_function
 from brainnet.prediction.brainnet_predict_v1 import PredictionStep
 from brainnet.resources import PretrainedModels
 
 from cortech import Surface, Hemisphere
-
-
-def apply_affine(affine, data):
-    return data @ affine[..., :3, :3].mT + affine[..., :3, 3]
 
 
 class SimNIBSDataset(GenericDataset):
@@ -99,34 +95,26 @@ def cortical_surface_estimation(
     predict_step = PredictionStep(preprocessor, model, enable_amp=True)
 
     predictions = []
-    for i,batch in enumerate(dataset):
-        m2m = dataset.m2m_dirs[i]
+    for batch in dataset:
         y_pred, vox_to_mri = predict_step(None, batch)
         y_pred = y_pred["surface"]
 
-        # voxel to MRI
-
+        # convert from voxel to MRI space
         for func in [
             functools.partial(apply_affine, vox_to_mri),
             functools.partial(torch.squeeze, dim=0),
         ]:
             y_pred = recursively_apply_function(y_pred, func)
 
-        # convert to Surface class
         hemispheres = {}
         for hemi, surfaces in y_pred.items():
             for surface,vertices in surfaces.items():
-
-                surf = Surface(vertices, predict_step.topology[hemi].faces.cpu().numpy())
-                mesh = mesh_io.make_surface_mesh(surf.vertices, surf.faces + 1)
-                # mesh_io.write_gifti_surface(mesh, m2m.surfaces[surface][hemi])
-                mesh_io.write_gifti_surface(mesh, f"{hemi}.{surface}.gii")
-
-                y_pred[hemi][surface] = surf
-
+                y_pred[hemi][surface] = Surface(
+                    vertices,
+                    predict_step.topology[hemi].faces.cpu().numpy()
+                )
             hemispheres[hemi] = Hemisphere(y_pred[hemi]["white"], y_pred[hemi]["pial"])
         predictions.append(hemispheres)
-
     return predictions
 
 
@@ -135,36 +123,34 @@ def central_surface_estimation(hemispheres, fraction=0.5, method="equivolume"):
     for k,v in hemispheres.items():
         thickness = v.compute_thickness()
         curv = v.compute_average_curvature(curv_kwargs=dict(smooth_iter=10))
-        c = v.estimate_layers(thickness, curv, fraction, method)
+        c = v.estimate_layers(thickness, curv.H, fraction, method)
         central[k] = Surface(c, v.white.faces)
     return central
 
 
 # Spherical Registration
 
-def make_sphere_reg(hemispheres=None):
-    """This simply reads the spherical registration file from `deepsurfer` and
-    applies a correction to the right hemisphere."""
-    if hemispheres is None:
-        hemispheres = ("lh", "rh")
+# def make_sphere_reg(hemispheres=None):
+#     """This simply reads the spherical registration file from `deepsurfer` and
+#     applies a correction to the right hemisphere."""
+#     if hemispheres is None:
+#         hemispheres = ("lh", "rh")
 
-    filename_sphere_reg = ds.system.resource('template/sphere-reg.srf')
+#     filename_sphere_reg = ds.system.resource('template/sphere-reg.srf')
 
-    sphere_reg = {}
-    sphere_reg["lh"] = mesh_io.read_freesurfer_surface(filename_sphere_reg)
-    # the mesh is the same for both hemispheres, only flipped in x
-    sphere_reg["rh"] = mesh_io.read_freesurfer_surface(filename_sphere_reg)
-    sphere_reg["rh"].nodes.node_coord *= (-1, 1, 1)
+#     sphere_reg = {}
+#     sphere_reg["lh"] = mesh_io.read_freesurfer_surface(filename_sphere_reg)
+#     # the mesh is the same for both hemispheres, only flipped in x
+#     sphere_reg["rh"] = mesh_io.read_freesurfer_surface(filename_sphere_reg)
+#     sphere_reg["rh"].nodes.node_coord *= (-1, 1, 1)
 
-    return sphere_reg
+#     return sphere_reg
 
 
-def spherical_registration_cat_parallel(m2m):
+def spherical_registration_cat_parallel(m2m, n_processes: int = 2):
     """Run the spherical registration for left and right hemispheres in
     parallel.
     """
-    n_processes = 2
-
     fun = functools.partial(spherical_registration_cat, m2m)
     with Pool(processes=n_processes) as pool:
         pool.map(fun, m2m.hemispheres)
@@ -197,8 +183,6 @@ def spherical_registration_cat(m2m, hemi):
     spawn_process(cmd.split())
     time_elapsed = time.strftime('%H:%M:%S', time.gmtime(time.perf_counter() - s))
     print(f"Time for spherical registration ({hemi}) : {time_elapsed}")
-
-
 
 
 def smooth_vertices(vertices, faces, verts2consider=None,
