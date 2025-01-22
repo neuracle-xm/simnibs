@@ -3,14 +3,13 @@ from samseg import gems
 from samseg.ProbabilisticAtlas import ProbabilisticAtlas
 from samseg.SamsegUtility import undoLogTransformAndBiasField, writeImage, logTransform
 from samseg.io import kvlReadCompressionLookupTable, kvlReadSharedGMMParameters
-#
 import os
 from samseg.GMM import GMM
 import numpy as np
 import nibabel as nib
 import gc
-from simnibs.segmentation._cat_c_utils import cat_vbdist
 from samseg.utilities import requireNumpyArray
+
 
 def getModelSpecificationsWholeHead(atlasDir, userModelSpecifications={}):
 
@@ -409,7 +408,7 @@ def _calculateSegmentationLoop(biasCorrectedImageBuffers,
                                bg_label,
                                csf_tissues,
                                csf_factor,
-                               cat_opts=None):
+                               ):
 
     data = biasCorrectedImageBuffers[mask, :]
     channels = data.shape[1]
@@ -429,20 +428,6 @@ def _calculateSegmentationLoop(biasCorrectedImageBuffers,
 
     maxIndices[:] = FreeSurferLabels[bg_label]
     print('done')
-
-    # We need the normalizer if we are writing out the normalized images
-    # for CAT
-    if cat_opts is not None:
-        cat_tissue_dict = cat_opts['cat_tissues']
-        cat_mask_dict = cat_opts['cat_masks']
-        wm_probs = np.zeros(biasCorrectedImageBuffers.shape[0:3],
-                            dtype=np.float32)
-        gm_probs = np.zeros(biasCorrectedImageBuffers.shape[0:3],
-                            dtype=np.float32)
-        csf_probs = np.zeros(biasCorrectedImageBuffers.shape[0:3],
-                             dtype=np.float32)
-        normalizer = np.zeros(biasCorrectedImageBuffers.shape[0:3],
-                              dtype=np.float32)
 
     # The different structures can share their mixtures between classes
     # E.g., thalamus can be half wm and half gm. This needs to be accounted
@@ -488,15 +473,6 @@ def _calculateSegmentationLoop(biasCorrectedImageBuffers,
         else:
             nonNormalized[mask] = likelihoods * prior
 
-        if cat_opts is not None:
-            normalizer += nonNormalized
-            if structureNumber in cat_tissue_dict['WM']:
-                wm_probs += nonNormalized
-            elif structureNumber in cat_tissue_dict['GM']:
-                gm_probs += nonNormalized
-            elif structureNumber in cat_tissue_dict['CSF']:
-                csf_probs += nonNormalized
-
         if structureNumber == 0:
             # In the first iteration just save the non-normalized values
             # Indices are initialized to zero anyway
@@ -507,66 +483,4 @@ def _calculateSegmentationLoop(biasCorrectedImageBuffers,
             maxValues[higher_values] = nonNormalized[higher_values]
             maxIndices[higher_values] = FreeSurferLabels[structureNumber]
 
-
-    if cat_opts is not None:
-        cat_scan_and_masks = _prep_scans_and_masks([wm_probs, gm_probs,
-                                                    csf_probs],
-                                                   normalizer,
-                                                   maxIndices,
-                                                   FreeSurferLabels,
-                                                   cat_mask_dict)
-
-    if cat_opts is not None:
-        return maxIndices, cat_scan_and_masks
-    else:
-        return maxIndices
-
-
-def _prep_scans_and_masks(tissue_prob_list, normalizer, maxInds,
-                          FreeSurferLabels, mask_dict):
-
-    # Create normalized image
-    eps = np.finfo(float).eps
-    normalized_scan = np.zeros_like(normalizer)
-    normalized_scan += tissue_prob_list[0]/(normalizer + eps)
-    normalized_scan += (2.0*tissue_prob_list[1])/(3.0*(normalizer + eps))
-    normalized_scan += tissue_prob_list[2]/(3.0*(normalizer + eps))
-
-    normalized_scan = 3.0*normalized_scan
-    # Create cerebrum mask
-    mask_cereb = np.zeros_like(normalizer)
-    for left, right in zip(mask_dict['Left_Cerebrum'], mask_dict['Right_Cerebrum']):
-        mask_cereb += 1*(maxInds == FreeSurferLabels[left])
-        mask_cereb += 2*(maxInds == FreeSurferLabels[right])
-
-    for left, right in zip(mask_dict['Left_Cerebellum'], mask_dict['Right_Cerebellum']):
-        mask_cereb += 3*(maxInds == FreeSurferLabels[left])
-        mask_cereb += 4*(maxInds == FreeSurferLabels[right])
-
-    mask_cereb = mask_cereb.astype(np.uint8)
-    # Create subcortical mask
-    mask_subcortical = np.zeros_like(normalizer)
-    for struct in mask_dict['Sub_cortical']:
-        mask_subcortical += 1*(maxInds == FreeSurferLabels[struct])
-
-    # Make boolean
-    mask_subcortical = mask_subcortical > 0
-
-    # # Create parahippo mask
-    # mask_parahippo = np.zeros_like(normalizer)
-    # for struct in mask_dict['Parahippo']:
-    #     mask_parahippo += 1*(maxInds == FreeSurferLabels[struct])
-
-    # # Make boolean
-    # mask_parahippo = mask_parahippo > 0
-
-    # Create left/right mask by interpolating the cereb mask into the background
-    mask = 2*(mask_cereb == 1) + 2*(mask_cereb == 3) + 1*(mask_cereb == 2) + 1*(mask_cereb == 4)
-    # cat_vbdist takes in a voxel size as well, need to probably use that too
-    _, _, mask_hemi = cat_vbdist(mask)
-    mask_hemi = mask_hemi > 1
-    mask_hemi = mask_hemi.astype(np.uint8)
-
-    # return [normalized_scan, mask_cereb, mask_subcortical,
-    #         mask_parahippo, mask_hemi]
-    return [normalized_scan, mask_cereb, mask_subcortical, mask_hemi]
+    return maxIndices

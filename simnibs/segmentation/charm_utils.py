@@ -13,7 +13,6 @@ from scipy.ndimage import (
     binary_fill_holes,
     binary_opening,
 )
-from scipy.ndimage import affine_transform
 from scipy.ndimage import label
 from scipy.io import loadmat
 
@@ -796,98 +795,6 @@ def _registerT1T2(fixed_image, moving_image, output_image):
         T2_data = T2_reg.get_fdata().astype(np.float32)
         T2_im = nib.Nifti1Image(T2_data, fixed_tmp.affine)
         nib.save(T2_im, output_image)
-
-
-def _fillin_gm_layer(
-    label_img,
-    label_affine,
-    labelorg_img,
-    labelorg_affine,
-    m,
-    exclusion_tissues={
-        "left_cerebral_wm": 2,
-        "right_cerebral_wm": 41,
-        "stuff_to_exclude": [4, 10, 14, 16, 24, 28, 43, 49, 60],
-    },
-    relabel_tissues={"GM": 2, "stuff_to_relabel": [1, 3]},
-):
-    """relabels WM and CSF that intersect with the central GM surface to GM
-    an exclusion mask is used to prevent relabelign in central brain regions
-    """
-    # generate exclusion mask: estimate corpus callossum
-    exclude_img = binary_dilation(
-        labelorg_img == exclusion_tissues["left_cerebral_wm"], iterations=2
-    )
-    exclude_img *= binary_dilation(
-        labelorg_img == exclusion_tissues["right_cerebral_wm"], iterations=2
-    )
-    # add other tissues
-    for i in exclusion_tissues["stuff_to_exclude"]:
-        exclude_img += labelorg_img == i
-    exclude_img = binary_dilation(exclude_img, iterations=8)
-    # upsample exclude_img
-    iM = np.linalg.inv(labelorg_affine).dot(label_affine)
-    exclude_img = affine_transform(
-        exclude_img, iM[:3, :3], iM[:3, 3], label_img.shape, order=0
-    )
-
-    # generate voxel mask of middle GM
-    mask = mask_from_surface(
-        m.nodes[:], m.elm[:, :3] - 1, label_affine, label_img.shape
-    )
-    mask = binary_dilation(mask, iterations=1) * ~binary_erosion(mask, iterations=1)
-    mask[exclude_img] = 0
-
-    # relabel WM and CSF parts to GM
-    for i in relabel_tissues["stuff_to_relabel"]:
-        label_img[(label_img == i) * mask] = relabel_tissues["GM"]
-
-    return label_img
-
-
-def _open_sulci(
-    label_img,
-    label_affine,
-    labelorg_img,
-    labelorg_affine,
-    m,
-    tissue_labels={"CSF": 3, "GM": 2, "WM": 1},
-    exclusion_tissues=[17, 18, 53, 54],
-):
-    # get thin CSF structures
-    mask = mask_from_surface(
-        m.nodes[:], m.elm[:, :3] - 1, label_affine, label_img.shape
-    )
-    # mask2 = binary_dilation(mask,iterations=4)
-    # mask2 = binary_erosion(mask2,iterations=5)
-    mask2 = binary_dilation(mask, iterations=2)
-    mask2 = binary_erosion(mask2, iterations=3)
-    mask2[mask] = 0
-
-    # protect hippocampi and amydalae
-    exclude_img = np.zeros_like(labelorg_img, dtype=bool)
-    for i in exclusion_tissues:
-        exclude_img += labelorg_img == i
-    iM = np.linalg.inv(labelorg_affine).dot(label_affine)
-    exclude_img = affine_transform(
-        exclude_img, iM[:3, :3], iM[:3, 3], label_img.shape, order=0
-    )
-    mask2[exclude_img] = 0
-
-    # relabel GM overlapping thin CSF to CSF
-    label_img[(label_img == tissue_labels["GM"]) * mask2] = tissue_labels["CSF"]
-
-    # open up remaining thin GM bridges at brain surface
-    mask2 = (label_img == tissue_labels["GM"]) | (label_img == tissue_labels["WM"])
-    # mask2 = binary_erosion(mask2,iterations=2)
-    # mask2 = binary_dilation(mask2,iterations=2)
-    # label_img[ (label_img == tissue_labels['GM'])* ~mask2 ] = tissue_labels['CSF']
-    brainthickness = _calc_thickness(mask2)
-    label_img[(brainthickness <= 2.0) * (label_img == tissue_labels["GM"])] = (
-        tissue_labels["CSF"]
-    )
-
-    return label_img
 
 
 def update_labeling_from_cortical_surfaces(
