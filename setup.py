@@ -133,7 +133,7 @@ marching_cubes_lewiner_cy = Extension(
 )
 cat_c_utils = Extension(
     'simnibs.segmentation._cat_c_utils',
-    ["simnibs/segmentation/_cat_c_utils.pyx", "simnibs/segmentation/cat_c_utils/genus0.c"],
+    ["simnibs/segmentation/_cat_c_utils.pyx"],
     include_dirs=[np.get_include(), 'simnibs/segmentation/cat_c_utils'],
     extra_compile_args=cat_compile_args
 )
