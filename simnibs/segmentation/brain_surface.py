@@ -16,56 +16,57 @@ from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import normalize
 
-from brainsynth.dataset import GenericDataset
+from brainsynth.dataset import PredictionDataset
 from brainnet.prediction import PretrainedModels
 from brainnet.prediction.brainnet_predict import PredictionStep
 
 from cortech import Surface, Hemisphere
 
 
-class SimNIBSDataset(GenericDataset):
+class SimNIBSDataset(PredictionDataset):
     def __init__(
         self,
         m2m_dirs: list | tuple[file_finder.SubjectFiles],
         image: str = "reference_volume",
-        hemi: str | None = None,
+        **kwargs,
     ):
         images = [getattr(m2m, image) for m2m in m2m_dirs]
         mni_transform = [m2m.coregistration_matrices for m2m in m2m_dirs]
 
-        super().__init__(images, mni_transform, "mni2sub", "mni152", hemi)
+        super().__init__(images, mni_transform, "mni2sub", "mni152", **kwargs)
         self.m2m_dirs = m2m_dirs
 
-    def _load_mni_transform(self, index):
-        # worldToWorldTransformMatrix is mni to subject space
-        return scipy.io.loadmat(self.mni_transform[index])["worldToWorldTransformMatrix"]
 
-    def preprocess_image(self, img):
-        # Apply conform if the linear part of the affine deviates identity,
-        # i.e., we want 1 mm voxels aligned the major axes in RAS orientation.
-        if not np.allclose(img.affine[:3, :3], np.identity(3)):
-            img = nibabel.processing.conform(img)
-        return img
+def _load_mni_transform(filename):
+    # worldToWorldTransformMatrix is mni to subject space
+    return scipy.io.loadmat(filename)["worldToWorldTransformMatrix"]
 
 
 def cortical_surface_estimation(
-        m2m_dirs: list | tuple[file_finder.SubjectFiles],
-        model_name = "topofit",
-        model_contrast="T1w",
-        model_resolution="1mm",
-        device="cpu"
-    ):
+    m2m_dirs: list | tuple[file_finder.SubjectFiles],
+    model_name="topofit",
+    model_contrast="T1w",
+    model_resolution="1mm",
+    device="cpu",
+):
     """
     Parameters
     ----------
     m2m_dirs
-
+    model_name: str
+        The name of the model to use.
+    model_contrast: str
+        The contrast with which the model was trained (choices: synth, t1w).
+    model_resolution: str
+        The resolution with which the model was trained (choices: 1mm, random).
 
     Returns
     -------
 
     """
-    dataset = SimNIBSDataset(m2m_dirs)
+    dataset = SimNIBSDataset(
+        m2m_dirs, conform=True, mni_transform_loader=_load_mni_transform
+    )
 
     name = model_name
     specs = (model_contrast.lower(), model_resolution.lower())
@@ -77,15 +78,15 @@ def cortical_surface_estimation(
 
     predictions = []
     for batch in dataset:
+        # y_pred is in RAS coordinates
         y_pred, _ = predict_step(None, batch)
         y_pred = y_pred["surface"]
 
         hemispheres = {}
         for hemi, surfaces in y_pred.items():
-            for surface,vertices in surfaces.items():
+            for surface, vertices in surfaces.items():
                 y_pred[hemi][surface] = Surface(
-                    vertices,
-                    predict_step.topology[hemi].faces.cpu().numpy()
+                    vertices, predict_step.topology[hemi].faces.cpu().numpy()
                 )
             hemispheres[hemi] = Hemisphere(y_pred[hemi]["white"], y_pred[hemi]["pial"])
         predictions.append(hemispheres)
@@ -94,7 +95,7 @@ def cortical_surface_estimation(
 
 def central_surface_estimation(hemispheres, fraction=0.5, method="equivolume"):
     central = {}
-    for k,v in hemispheres.items():
+    for k, v in hemispheres.items():
         thickness = v.compute_thickness()
         curv = v.compute_average_curvature(curv_kwargs=dict(smooth_iter=10))
         c = v.estimate_layers(thickness, curv.H, fraction, method)
@@ -141,28 +142,34 @@ def spherical_registration_cat(m2m, hemi):
     sphere_reg = m2m.surfaces["sphere.reg"][hemi]
 
     fsavg_dir = file_finder.templates.freesurfer_templates
-    fsavg_white = os.path.join(fsavg_dir, f'{hemi}.white.gii')
-    fsavg_sphere = os.path.join(fsavg_dir, f'{hemi}.sphere.gii')
+    fsavg_white = os.path.join(fsavg_dir, f"{hemi}.white.gii")
+    fsavg_sphere = os.path.join(fsavg_dir, f"{hemi}.sphere.gii")
 
     # sphere creation (sphere)
     s = time.perf_counter()
     cmd = f"{cat_surf2sphere} {white} {sphere} 10"
     spawn_process(cmd.split())
-    time_elapsed = time.strftime('%H:%M:%S', time.gmtime(time.perf_counter() - s))
+    time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
     print(f"Time for sphere generation ({hemi})      : {time_elapsed}")
 
     # registration to fsaverage (sphere.reg)
     s = time.perf_counter()
     cmd = f"{cat_warpsurf} -steps 2 -avg -i {white} -is {sphere} -t {fsavg_white} -ts {fsavg_sphere} -ws {sphere_reg}"
     spawn_process(cmd.split())
-    time_elapsed = time.strftime('%H:%M:%S', time.gmtime(time.perf_counter() - s))
+    time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
     print(f"Time for spherical registration ({hemi}) : {time_elapsed}")
 
 
-def smooth_vertices(vertices, faces, verts2consider=None,
-                    v2f_map=None, Niterations=1,
-                    Ndilate=0, mask_move=None,
-                    taubin=False):
+def smooth_vertices(
+    vertices,
+    faces,
+    verts2consider=None,
+    v2f_map=None,
+    Niterations=1,
+    Ndilate=0,
+    mask_move=None,
+    taubin=False,
+):
     """Simple mesh smoothing by averaging vertex coordinates or other data
     across neighboring vertices.
 
@@ -193,11 +200,11 @@ def smooth_vertices(vertices, faces, verts2consider=None,
     if verts2consider is None:
         verts2consider = np.arange(len(vertices))
     if v2f_map is None:
-        v2f_map = verts2faces(vertices,faces)
+        v2f_map = verts2faces(vertices, faces)
 
     for i in range(Ndilate):
         f2c = [v2f_map[n] for n in verts2consider]
-        f2c, f2cok = list2numpy(f2c,dtype=int)
+        f2c, f2cok = list2numpy(f2c, dtype=int)
         f2c = f2c[f2cok]  # faces of verts2consider
         verts2consider = np.unique(faces[f2c])
 
@@ -206,21 +213,19 @@ def smooth_vertices(vertices, faces, verts2consider=None,
 
     smoo = vertices.copy()
     if taubin:
-        m = mesh_io.Msh(nodes=mesh_io.Nodes(smoo),
-                        elements=mesh_io.Elements(faces + 1))
+        m = mesh_io.Msh(nodes=mesh_io.Nodes(smoo), elements=mesh_io.Elements(faces + 1))
         vert_mask = np.zeros(len(vertices), dtype=bool)
         vert_mask[verts2consider] = True
         m.smooth_surfaces_simple(Niterations, nodes_mask=vert_mask)
         smoo = m.nodes[:]
     else:
         for n in verts2consider:
-            smoo[n] = np.average(vertices[faces[v2f_map[n]]], axis=(0,1))
-        for i in range(Niterations-1):
+            smoo[n] = np.average(vertices[faces[v2f_map[n]]], axis=(0, 1))
+        for i in range(Niterations - 1):
             smoo2 = smoo.copy()
             for n in verts2consider:
-                smoo[n] = np.average(smoo2[faces[v2f_map[n]]], axis=(0,1))
+                smoo[n] = np.average(smoo2[faces[v2f_map[n]]], axis=(0, 1))
     return smoo
-
 
 
 def get_element_neighbors(elements, ntol=1e-6):
@@ -259,14 +264,19 @@ def get_element_neighbors(elements, ntol=1e-6):
     barycenters = np.zeros_like(elements)
     num_nodes_per_el = elements.shape[1]
     for i in range(num_nodes_per_el):
-        nodes = np.roll(np.arange(num_nodes_per_el),-i)[:-1] # nodes that make up the ith face
-        barycenters[:,i,:] = np.average(elements[:,nodes,:], 1)
+        nodes = np.roll(np.arange(num_nodes_per_el), -i)[
+            :-1
+        ]  # nodes that make up the ith face
+        barycenters[:, i, :] = np.average(elements[:, nodes, :], 1)
 
-    bar_tree = cKDTree(barycenters.reshape(np.multiply(*elements.shape[:-1]),
-                                           elements.shape[-1]))
+    bar_tree = cKDTree(
+        barycenters.reshape(np.multiply(*elements.shape[:-1]), elements.shape[-1])
+    )
     face_dist, face_idx = bar_tree.query(bar_tree.data, 2)
 
-    nonself = (face_idx != np.arange(len(face_idx))[:,np.newaxis]) # get non-self-references
+    nonself = (
+        face_idx != np.arange(len(face_idx))[:, np.newaxis]
+    )  # get non-self-references
 
     # Distance to nearest neighbor. Neighbors having a distance shorter than
     # ntol are considered actual neighbors (i.e. sharing a face)
@@ -282,7 +292,6 @@ def get_element_neighbors(elements, ntol=1e-6):
     nearest_neighbors = nearest_neighbors.reshape(elements.shape[:2])
 
     return nearest_neighbors, ok
-
 
 
 def verts2faces(vertices, faces, pad_val=0, array_out_type="list"):
@@ -327,7 +336,6 @@ def verts2faces(vertices, faces, pad_val=0, array_out_type="list"):
         raise ValueError("Array output type must be list or numpy array.")
 
 
-
 def list2numpy(L, pad_val=0, dtype=float):
     """Convert a python list of lists (the sublists being of varying length)
     to a numpy array.
@@ -348,7 +356,7 @@ def list2numpy(L, pad_val=0, dtype=float):
     """
 
     max_neighbors = len(sorted(L, key=len, reverse=True)[0])
-    narr = np.array([r+[np.nan]*(max_neighbors-len(r)) for r in L])
+    narr = np.array([r + [np.nan] * (max_neighbors - len(r)) for r in L])
     ok = ~np.isnan(narr)
     narr[~ok] = pad_val
     narr = narr.astype(dtype)
@@ -371,13 +379,15 @@ def get_triangle_normals(mesh):
         Normal vectors of each triangle in "mesh".
     """
 
-    tnormals = np.cross(mesh[:,1,:]-mesh[:,0,:],mesh[:,2,:]-mesh[:,0,:]).astype(float)
-    tnormals /= np.sqrt(np.sum(tnormals**2,1))[:,np.newaxis]
+    tnormals = np.cross(
+        mesh[:, 1, :] - mesh[:, 0, :], mesh[:, 2, :] - mesh[:, 0, :]
+    ).astype(float)
+    tnormals /= np.sqrt(np.sum(tnormals**2, 1))[:, np.newaxis]
     return tnormals
 
 
 def segment_triangle_intersect(vertices, faces, segment_start, segment_end):
-    ''' Computes the intersection between a line segment and a triangulated surface
+    """Computes the intersection between a line segment and a triangulated surface
 
     Parameters
     -----------
@@ -396,42 +406,40 @@ def segment_triangle_intersect(vertices, faces, segment_start, segment_end):
         Nx2 array of ints with the pair (segment index, face index) for each intersection
     positions: ndarray
         Nx3 array of floats with the position of the intersections
-    '''
-    m = mesh_io.Msh(
-            nodes=mesh_io.Nodes(vertices),
-            elements=mesh_io.Elements(faces+1)
-    )
+    """
+    m = mesh_io.Msh(nodes=mesh_io.Nodes(vertices), elements=mesh_io.Elements(faces + 1))
     indices_pairs, positions = m.intersect_segment(segment_start, segment_end)
     # Go from 1-indexed to 0-indexed
     indices_pairs[:, 1] -= 1
     return indices_pairs, positions
 
 
-def _rasterize_surface(vertices, faces, affine, shape, axis='z'):
-    ''' Function to rastherize a given surface given by (vertices, faces) to a volume
-    '''
+def _rasterize_surface(vertices, faces, affine, shape, axis="z"):
+    """Function to rastherize a given surface given by (vertices, faces) to a volume"""
     inv_affine = np.linalg.inv(affine)
     vertices_trafo = inv_affine[:3, :3].dot(vertices.T).T + inv_affine[:3, 3].T
 
     # switch vertices, dimensions to align with rastherization axis
-    if axis == 'z':
+    if axis == "z":
         out_shape = shape
-    elif axis == 'y':
+    elif axis == "y":
         vertices_trafo = vertices_trafo[:, [0, 2, 1]]
         out_shape = np.array(shape, dtype=int)[[0, 2, 1]]
-    elif axis == 'x':
+    elif axis == "x":
         vertices_trafo = vertices_trafo[:, [2, 1, 0]]
         out_shape = np.array(shape, dtype=int)[[2, 1, 0]]
     else:
         raise ValueError('"axis" should be x, y, or z')
 
-    grid_points = np.array(
-        np.meshgrid(
-            *tuple(map(np.arange, out_shape[:2])), indexing="ij"
-        )
-    ).reshape((2, -1)).T
+    grid_points = (
+        np.array(np.meshgrid(*tuple(map(np.arange, out_shape[:2])), indexing="ij"))
+        .reshape((2, -1))
+        .T
+    )
     grid_points_near = np.hstack([grid_points, np.zeros((len(grid_points), 1))])
-    grid_points_far = np.hstack([grid_points, out_shape[2] * np.ones((len(grid_points), 1))])
+    grid_points_far = np.hstack(
+        [grid_points, out_shape[2] * np.ones((len(grid_points), 1))]
+    )
 
     # This fixes the search are such that if the volume area to rastherize is smaller
     # than the mesh, we will still trace rays that cross the whole extension of the mesh
@@ -453,12 +461,12 @@ def _rasterize_surface(vertices, faces, affine, shape, axis='z'):
     # The count should never be odd
     if np.any(counts % 2 == 1):
         logger.warning(
-            'Found an odd number of crossings! This could be an open surface '
-            'or a self-intersection'
+            "Found an odd number of crossings! This could be an open surface "
+            "or a self-intersection"
         )
 
     # "z" voxels where intersections occurs
-    #inter_z = np.around(positions[:, 2]).astype(int)
+    # inter_z = np.around(positions[:, 2]).astype(int)
     inter_z = (positions[:, 2] + 1).astype(int)
     inter_z[inter_z < 0] = 0
     inter_z[inter_z > out_shape[2]] = out_shape[2]
@@ -472,24 +480,24 @@ def _rasterize_surface(vertices, faces, affine, shape, axis='z'):
     for i, l in enumerate(lines_intersecting):
         # We can do this because we know that the "pairs" variables is ordered with
         # respect to the first variable
-        crossings = np.sort(inter_z[uq_indices[i]: uq_indices[i+1]])
+        crossings = np.sort(inter_z[uq_indices[i] : uq_indices[i + 1]])
         for j in range(0, len(crossings) // 2):
-            enter, leave = crossings[2*j], crossings[2*j + 1]
+            enter, leave = crossings[2 * j], crossings[2 * j + 1]
             mask[grid_points[l, 0], grid_points[l, 1], enter:leave] = True
 
     # Go back to the original frame
-    if axis == 'z':
+    if axis == "z":
         pass
-    elif axis == 'y':
+    elif axis == "y":
         mask = np.swapaxes(mask, 2, 1)
-    elif axis == 'x':
+    elif axis == "x":
         mask = np.swapaxes(mask, 2, 0)
 
     return mask
 
 
 def mask_from_surface(vertices, faces, affine, shape):
-    """ Creates a binary mask based on a surface
+    """Creates a binary mask based on a surface
 
     Parameters
     ----------
@@ -515,50 +523,50 @@ def mask_from_surface(vertices, faces, affine, shape):
         return np.zeros(shape, dtype=bool)
 
     # Do the rastherization in 3 directions
-    for axis in ['x', 'y', 'z']:
+    for axis in ["x", "y", "z"]:
         masks.append(_rasterize_surface(vertices, faces, affine, shape, axis=axis))
 
     # Return all voxels which are in at least 2 of the masks
     # This is done to reduce spurious results caused by bad tolopogy
     return np.sum(masks, axis=0) >= 2
-    #return masks[2]
+    # return masks[2]
 
 
-def dilate(image,n):
+def dilate(image, n):
     nan_inds = np.isnan(image)
     image[nan_inds] = 0
     image = image > 0.5
-    se = np.ones((2*n+1,2*n+1,2*n+1),dtype=bool)
-    return binary_dilation(image,se)>0
+    se = np.ones((2 * n + 1, 2 * n + 1, 2 * n + 1), dtype=bool)
+    return binary_dilation(image, se) > 0
 
 
-def erosion(image,n):
+def erosion(image, n):
     nan_inds = np.isnan(image)
     image[nan_inds] = 0
     image = image > 0.5
-    return ~dilate(~image,n)
+    return ~dilate(~image, n)
 
 
 def lab(image):
     labels, _ = label(image)
-    return (labels == np.argmax(np.bincount(labels.flat)[1:])+1)
+    return labels == np.argmax(np.bincount(labels.flat)[1:]) + 1
 
 
-def close(image,n):
+def close(image, n):
     nan_inds = np.isnan(image)
     image[nan_inds] = 0
     image = image > 0.5
-    image_padded = np.pad(image,n,'constant')
-    image_padded = dilate(image_padded,n)
-    image_padded = erosion(image_padded,n)
-    return image_padded[n:-n,n:-n,n:-n]>0
+    image_padded = np.pad(image, n, "constant")
+    image_padded = dilate(image_padded, n)
+    image_padded = erosion(image_padded, n)
+    return image_padded[n:-n, n:-n, n:-n] > 0
 
 
-def labclose(image,n):
+def labclose(image, n):
     nan_inds = np.isnan(image)
     image[nan_inds] = 0
     image = image > 0.5
-    tmp = close(image,n)
+    tmp = close(image, n)
     return ~lab(~tmp)
 
 
@@ -610,10 +618,13 @@ def subsample_surfaces(m2m_dir, n_points: int) -> dict:
     m2m = file_finder.SubjectFiles(subpath=m2m_dir)
 
     full = dict(
-        white = mesh_io.load_subject_surfaces(m2m, "white"),
-        sphere = mesh_io.load_subject_surfaces(m2m, "sphere"),
+        white=mesh_io.load_subject_surfaces(m2m, "white"),
+        sphere=mesh_io.load_subject_surfaces(m2m, "sphere"),
     )
-    subsampled = {h: subsample_surface(full["white"][h], full["sphere"][h], n_points) for h in full["white"]}
+    subsampled = {
+        h: subsample_surface(full["white"][h], full["sphere"][h], n_points)
+        for h in full["white"]
+    }
 
     # write subsampled central surface as well as index and normals
     for h, v in subsampled.items():
@@ -637,10 +648,12 @@ def subsample_surfaces(m2m_dir, n_points: int) -> dict:
         for h, v in m.items():
             m = mesh_io.write_gifti_surface(
                 mesh_io.Msh(
-                    mesh_io.Nodes(v.nodes.node_coord[subsampled[h].field["index"].value]),
+                    mesh_io.Nodes(
+                        v.nodes.node_coord[subsampled[h].field["index"].value]
+                    ),
                     subsampled[h].elm,
                 ),
-                m2m.get_surface(h, s, n_points)
+                m2m.get_surface(h, s, n_points),
             )
 
     for d in m2m._standard_morph_data:
@@ -1086,7 +1099,6 @@ def equalize_coverage_by_swap(
     coverage_var = coverage.var()
 
     for _ in np.arange(max_iter):
-
         cov_un = coverage[unused]
         cov_us = coverage[used]
         addii = cov_un.argmin()

@@ -69,7 +69,7 @@ def fit_matched_points_analytical(
     src_pts, tgt_pts, scale: bool = False, return_matrix: bool = True,
 ):
     """Estimate a transformation (rigid body with optional scaling) which moves
-    `src_pts` to fit `tgt_pts` in a least squares sense.
+    `src_pts` such as to fit `tgt_pts` in a least squares sense.
 
     PARAMETERS
     ----------
@@ -150,7 +150,7 @@ def fit_matched_points_generic(
     return_matrix: bool = True,
 ):
     """Estimate a transformation (rigid body with optional scaling) which moves
-    `src_pts` to fit `tgt_pts` in a least squares sense.
+    `src_pts` such as to fit `tgt_pts` in a least squares sense.
 
     PARAMETERS
     ----------
