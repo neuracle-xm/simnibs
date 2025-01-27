@@ -123,22 +123,28 @@ def main():
     if args.registerT2 and args.T2 is None:
         raise RuntimeError("ERROR: Filename of T2-weighted image has to be supplied")
 
-    if fresh_run and os.path.exists(subject_dir):
-        # stop when subject_dir folder exists and it's a fresh run (unless --forcerun is set)
-        if not args.forcerun:
-            raise RuntimeError(
-                "ERROR: --forcerun has to be set to overwrite existing m2m_{subID} folder"
-            )
-        else:
-            if args.usesettings is not None and os.path.dirname(
-                os.path.abspath(args.usesettings[0])
-            ) == os.path.abspath(subject_dir):
+    if os.path.exists(subject_dir):
+        if fresh_run:
+            # stop when subject_dir folder exists and it's a fresh run (unless --forcerun is set)
+            if not args.forcerun:
                 raise RuntimeError(
-                    "ERROR: move the custom settings file out of the m2m-folder before running with --forcerun."
+                    "ERROR: --forcerun has to be set to overwrite existing m2m_{subID} folder"
                 )
+            else:
+                if args.usesettings is not None and os.path.dirname(
+                    os.path.abspath(args.usesettings[0])
+                ) == os.path.abspath(subject_dir):
+                    raise RuntimeError(
+                        "ERROR: move the custom settings file out of the m2m-folder before running with --forcerun."
+                    )
 
-            shutil.rmtree(subject_dir)
-            time.sleep(2)
+                shutil.rmtree(subject_dir)
+                time.sleep(2)
+        else:
+            if args.usesettings is None:
+                settings_file = os.path.join(subject_dir, "settings.ini")
+                assert os.path.exists(settings_file), "No settings.ini found for this run."
+                args.usesettings = settings_file
 
     if args.skipregisterT2:
         args.registerT2 = False
