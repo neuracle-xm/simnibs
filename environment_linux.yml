@@ -2,34 +2,42 @@ name: simnibs_env
 channels:
   - conda-forge
 dependencies:
-  - python=3.11.10
-  - cgal-cpp=5.5.1
-  - cython=3.0.11
-  - freeglut=3.2.2
-  - h5py=3.11.0
-  - jsonschema=4.23.0
-  - libwebp=1.4.0
-  - matplotlib-base=3.9.2
-  - mkl=2024.2.2
-  - mock=5.1.0
-  - nibabel=5.3.0
-  - numba=0.60.0
-  - numpy=1.26.4
-  - pillow=10.4.0
-  - pip=24.2
-  - pyopengl=3.1.6
-  - pytest=8.3.3
-  - python-mumps=0.0.2
-  - requests=2.32.3
-  - scipy=1.14.1
-  - setuptools-scm=8.1.0
-  - tbb-devel=2021.13.0
-  - zlib=1.3.1
+- python=3.11
+  - cgal-cpp=5.5
+  - cython
+  - freeglut
+  - h5py
+  - jsonschema
+  - libwebp
+  - matplotlib-base
+  - mkl
+  - mock
+  - nibabel
+  - numba
+  - numpy=1.26
+  - pillow
+  - pip
+  - pyopengl
+  - pytest
+  - python-mumps
+  - requests
+  - scipy
+  - setuptools-scm
+  - tbb-devel
+  - zlib
   - mesa-libgl-cos6-x86_64
-  - jupyterlab=4.3.0
+  - jupyterlab
+  - pytorch::ignite
+  - pytorch::pytorch=2.5
+  - pytorch::cpuonly
   - pip:
-    - pyqt5==5.15
+    - pyqt5
     - fmm3dpy==1.0.0
     - samseg==0.4a0
-    - pygpc==0.4.1
+    - pygpc==0.4
     - https://github.com/simnibs/petsc4py/releases/download/v3.21.5/petsc4py-3.21.5-cp311-cp311-manylinux_2_28_x86_64.whl
+    - https://github.com/simnibs/cortech/releases/download/v0.1/cortech-0.1-cp311-cp311-manylinux_2_24_x86_64.whl
+    # - https://github.com/simnibs/brainsynth/releases/download/v0.1a/BrainSynth-0.1a0-py3-none-any.whl
+    # - https://github.com/simnibs/brainnet/releases/download/v0.1a/BrainNet-0.1a0-py3-none-any.whl
+    - brainsynth@git+https://github.com/simnibs/brainsynth@324dbc1 # v0.1a
+    - brainnet@git+https://github.com/simnibs/brainnet@3eec98c # v0.1a

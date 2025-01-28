@@ -19,7 +19,10 @@ requires-python = ">=3.11"
 # libwebp, freeglut
 # python-mumps - only works automatically via conda
 # mpfr, gmp - from conda
-dependencies =[
+dependencies = [
+    "brainsynth",
+    "brainnet",
+    "cortech",
     "fmm3dpy==1.0.0",
     "h5py",
     "jsonschema",
@@ -36,7 +39,7 @@ dependencies =[
     "samseg",
     "scipy",
     "tbb ; sys_platform != 'darwin'",
-  ]
+]
 
 [project.urls]  # Optional
 "Homepage" = "simnibs.org"
