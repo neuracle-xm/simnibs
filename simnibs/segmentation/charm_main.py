@@ -40,6 +40,7 @@ def run(
     create_surfaces=False,
     mesh_image=False,
     usesettings=None,
+    usefatatlas=False,
     noneck=False,
     init_transform=None,
     use_transform=None,
@@ -84,6 +85,8 @@ def run(
         to the identity matrix).
     usesettings : str
         filename of alternative settings-file (default = None)
+    usefatatlas : bool
+        use that extended atlas including subcutaneous fat
     options_str : str
         string of command line options to add to logging (default = None)
 
@@ -109,7 +112,7 @@ def run(
     logger.info(f"charm run started: {time.asctime()}")
     logger.debug(f"options: {options_str}")
 
-    settings = _read_settings_and_copy(usesettings, sub_files.settings)
+    settings = _read_settings_and_copy(usesettings, usefatatlas, sub_files.settings)
     denoise_settings = settings["preprocess"]
     do_denoise = denoise_settings["denoise"]
     samseg_settings = settings["samseg"]
@@ -576,10 +579,12 @@ def _stop_logger(logfile):
         f.close()
 
 
-def _read_settings_and_copy(usesettings, fn_settingslog):
+def _read_settings_and_copy(usesettings, usefatatlas, fn_settingslog):
     # read settings and copy settings file
-    if usesettings is None:
+    if usesettings is None and usefatatlas is None:
         fn_settings = os.path.join(SIMNIBSDIR, "charm.ini")
+    elif usesettings is None and usefatatlas is not None:
+        fn_settings = os.path.join(SIMNIBSDIR, "charm_fat.ini")
     else:
         if type(usesettings) == list:
             usesettings = usesettings[0]

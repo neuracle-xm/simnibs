@@ -73,6 +73,7 @@ MANUAL EDITING:
     add_argument(parser, args_charm.forcerun)
     add_argument(parser, args_charm.skip_register_t2)
     add_argument(parser, args_charm.use_settings)
+    add_argument(parser, args_charm.use_fat_atlas)
     add_argument(parser, args_charm.no_neck)
     add_argument(parser, args_charm.init_transform)
     add_argument(parser, args_charm.force_qform)
@@ -159,6 +160,7 @@ def main():
         args.surfaces,
         args.mesh,
         args.usesettings,
+        args.usefatatlas,
         args.noneck,
         args.inittransform,
         args.usetransform,

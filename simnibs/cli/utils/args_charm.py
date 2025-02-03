@@ -110,6 +110,14 @@ use_settings = CommandLineArgument(
                     simnibs folder)""",
     ),
 )
+use_fat_atlas = CommandLineArgument(
+    ["--usefatatlas"],
+    dict(
+        action="store_true",
+        default=False,
+        help="""use the extended atlas including subcutaneous fat""",
+    ),
+)
 no_neck = CommandLineArgument(
     ["--noneck"],
     dict(
