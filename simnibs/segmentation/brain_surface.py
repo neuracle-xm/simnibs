@@ -31,9 +31,9 @@ class SimNIBSDataset(PredictionDataset):
         **kwargs,
     ):
         images = [getattr(m2m, image) for m2m in m2m_dirs]
-        mni_transform = [m2m.coregistration_matrices for m2m in m2m_dirs]
+        mni_transforms = [m2m.coregistration_matrices for m2m in m2m_dirs]
 
-        super().__init__(images, mni_transform, "mni2sub", "mni152", **kwargs)
+        super().__init__(images, mni_transforms, "mni2sub", "mni152", **kwargs)
         self.m2m_dirs = m2m_dirs
 
 

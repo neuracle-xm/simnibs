@@ -405,9 +405,12 @@ def run(
 
         if surface_settings["update_segmentation_from_surfaces"]:
             logger.info("Updating the segmentation using the cortical surfaces")
+
             charm_utils.update_labeling_from_cortical_surfaces(
                 sub_files,
-                surface_settings["protect"],
+                _fs_lut_labels_to_fs_lut_values(
+                    surface_settings["update_segmentation_protect"]
+                ),
                 tissue_map_simnibs,
             )
 
@@ -763,3 +766,9 @@ def _load_freesurfer_pial_surface(fs_sub):
         except FileNotFoundError:  # -T2pial was not used
             m = load_freesurfer_surfaces(fs_sub, "pial.T1", coord="ras")
     return m
+
+
+def _fs_lut_labels_to_fs_lut_values(labels_dict: dict[str, list[str]]):
+    values, labels, _ = charm_utils.read_freesurfer_lut(file_finder.templates.labeling_LUT)
+    mapper = dict(zip(labels, values))
+    return {k: [mapper[i] for i in v] for k,v in labels_dict.items()}

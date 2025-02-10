@@ -797,9 +797,16 @@ def _registerT1T2(fixed_image, moving_image, output_image):
         nib.save(T2_im, output_image)
 
 
+def read_freesurfer_lut(filename):
+    value, label, r, g, b, a = np.loadtxt(filename, dtype=str, unpack=True)
+    value = value.astype(int)
+    ctab = np.stack((r,g,b,a), axis=1).astype(int)
+    return value, label, ctab
+
+
 def update_labeling_from_cortical_surfaces(
     m2m: SubjectFiles,
-    protect: dict[str, npt.ArrayLike],
+    protect: dict[str, list],
     tissue_mapping: dict[str, int],
 ):
     """
@@ -833,6 +840,7 @@ def update_labeling_from_cortical_surfaces(
     tissue_mapping : dict
         The mapping of SimNIBS tissue names to numbers.
     """
+
     # SimNIBS label image (to update)
     sm_label_img = nib.load(m2m.tissue_labeling_upsampled)
     sm_label_data = np.asanyarray(sm_label_img.dataobj)
@@ -872,26 +880,31 @@ def update_labeling_from_cortical_surfaces(
 
 
 def update_labeling_from_cortical_surfaces_(
-    sm_labeling, fs_labeling, wm_surf_mask, gm_surf_mask, protect, tissue_mapping
+    sm_labeling, fs_labeling, white_surf_mask, pial_surf_mask, protect, tissue_mapping
 ):
+
+    # if "csf_to_wm" not in protect:
+    #     protect["csf_to_wm"] = protect["csf_to_gm"] + protect["gm_to_wm"]
+
+
     ndim = sm_labeling.ndim
 
     # (1) Build masks
 
     # cortical WM mask
-    wm_surf_mask = binary_opening(wm_surf_mask, iterations=1)
+    white_surf_mask = binary_opening(white_surf_mask, iterations=1)
 
     wm_extra_mask = np.isin(fs_labeling, protect["wm_to_gm"])
     wm_extra_mask = binary_dilation(wm_extra_mask, iterations=2)
 
     # cortical GM mask
-    gm_surf_mask = binary_opening(gm_surf_mask, iterations=1)
+    pial_surf_mask = binary_opening(pial_surf_mask, iterations=1)
 
     gm_extra_mask = np.isin(fs_labeling, protect["gm_to_csf"])
     gm_extra_mask = binary_dilation(gm_extra_mask, iterations=2)
 
     # relabel GM inside of white surfaces to WM
-    # structures to protect from becoming WM (subcortical structures, cerebellum)
+    # structures to protect from becoming WM (subcortical structures)
     wm_ignore_mask = np.isin(fs_labeling, protect["gm_to_wm"])
     wm_ignore_mask = binary_dilation(wm_ignore_mask, iterations=2)
 
@@ -901,23 +914,26 @@ def update_labeling_from_cortical_surfaces_(
     )
     se = ndimage.generate_binary_structure(ndim, ndim)
     dilated_bone = binary_dilation(bone, se)
-    csf_mask_shrunk = (sm_labeling == tissue_mapping["CSF"]) & ~dilated_bone
+    csf_blood_mask_shrunk = np.isin(sm_labeling, (tissue_mapping["CSF"], tissue_mapping["Blood"])) & ~dilated_bone
     csf_ignore_mask = np.isin(fs_labeling, protect["csf_to_gm"])
 
     # (2) Apply
 
     # GM to CSF
-    replace = (sm_labeling == tissue_mapping["GM"]) & ~(gm_surf_mask | gm_extra_mask)
+    replace = (sm_labeling == tissue_mapping["GM"]) & ~(pial_surf_mask | gm_extra_mask)
     sm_labeling[replace] = tissue_mapping["CSF"]
     # WM to GM
-    replace = (sm_labeling == tissue_mapping["WM"]) & ~(wm_surf_mask | wm_extra_mask)
+    replace = (sm_labeling == tissue_mapping["WM"]) & ~(white_surf_mask | wm_extra_mask)
     sm_labeling[replace] = tissue_mapping["GM"]
     # GM to WM
-    replace = (sm_labeling == tissue_mapping["GM"]) & wm_surf_mask & ~wm_ignore_mask
+    replace = (sm_labeling == tissue_mapping["GM"]) & white_surf_mask & ~wm_ignore_mask
     sm_labeling[replace] = tissue_mapping["WM"]
-    # CSF to GM
-    replace = csf_mask_shrunk & gm_surf_mask & ~wm_surf_mask & ~csf_ignore_mask
+    # CSF/blood to GM
+    replace = csf_blood_mask_shrunk & pial_surf_mask & ~white_surf_mask & ~csf_ignore_mask
     sm_labeling[replace] = tissue_mapping["GM"]
+    # CSF/blood to WM
+    replace = csf_blood_mask_shrunk & white_surf_mask & ~csf_ignore_mask & ~wm_ignore_mask
+    sm_labeling[replace] = tissue_mapping["WM"]
 
     return sm_labeling
 
