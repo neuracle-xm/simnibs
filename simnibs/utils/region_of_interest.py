@@ -17,12 +17,12 @@ from .transformations import mni2subject_coords
 
 class RegionOfInterest:
     """A class describing a region of Interest in a volume mesh or a surface mesh.
-    
+
     Parameters:
     ------------------------
     settings_dict: (optional) dict
         Dictionary containing parameter as key value pairs
-            
+
     method: str
         The method to create the ROI {"manual", "custom", "surface", "volume", "volume_from_surface", "mesh+mask"}
 
@@ -64,11 +64,11 @@ class RegionOfInterest:
     surface_inclusion_radius: float | None
         Only for method = "volume_from_surface" -> The radius from the surface nodes at which the volume elements should be included in mm (example: 5)
 
-    node_mask: list[bool] | None  
+    node_mask: list[bool] | None
         Only for method = "mesh+mask" -> a boolean node mask (exclusive with elm_mask) (example: [True, ..., False])
-    elm_mask: list[bool] | None  
+    elm_mask: list[bool] | None
         Only for method = "mesh+mask" -> a boolean node mask (exclusive with node_mask) (example: [True, ..., False])
-   
+
     """
 
     method: str
@@ -112,9 +112,9 @@ class RegionOfInterest:
     surface_inclusion_radius: float | None
     """ Only for method = "volume_from_surface" -> The radius from the surface nodes at which the volume elements should be included in mm (example: 5)"""
 
-    node_mask: list[bool] | None  
+    node_mask: list[bool] | None
     """ Only for method = "mesh+mask" -> a boolean node mask (exclusive with elm_mask) (example: [True, ..., False])"""
-    elm_mask: list[bool] | None  
+    elm_mask: list[bool] | None
     """ Only for method = "mesh+mask" -> a boolean node mask (exclusive with node_mask) (example: [True, ..., False])"""
 
     def __init__(self, settings_dict=None):
@@ -144,7 +144,7 @@ class RegionOfInterest:
 
         self.node_mask = None
         self.elm_mask = None
-        
+
         self._prepared = False
 
         if settings_dict:
@@ -263,10 +263,10 @@ class RegionOfInterest:
         """
         # Generate dict from instance variables (excluding variables starting with _ or __)
         settings = {
-            key:value for key, value in self.__dict__.items() 
+            key:value for key, value in self.__dict__.items()
             if not key.startswith('__')
             and not key.startswith('_')
-            and not callable(value) 
+            and not callable(value)
             and not callable(getattr(value, "__get__", None))
             and value is not None
         }
@@ -275,7 +275,7 @@ class RegionOfInterest:
         settings['type'] = 'RegionOfInterest'
 
         return settings
-    
+
     def from_dict(self, settings: dict) -> "RegionOfInterest":
         """ Reads parameters from a dict
 
@@ -297,7 +297,7 @@ class RegionOfInterest:
         self._prepared = False
         return self
 
-    def get_nodes(self, node_type: str | None = None) -> npt.NDArray[np.float_]:
+    def get_nodes(self, node_type: str | None = None) -> npt.NDArray[np.float64]:
         """Returns the nodes which are part of the Region of Interest.
         Element center coordinates in the case of node_type="elm_center", node coordinates in the case of node_type="node"
 
@@ -308,7 +308,7 @@ class RegionOfInterest:
 
         Returns
         -------
-        npt.NDArray[np.float_]
+        npt.NDArray[np.float64]
             The node coordinates which are part of the Region of Interest
 
         Raises
@@ -373,7 +373,7 @@ class RegionOfInterest:
                 return self._mesh.crop_mesh(elements=elm_indexes)
             case _:
                 raise ValueError("No mesh or surface was loaded")
-            
+
     def get_roi_element_types(self) -> list[int]:
         """Returns the element types that are present in the masked mesh
 
@@ -1071,7 +1071,7 @@ class RegionOfInterest:
                 )
             case _:
                 raise ValueError("No mesh or surface was loaded")
-        
+
 
     def apply_element_type_mask(
         self,
@@ -1120,7 +1120,7 @@ class RegionOfInterest:
     def invert(self):
         """Inverts the current mask"""
         self._mask = ~self._mask
-        
+
     def run(self, cpus=1):
         """writes visualization for visual control"""
         if self.fname_visu is None:

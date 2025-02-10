@@ -46,7 +46,7 @@ class TmsFlexOptimization:
     ------------------------
     settings_dict: (optional) dict
         Dictionary containing parameter as key value pairs
-        
+
     date: str | None
         Date when the optimization struct was initiated
     time_str: str | None
@@ -75,7 +75,7 @@ class TmsFlexOptimization:
     method: str | None
         The method of optimization {"distance", "emag"}
     roi: RegionOfInterest | None
-        The region of interest in which the e field is simulated, method = "emag" 
+        The region of interest in which the e field is simulated, method = "emag"
     disable_SPR_for_volume_roi: bool
         Weather to use SPR interpolation for volume rois, default True
     distance: float
@@ -101,7 +101,7 @@ class TmsFlexOptimization:
         Settings for the scipy direct global optimization
     l_bfgs_b_args: dict
         Settings for the scipy L-BFGS-B local optimization
-        
+
     """
 
     date: str | None
@@ -192,7 +192,7 @@ class TmsFlexOptimization:
 
         self._prepared = False
         self._log_handlers = []
-        
+
         self.solver_options = "pardiso"
 
         if settings_dict:
@@ -326,7 +326,7 @@ class TmsFlexOptimization:
                 self.global_rotation_ranges = [[-20, 20], [-20, 20], [-5, 5]]
         else:
             raise ValueError("method should be 'distance' or 'emag'")
-        
+
         self._global_translation_ranges = np.array(self.global_translation_ranges)
         self._global_rotation_ranges = np.array(self.global_rotation_ranges)
 
@@ -427,10 +427,10 @@ class TmsFlexOptimization:
 
         if self.pos is None:
             raise AttributeError("pos is None")
-        
+
         if self.fnamecoil is None:
             raise AttributeError("fnamecoil is None")
-        
+
         if self._mesh is None:
             raise AttributeError("mesh is not loaded")
 
@@ -696,7 +696,7 @@ def auto_init_position_from_roi(roi: RegionOfInterest, distance: float = 0.0):
 def _get_fast_distance_score(
     distance_function: Callable,
     elements: list[TmsCoilElements],
-    affine: npt.NDArray[np.float_],
+    affine: npt.NDArray[np.float64],
 ) -> float:
     """Calculates the mean absolute distance from the min distance points of the coil using the distance function.
     If no min distance points are present the node positions of the casings will be used.
@@ -707,7 +707,7 @@ def _get_fast_distance_score(
         A distance function calculating the distance between input points and a target
     elements : list[TmsCoilElements]
         The coil elements to be used
-    affine : npt.NDArray[np.float_]
+    affine : npt.NDArray[np.float64]
         The affine transformation from coil to world space
 
     Returns
@@ -741,12 +741,12 @@ def _get_fast_distance_score(
 def _get_fast_intersection_penalty(
     element_voxel_volumes: dict[TmsCoilElements, npt.NDArray[np.bool_]],
     element_voxel_indexes: dict[TmsCoilElements, npt.NDArray[np.int_]],
-    element_voxel_dither_factors: dict[TmsCoilElements, npt.NDArray[np.float_]],
-    element_voxel_affines: dict[TmsCoilElements, npt.NDArray[np.float_]],
-    target_voxel_distance: npt.NDArray[np.float_],
-    target_voxel_affine: npt.NDArray[np.float_],
+    element_voxel_dither_factors: dict[TmsCoilElements, npt.NDArray[np.float64]],
+    element_voxel_affines: dict[TmsCoilElements, npt.NDArray[np.float64]],
+    target_voxel_distance: npt.NDArray[np.float64],
+    target_voxel_affine: npt.NDArray[np.float64],
     self_intersection_elements: list[TmsCoilElements],
-    affine: npt.NDArray[np.float_],
+    affine: npt.NDArray[np.float64],
     order: int = 3,
 ) -> tuple[float, float]:
     """Evaluates how far the element voxel volumes intersect with the target voxel volume measured in mm^3 (volume) * mm (depth).
@@ -759,17 +759,17 @@ def _get_fast_intersection_penalty(
         The voxel volume (True inside, False outside) of each coil element
     element_voxel_indexes : dict[TmsCoilElements, npt.NDArray[np.int_]]
         The indexes of the inside voxels for each coil element
-    element_voxel_dither_factors : dict[TmsCoilElements, npt.NDArray[np.float_]]
+    element_voxel_dither_factors : dict[TmsCoilElements, npt.NDArray[np.float64]]
         The dither scaling factor for each voxel for each coil element
-    element_voxel_affine : dict[TmsCoilElements, npt.NDArray[np.float_]]
+    element_voxel_affine : dict[TmsCoilElements, npt.NDArray[np.float64]]
         The affine transformations from world to voxel space for each coil element
-    target_voxel_distance : npt.NDArray[np.float_]
+    target_voxel_distance : npt.NDArray[np.float64]
         The voxel distance field of the target
-    target_voxel_affine : npt.NDArray[np.float_]
+    target_voxel_affine : npt.NDArray[np.float64]
         The affine transformations from voxel to world space for the target
     self_intersection_elements : list[TmsCoilElements]
         The groups of coil elements that need to be checked for self intersection with each other
-    affine : npt.NDArray[np.float_]
+    affine : npt.NDArray[np.float64]
         The affine transformation from coil to world space
     order : int
         The order of interpolation on the target_voxel_distance
@@ -897,16 +897,16 @@ def _prepare_skin_surface(mesh: Msh) -> Msh:
 def optimize_distance(
     coil: TmsCoil,
     head_mesh: Msh,
-    affine: npt.NDArray[np.float_],
+    affine: npt.NDArray[np.float64],
     distance: float = 0,
-    coil_translation_ranges: npt.NDArray[np.float_] | None = None,
-    coil_rotation_ranges: npt.NDArray[np.float_] | None = None,
+    coil_translation_ranges: npt.NDArray[np.float64] | None = None,
+    coil_rotation_ranges: npt.NDArray[np.float64] | None = None,
     dither_skip: int = 0,
     global_optimization: bool = True,
     local_optimization: bool = True,
     direct_args: dict | None = None,
     l_bfgs_b_args: dict | None = None,
-) -> tuple[float, float, npt.NDArray[np.float_], list, dict]:
+) -> tuple[float, float, npt.NDArray[np.float64], list, dict]:
     """Optimizes the deformations of the coil elements as well as the global transformation to minimize the distance between the optimization_surface
     and the min distance points (if not present, the coil casing points) while preventing intersections of the
     optimization_surface and the intersect points (if not present, the coil casing points)
@@ -917,15 +917,15 @@ def optimize_distance(
         The coil used in the optimization
     head_mesh : Msh
         The head mesh used in the TMS simulation and the head mesh where the scalp surface is used for coil head intersection
-    affine : npt.NDArray[np.float_]
+    affine : npt.NDArray[np.float64]
         The affine transformation that is applied to the coil
     distance : float
         The distance at which the coil is supposed to be placed relative to the head
-    coil_translation_ranges : npt.NDArray[np.float_], optional
+    coil_translation_ranges : npt.NDArray[np.float64], optional
         If the global coil position is supposed to be optimized as well, these ranges in the format
         [[min(x), max(x)],[min(y), max(y)], [min(z), max(z)]] are used
         and the updated affine coil transformation is returned, by default None
-    coil_translation_ranges : npt.NDArray[np.float_], optional
+    coil_translation_ranges : npt.NDArray[np.float64], optional
         If the global coil rotation is supposed to be optimized as well, these ranges in the format
         [[min(x), max(x)],[min(y), max(y)], [min(z), max(z)]] are used
         and the updated affine coil transformation is returned, by default None
@@ -1128,8 +1128,8 @@ def get_voxel_volume(
 ) -> tuple[
     dict[TmsCoilElements, npt.NDArray[np.bool_]],
     dict[TmsCoilElements, npt.NDArray[np.int_]],
-    dict[TmsCoilElements, npt.NDArray[np.float_]],
-    dict[TmsCoilElements, npt.NDArray[np.float_]],
+    dict[TmsCoilElements, npt.NDArray[np.float64]],
+    dict[TmsCoilElements, npt.NDArray[np.float64]],
     list[TmsCoilElements],
 ]:
     """Generates voxel volume information about the coil.
@@ -1150,7 +1150,7 @@ def get_voxel_volume(
         The indexes of the inside voxels for each coil element (interior voxel coordinates first, then edge coordinates)
     element_voxel_dither_factors : dict[TmsCoilElements, npt.NDArray[float]]
         The spacial factor that describes how many voxel are described by each interior dithered voxel for each voxel inside the volume for each coil element
-    element_voxel_affine : dict[TmsCoilElements, npt.NDArray[np.float_]]
+    element_voxel_affine : dict[TmsCoilElements, npt.NDArray[np.float64]]
         The affine transformations from world to voxel space for each coil element
     self_intersection_elements : list[TmsCoilElements]
         The groups of coil elements that need to be checked for self intersection with each other
@@ -1205,16 +1205,16 @@ def get_voxel_volume(
 
 def add_global_deformations(
     coil,
-    coil_rotation_ranges: npt.NDArray[np.float_] | None = None,
-    coil_translation_ranges: npt.NDArray[np.float_] | None = None,
+    coil_rotation_ranges: npt.NDArray[np.float64] | None = None,
+    coil_translation_ranges: npt.NDArray[np.float64] | None = None,
 ) -> list[TmsCoilDeformation]:
     """Adds deformations to the coil. The deformations are added to all coil elements so that they are global.
 
     Parameters
     ----------
-    coil_rotation_ranges : npt.NDArray[np.float_], optional
+    coil_rotation_ranges : npt.NDArray[np.float64], optional
         Adds global rotations to the coil, the format is [[min(x), max(x)],[min(y), max(y)], [min(z), max(z)]], by default None
-    coil_translation_ranges : npt.NDArray[np.float_], optional
+    coil_translation_ranges : npt.NDArray[np.float64], optional
         Adds global deformations to the coil, the format is [[min(x), max(x)],[min(y), max(y)], [min(z), max(z)]], by default None
 
     Returns
@@ -1307,10 +1307,10 @@ def optimize_e_mag(
     coil: TmsCoil,
     head_mesh: Msh,
     roi: FemTargetPointCloud,
-    affine: npt.NDArray[np.float_],
+    affine: npt.NDArray[np.float64],
     distance: float = 0,
-    coil_translation_ranges: npt.NDArray[np.float_] | None = None,
-    coil_rotation_ranges: npt.NDArray[np.float_] | None = None,
+    coil_translation_ranges: npt.NDArray[np.float64] | None = None,
+    coil_rotation_ranges: npt.NDArray[np.float64] | None = None,
     dither_skip: int = 0,
     fem_evaluation_cutoff: float = 1000,
     global_optimization: bool = True,
@@ -1320,7 +1320,7 @@ def optimize_e_mag(
     solver_options = "pardiso",
     cpus = 1,
     debug: bool = False,
-) -> tuple[float, float, npt.NDArray[np.float_], npt.NDArray[np.float_], list, dict]:
+) -> tuple[float, float, npt.NDArray[np.float64], npt.NDArray[np.float64], list, dict]:
     """Optimizes the deformations of the coil elements as well as the global transformation to maximize the mean e-field magnitude in the ROI while preventing intersections of the
     scalp surface and the coil casing
 
@@ -1332,15 +1332,15 @@ def optimize_e_mag(
         The head mesh used in the TMS simulation and the head mesh where the scalp surface is used for coil head intersection
     roi: RegionOfInterest
         Region of interest for the calculation of the e field
-    affine : npt.NDArray[np.float_]
+    affine : npt.NDArray[np.float64]
         The affine transformation that is applied to the coil
     distance : float
         The distance at which the coil is supposed to be placed relative to the head
-    coil_translation_ranges : npt.NDArray[np.float_], optional
+    coil_translation_ranges : npt.NDArray[np.float64], optional
         If the global coil position is supposed to be optimized as well, these ranges in the format
         [[min(x), max(x)],[min(y), max(y)], [min(z), max(z)]] are used
         and the updated affine coil transformation is returned, by default None
-    coil_rotation_ranges : npt.NDArray[np.float_], optional
+    coil_rotation_ranges : npt.NDArray[np.float64], optional
         If the global coil rotation is supposed to be optimized as well, these ranges in the format
         [[min(x), max(x)],[min(y), max(y)], [min(z), max(z)]] are used
         and the updated affine coil transformation is returned, by default None
@@ -1357,9 +1357,9 @@ def optimize_e_mag(
         The initial cost
     optimized_cost : float
         The cost after the optimization
-    result_affine : npt.NDArray[np.float_]
+    result_affine : npt.NDArray[np.float64]
         The optimized affine matrix
-    optimized_e_mag : npt.NDArray[np.float_]
+    optimized_e_mag : npt.NDArray[np.float64]
         The e field magnitude in the roi elements after the optimization
     opt_results : list
         The results of the optimizations

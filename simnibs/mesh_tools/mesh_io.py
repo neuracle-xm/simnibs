@@ -1861,7 +1861,7 @@ class Msh:
         gc.collect()
         return corresponding_th_indices
 
- 
+
     def calc_matsimnibs(self, center, pos_ydir, distance, skin_surface=None, msh_surf=None):
         """ Calculate the matsimnibs matrix for TMS simulations
 
@@ -2354,7 +2354,7 @@ class Msh:
         Parameters
         ----------
         distance_offset : float, optional
-            A distance offset that is subtracted from the actuall distance, by default 0.0 
+            A distance offset that is subtracted from the actuall distance, by default 0.0
         resolution : float, optional
             The resolution of the grid, by default 1.0
         order : int
@@ -2366,9 +2366,9 @@ class Msh:
         -------
         min_distance_on_grid : Callable
             The signed gridded distance field function (inside is negative)
-        grid : npt.NDArray[np.float_]
+        grid : npt.NDArray[np.float64]
             The voxelized surface distance
-        affine : npt.NDArray[np.float_]
+        affine : npt.NDArray[np.float64]
             The affine transformation from voxel to world coordinates
         AABBTree : pyAABBTree
             The AABBTree used
@@ -2452,9 +2452,9 @@ class Msh:
         -------
         npt.NDArray[np.bool_]
             The binary voxel volume
-        npt.NDArray[np.float_]
+        npt.NDArray[np.float64]
             The affine transformation from voxel to world space
-        voxel_dither_factors : npt.NDArray[np.float_]
+        voxel_dither_factors : npt.NDArray[np.float64]
             The spacial factor that describes how many voxel are described by each interior dithered voxel for each voxel inside the volume
         pyAABBTree
             The AABBTree used
@@ -3577,7 +3577,7 @@ class Data(object):
             Whether to replace zeros at boundaries of deformation field by values
             of clostest non-zero voxel; relevant only for non-linear transforms
             (Default: True)
-        
+
         Returns
         --------
         img: nibabel.Nifti1Pair
@@ -6127,9 +6127,9 @@ def write_vtk(msh: Msh, file_name):
     import pyvista as pv
 
     type_mapping = np.zeros(16, dtype=np.int64)
-    type_mapping[15] = pv.CellType.VERTEX 
-    type_mapping[1] = pv.CellType.LINE 
-    type_mapping[2] = pv.CellType.TRIANGLE 
+    type_mapping[15] = pv.CellType.VERTEX
+    type_mapping[1] = pv.CellType.LINE
+    type_mapping[2] = pv.CellType.TRIANGLE
     type_mapping[4] = pv.CellType.TETRA
 
     point_number_mapping = np.zeros(16, dtype=np.int64)
@@ -6182,7 +6182,7 @@ def read_vtk(file_name):
         i += grid.cells[i] + 1
 
     node_number_list[node_number_list != -1] += 1
-     
+
     elm = Elements()
     elm.node_number_list = node_number_list
     elm.elm_type = elm_type
@@ -6191,7 +6191,7 @@ def read_vtk(file_name):
     else:
         elm.tag1 = np.zeros(elm.nr)
     elm.tag2 = elm.tag1.copy()
-    
+
     elm_data = []
     for key in grid.cell_data:
         if key == 'tag':
@@ -6300,7 +6300,7 @@ def write_geo_axis_vectors(affine_matrix, fn, values=None, name="", mode='bw'):
     """
     if affine_matrix.shape[0] != 4 or affine_matrix.shape[1] != 4:
         raise ValueError('Affine matrix must have size (4x4)')
-    
+
     if values is None:
         values = np.ones(4)
     else:
@@ -7186,11 +7186,11 @@ def split(m: Msh, iterations: int = 1, hierarchy: tuple[int] = None, skin_tag: i
 
 
 def _format_table(table):
-    """helper function for Msh.fields_summary and 
+    """helper function for Msh.fields_summary and
     tes_flex_optimization.get_summary_text
-    
+
     converts a table into a string for printing
-    """    
+    """
     entry_sizes = np.array([[len(e) for e in row] for row in table])
     col_sizes = np.max(entry_sizes, axis=0)
     align_string = ['{:<' + str(cs) + '}' for cs in col_sizes]
