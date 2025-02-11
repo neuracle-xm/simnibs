@@ -124,7 +124,7 @@ def write(sub_files, templates):
 
     if os.path.exists(sub_files.template_coregistered):
         imgs.append(_final_overlay(sub_files.template_coregistered, 
-                                   labels = [6, 5], medfilter_size=5))
+                                   labels = [0, 4], medfilter_size=5)) #merdi: [6, 5] if normal, [0, 4] if fat atlas
         cmaps.append(cmap_affine)
         interpolation_order.append(0)
         names.append('Coregistered template')

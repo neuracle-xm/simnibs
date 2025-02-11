@@ -52,5 +52,6 @@
 515	  Bone-Cortical			   238 215 150 255 
 516	  Bone-Cancellous		   237 199 154 255  
 517	  Background			   0 168 255 255 
-520	  Cortical-CSF     		   120 133 217 255 
+520	  Cortical-CSF     		   120 133 217 255
+525       Fat                              255 235 205 255
 530	  Optic-Nerve     		   0 191 122 255 
