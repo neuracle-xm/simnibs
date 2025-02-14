@@ -160,7 +160,7 @@ def main():
         args.surfaces,
         args.mesh,
         args.usesettings,
-        args.usefatatlas,
+        args.useatlasv1_0,
         args.noneck,
         args.inittransform,
         args.usetransform,

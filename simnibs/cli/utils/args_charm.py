@@ -111,7 +111,7 @@ use_settings = CommandLineArgument(
     ),
 )
 use_fat_atlas = CommandLineArgument(
-    ["--usefatatlas"],
+    ["--useatlasv1_0"],
     dict(
         action="store_true",
         default=False,
