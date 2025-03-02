@@ -6,7 +6,6 @@ import h5py
 import types
 import logging
 import sys
-import nibabel
 
 import numpy as np
 import scipy.spatial
@@ -18,7 +17,7 @@ from scipy.optimize import (
 )
 
 from simnibs import __version__
-from simnibs.mesh_tools import mesh_io, surface
+from simnibs.mesh_tools import mesh_io
 from simnibs.simulation.fem import get_dirichlet_node_index_cog
 from simnibs.simulation.onlinefem import FemTargetPointCloud, OnlineFEM
 from simnibs.utils import simnibs_logger
@@ -27,10 +26,7 @@ from simnibs.utils.region_of_interest import RegionOfInterest
 from simnibs.utils.roi_result_visualization import RoiResultVisualization
 from simnibs.utils.TI_utils import get_maxTI, get_dirTI
 from simnibs.utils.file_finder import SubjectFiles, Templates
-from simnibs.utils.transformations import (
-    subject2mni_coords,
-    create_new_connectivity_list_point_mask,
-)
+
 from simnibs.utils.mesh_element_properties import ElementTags, tissue_names
 
 from .ellipsoid import Ellipsoid, subject2ellipsoid, ellipsoid2subject
@@ -40,13 +36,14 @@ from .electrode_layout import (
     ElectrodeArrayPair,
     create_tdcs_session_from_array,
     CircularArray,
+    valid_skin_region,
 )
 
 
 class TesFlexOptimization:
     """
     Defines a TES optimization problem using node-wise current sources.
-    
+
     Parameters (general)
     --------------------
     electrode : Electrode Object
@@ -55,42 +52,42 @@ class TesFlexOptimization:
 
     roi : list of RegionOfInterest class instances
         Region of interest(s) the field is evaluated in.
-    
+
     goal : list of str [n_roi], or FunctionType, optional, default: ["mean"]
         Implemented or user provided goal functions:
-        
+
         - "mean": maximize mean e-field in ROI
         - "max": maximize 99.9 percentile of electric field in ROI
         - "focality": Maximize focality  (goal: sensitivity = specificity = 1). NOTE: "focality" needs excatly two ROIs: The first will be treated as ROI, the second as non-ROI.
         - "focality_inv": Maximize inverse focality (goal: sensitivity(ROI) = 1, sensitivity(nonROI) = 1). NOTE: "focality" needs excatly two ROIs: The first will be treated as ROI, the second as non-ROI.
         - user provided function taking e-field as an input which is  a list of list of np.ndarrays of float [n_channel_stim][n_roi] containing np.array with e-field
-    
+
     e_postproc : str, optional, default: "norm"
         Specifies how the raw e-field in the ROI (Ex, Ey, Ez) is post-processed:
-        
+
         - "norm": electric field magnitude (default)
         - "normal": determine normal component (requires surface ROIS)
         - "tangential": determine tangential component (requires surface ROIS)
         - "max_TI": maximum envelope for temporal interference fields
-        - "dir_TI": directional sensitive maximum envelope for temporal interference fields (requires surface ROIS)    
-        
+        - "dir_TI": directional sensitive maximum envelope for temporal interference fields (requires surface ROIS)
+
     min_electrode_distance : float, optional, default: 5.0
-        Minimally ensured distance between electrodes of different arrays (in mm).    
-    
+        Minimally ensured distance between electrodes of different arrays (in mm).
+
     constrain_electrode_locations : bool, optional, default: False
         Constrains the possible locations of freely movable electrode arrays. Recommended for TTF optimizations,
         where two pairs of large electrode arrays are optimized. If True, parameter bounds for the optimization
         will be specified restricting the array locations to be frontal, parietal and occipital.
-        
+
     overlap_factor : float, optional, default: 1
         Factor of overlap of allowed lambda regions to place electrodes. (1 corresponds to neatless regions,
         <1 regions have a gap in between, >1 regions are overlapping)
-    
+
     weights : np.array of float [n_roi], optional, default: equal weights for each ROI
-            Weights for optimizer for ROI specific goal function weighting 
+            Weights for optimizer for ROI specific goal function weighting
             NOTE: Will be ignored for "focality" and "focality_inv" goals (see below),
             where ROI and non-ROI are combined into a single goal function value
-        
+
     Parameters (optimizer + FEM)
     ------------------------------------
     optimizer : str, optional, default: "differential_evolution"
@@ -105,7 +102,7 @@ class TesFlexOptimization:
         Specify type of anisotropy for simulation ('scalar', 'vn' or 'mc')
     disable_SPR_for_volume_roi : bool, optional, default: True
             Whether to use SPR interpolation for volume rois
-        
+
     Parameters (debugging)
     ----------------------
     initial_x0: numpy.array, optional, default: None
@@ -207,14 +204,14 @@ class TesFlexOptimization:
         # number of CPU cores (set by run(cpus=NN) )
         self._n_cpu = None
         self._log_handlers = []
-        
+
         if settings_dict:
             self.from_dict(settings_dict)
 
     def _prepare(self):
         """
         Prepares TESoptimize
-        
+
         """
         # check variable assignments
         ####################################################################################################
@@ -248,12 +245,12 @@ class TesFlexOptimization:
         logger.info( "Setting up output folders, logging and IO ...")
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
-        
+
         if self.detailed_results:
             self._detailed_results_folder = os.path.join(self.output_folder, "detailed_results")
             if not os.path.exists(self._detailed_results_folder):
                 os.makedirs(self._detailed_results_folder)
-        
+
         # setup headmodel
         ####################################################################################################
         logger.info( "Setting up headmodel ...")
@@ -272,9 +269,8 @@ class TesFlexOptimization:
         self._mesh_relabel = self._mesh.relabel_internal_air()
 
         # make final skin surface including some additional distance
-        self._skin_surface = surface.Surface(mesh=self._mesh_relabel, labels=1005)
         self._skin_surface = valid_skin_region(
-            skin_surface=self._skin_surface,
+            self._mesh_relabel.crop_mesh(tags=1005),
             fn_electrode_mask=self._fn_electrode_mask,
             mesh=self._mesh_relabel,
             additional_distance=0,
@@ -282,11 +278,11 @@ class TesFlexOptimization:
 
         # get mapping between skin_surface node indices and global mesh nodes
         self._node_idx_msh = np.where(
-            np.isin(self._mesh.nodes.node_coord, self._skin_surface.nodes).all(axis=1)
+            np.isin(self._mesh.nodes.node_coord, self._skin_surface.nodes.node_coord).all(axis=1)
         )[0]
 
         # fit optimal ellipsoid to valid skin points
-        self._ellipsoid.fit(points=self._skin_surface.nodes)
+        self._ellipsoid.fit(points=self._skin_surface.nodes.node_coord)
 
         # setup ROI
         ####################################################################################################
@@ -443,7 +439,7 @@ class TesFlexOptimization:
         n_effective_channels = self.n_channel_stim
         if np.array(["TI" in _t for _t in self.e_postproc]).any():
             n_effective_channels = 1 # for TI, fields of the channels are combined to a common metric
-            
+
         self.goal_fun_value = [[] for _ in range(n_effective_channels)]
         self.AUC = [[] for _ in range(n_effective_channels)]
         self.integral_focality = [[] for _ in range(n_effective_channels)]
@@ -507,7 +503,7 @@ class TesFlexOptimization:
             cpus=self._n_cpu
         )
         self._prepared = True
-        
+
     def _set_logger(self, fname_prefix='simnibs_optimization', summary=True):
         """
         Set-up logger to write to a file
@@ -540,12 +536,12 @@ class TesFlexOptimization:
             logger.addHandler(fh_s)
             self._log_handlers += [fh_s]
         simnibs_logger.register_excepthook(logger)
-    
+
     def _finish_logger(self):
         [logger.removeHandler(lh) for lh in self._log_handlers]
         self._log_handlers = []
         simnibs_logger.unregister_excepthook()
-        
+
     def _log_summary_preopt(self):
         ''' summary of optimization setup'''
         logger.log(26, "=" * 100)
@@ -557,7 +553,7 @@ class TesFlexOptimization:
         logger.log(26, f"Conductivity anisotropy type:     {self._ofem.anisotropy_type}")
         logger.log(26, f"Output_folder:                    {self.output_folder}")
         logger.log(26, " ")
-        
+
         logger.log(26, "Optimization and FEM settings")
         logger.log(26, "-" * 100)
         logger.log(26, f"Optimizer:                        {self.optimizer}")
@@ -568,7 +564,7 @@ class TesFlexOptimization:
         logger.log(26, f"Number of Channels:               {self.n_channel_stim}")
         logger.log(26, f"ROI weights:                      {self.weights}")
         logger.log(26, f"Constrain electrode locations:    {self.constrain_electrode_locations}")
-        logger.log(26, f"Polish (local optimization):      {self.polish}")        
+        logger.log(26, f"Polish (local optimization):      {self.polish}")
         logger.log(26, "Optimizer settings:")
         if self._optimizer_options_std is not None:
             for key in self._optimizer_options_std:
@@ -580,26 +576,26 @@ class TesFlexOptimization:
         else:
             logger.log(26, "None")
         logger.log(26, " ")
-        
+
         logger.log(26, f"FEM solver options:               {self._ofem.solver_options}")
         logger.log(26, f"Dirichlet correction:             {self.electrode[0].dirichlet_correction}")
         logger.log(26, f"Dirichlet correction (detailed):  {self.electrode[0].dirichlet_correction_detailed}")
         logger.log(26, f"Current outlier correction:       {self.electrode[0].current_outlier_correction}")
         logger.log(26, " ")
-        
+
         logger.log(26, "=" * 100)
         logger.log(26, "Optimization results:")
         logger.log(26, "=" * 100)
 
-                
+
     def _log_summary_postopt(self):
         ''' summary of optimization results'''
-        
+
         def sep(x):
             if x >= 0:
                 return " "
-            return ""        
-        
+            return ""
+
         logger.log(26, "Electrode array infos:")
         logger.log(26, "=" * 100)
         for i_stim in range(len(self.electrode_pos_opt)):
@@ -612,7 +608,7 @@ class TesFlexOptimization:
                 logger.log(26, f"\tdistance:  {sep(electrode_array.distance)}{electrode_array.distance}")
                 logger.log(26, f"\tn_outer:  {sep(electrode_array.n_outer)}{electrode_array.n_outer}")
         logger.log(26, " ")
-        
+
         logger.log(26, "Electrode coordinates (Cartesian space):")
         logger.log(26, "-" * 100)
         for i_stim in range(len(self.electrode_pos_opt)):
@@ -622,7 +618,7 @@ class TesFlexOptimization:
                for i_electrode, _electrode in enumerate(_electrode_array.electrodes):
                    logger.log(26, f"\tElectrode {i_electrode} ({_electrode.type}):")
                    for i_row in range(4):
-                       logger.log(26, 
+                       logger.log(26,
                            "\t\t"
                            + sep(_electrode.posmat[i_row, 0])
                            + f"{_electrode.posmat[i_row, 0]:.3f}, "
@@ -640,11 +636,11 @@ class TesFlexOptimization:
         # save skin surface
         np.savetxt(
             os.path.join(self._detailed_results_folder, "skin_surface_nodes.txt"),
-            self._skin_surface.nodes,
+            self._skin_surface.nodes.node_coord,
         )
         np.savetxt(
             os.path.join(self._detailed_results_folder, "skin_surface_con.txt"),
-            self._skin_surface.tr_nodes,
+            self._skin_surface.elm.node_number_list[:,:3]-1,
         )
 
         # save fitted ellipsoid
@@ -657,10 +653,10 @@ class TesFlexOptimization:
         np.savetxt(
             os.path.join(self._detailed_results_folder, "fitted_ellipsoid.txt"), eli_coords_jac
         )
-                
+
         # plot valid skin regions
         if self.constrain_electrode_locations:
-            beta = []        
+            beta = []
             lam = []
             min_idx = 0
             max_idx = 0
@@ -672,11 +668,11 @@ class TesFlexOptimization:
                     if _electrode_array.optimize_alpha:
                         max_idx += 3
                     else:
-                        max_idx += 2    
+                        max_idx += 2
                     beta.append([self._bounds.lb[min_idx], self._bounds.ub[min_idx]])
                     lam.append([self._bounds.lb[min_idx+1], self._bounds.ub[min_idx+1]])
                     min_idx = max_idx
-            
+
             for i in range(len(beta)):
                beta_region = np.linspace(beta[i][0], beta[i][1], 100)
                lam_region = np.linspace(lam[i][0], lam[i][1], 100)
@@ -684,7 +680,7 @@ class TesFlexOptimization:
                coords_region_jac = np.array(
                     np.meshgrid(beta_region, lam_region)
                 ).T.reshape(-1, 2)
- 
+
                coords_region = self._ellipsoid.jacobi2cartesian(
                     coords=coords_region_jac, return_normal=False
                 )
@@ -692,13 +688,13 @@ class TesFlexOptimization:
                np.savetxt(
                     os.path.join(self._detailed_results_folder, f"coords_region_{i}.txt"), coords_region
                 )
-  
+
     def _write_detailed_results_postopt(self, fopt=None):
         ''' write out some more results after to optimization
-        
+
             The fields are re-evaluated using the online FEM with dirichlet corrections,
             and saved for visualization as text files.
-            
+
             In addition, the final fields and the optimization settings and (intermediate)
             results are saved in a hdf5-file which contains the following:
                   optimizer : str
@@ -732,7 +728,7 @@ class TesFlexOptimization:
                   integral_focality : list of list of float [n_channel_stim][n_opt_runs]
                       Integral focality measure for all stimulation conditions.
         '''
-    
+
         def plot_roi_field(e, roi, fn_out, e_label=None):
             """
             Exports data to .txt files for plotting.
@@ -763,7 +759,7 @@ class TesFlexOptimization:
             np.savetxt(fn_out + "_nodes.txt", roi.get_nodes())
             np.savetxt(fn_out + "_data.txt", np.hstack(e))
             np.savetxt(fn_out + "_data_label.txt", e_label, fmt='%s')
-                
+
         # get final solution and electrode position with node-wise dirichlet correction for external plotting
         for _electrode in self.electrode:
              _electrode.dirichlet_correction = True
@@ -777,9 +773,9 @@ class TesFlexOptimization:
         e_plot_label = [[] for _ in range(self._n_roi)]
 
         if np.array(["TI" in _t for _t in self.e_postproc]).any():
-            
+
             e_pp = [[0 for _ in range(self._n_roi)]]
-            
+
             for i_roi in range(self._n_roi):
                  e_pp[0][i_roi] = postprocess_e(
                      e=e[0][i_roi],
@@ -797,7 +793,7 @@ class TesFlexOptimization:
                  e_plot_label[i_roi].append("e_stim_1_Ey")
                  e_plot_label[i_roi].append("e_stim_1_Ez")
                  e_plot_label[i_roi].append("e_pp")
-                 
+
                  fn_out = os.path.join(self._detailed_results_folder, f"e_roi_{i_roi}")
                  plot_roi_field(
                    e=e_plot[i_roi],
@@ -806,9 +802,9 @@ class TesFlexOptimization:
                    fn_out=fn_out,
                  )
         else:
-            
+
              e_pp = [[0 for _ in range(self._n_roi)] for _ in range(self.n_channel_stim)]
-             
+
              for i_roi in range(self._n_roi):
                 for i_channel_stim in range(self.n_channel_stim):
                      e_pp[i_channel_stim][i_roi] = postprocess_e(
@@ -823,7 +819,7 @@ class TesFlexOptimization:
                      e_plot_label[i_roi].append(f"e_stim_{i_channel_stim}_Ey")
                      e_plot_label[i_roi].append(f"e_stim_{i_channel_stim}_Ez")
                      e_plot_label[i_roi].append(f"e_pp_stim_{i_channel_stim}")
-                
+
                 fn_out = os.path.join(self._detailed_results_folder, f"e_roi_{i_roi}")
                 plot_roi_field(
                     e=e_plot[i_roi],
@@ -831,7 +827,7 @@ class TesFlexOptimization:
                     e_label=e_plot_label[i_roi],
                     fn_out=fn_out,
                 )
-                
+
         # save optimization settings and results in <fname>.hdf5 file
         fname_hdf5 = os.path.join(self._detailed_results_folder, "summary.hdf5")
         with h5py.File(fname_hdf5, "w") as f:
@@ -931,7 +927,7 @@ class TesFlexOptimization:
                         data=elec.n_outer,
                         name=f"electrode/channel_{i_stim}/n_outer",
                     )
-                
+
                 if isinstance(elec, ElectrodeArrayPair):
                     f.create_dataset(
                         data=elec.radius, name=f"electrode/channel_{i_stim}/radius"
@@ -972,7 +968,7 @@ class TesFlexOptimization:
                         data=e[i_stim][i_roi], name=f"e/channel_{i_stim}/e_roi_{i_roi}"
                     )
             for i_stim in range(len(e_pp)):
-                for i_roi in range(len(e_pp[i_stim])):     
+                for i_roi in range(len(e_pp[i_stim])):
                     f.create_dataset(
                         data=e_pp[i_stim][i_roi],
                         name=f"e_pp/channel_{i_stim}/e_roi_{i_roi}",
@@ -1018,7 +1014,7 @@ class TesFlexOptimization:
             roi = RegionOfInterest()
         self.roi.append(roi)
         return roi
-    
+
     def to_dict(self) -> dict:
         """ Makes a dictionary storing all settings as key value pairs
 
@@ -1029,10 +1025,10 @@ class TesFlexOptimization:
         """
         # Generate dict from instance variables (excluding variables starting with _ or __)
         settings = {
-            key:value for key, value in self.__dict__.items() 
+            key:value for key, value in self.__dict__.items()
             if not key.startswith('__')
             and not key.startswith('_')
-            and not callable(value) 
+            and not callable(value)
             and not callable(getattr(value, "__get__", None))
             and value is not None
         }
@@ -1048,7 +1044,7 @@ class TesFlexOptimization:
         electrode_dicts = []
         for electrode_class in self.electrode:
             electrode_dicts.append(electrode_class.to_dict())
-        settings["electrode"] = electrode_dicts    
+        settings["electrode"] = electrode_dicts
 
         return settings
 
@@ -1094,7 +1090,7 @@ class TesFlexOptimization:
         Parameters
         ----------
         cpus : int, optional, default: None
-            Number of CPU cores to use (so far used only during ellipsoid-fitting; 
+            Number of CPU cores to use (so far used only during ellipsoid-fitting;
                                         still ignored during FEM)
         save_mat: bool, optional, default: True
             Save the ".mat" file of this structure
@@ -1113,7 +1109,7 @@ class TesFlexOptimization:
             set_num_threads(int(cpus))
             from numba import get_num_threads
             logger.info(f"Numba reports {get_num_threads()} threads available")
-        
+
         # prepare optimization
         if not self._prepared:
             self._prepare()
@@ -1128,14 +1124,14 @@ class TesFlexOptimization:
                 ),
                 mat,
             )
-            
+
         # log settings in summary text
         self._log_summary_preopt()
-        
+
         # write settings and preparation details (skin surface, fitted ellipsoid, electrodes)
         if self.detailed_results:
             self._write_detailed_results_preopt()
-           
+
         # run global optimization
         ######################################################################################################
         if self.optimizer == "direct":
@@ -1169,15 +1165,15 @@ class TesFlexOptimization:
             raise NotImplementedError(
                 f"Specified optimization method: '{self.optimizer}' not implemented."
             )
-        
+
         self.optim_funvalue = result.fun
         optim_x = result.x
-        
+
         logger.info(f"Global optimization finished! Best electrode position: {optim_x}")
         logger.log(26, f"Number of function evaluations (global optimization):   {self.n_test}")
         logger.log(26, f"Number of FEM evaluations (global optimization):        {self.n_sim}")
         logger.log(26, f"Goal function value (global optimization):              {self.optim_funvalue}")
-        
+
         # run local optimization to polish results
         #######################################################################################################
         if self.polish:
@@ -1191,24 +1187,24 @@ class TesFlexOptimization:
                 options={"finite_diff_rel_step": 0.01},
             )
             logger.info(f"Local optimization finished! Best electrode position: {result.x}")
-    
+
             if self.optim_funvalue <= result.fun:
                 logger.info("Local optimization did not improve the results, proceeding with global optimization results.")
             else:
                 optim_x = result.x
                 self.optim_funvalue = result.fun
-                
+
         # transform optimal electrode pos from array to list of list
         self.electrode_pos_opt = self.get_electrode_pos_from_array(optim_x)
-        
+
         # internally update electrodes to correspond to optimal electrode pos
         self.get_nodes_electrode(electrode_pos=self.electrode_pos_opt)
-        
+
         logger.log(26, f"Total number of function evaluations:                   {self.n_test}")
         logger.log(26, f"Total number of FEM evaluations:                        {self.n_sim}")
         logger.log(26, f"Final goal function value:                              {self.optim_funvalue}")
         logger.log(26, f"Duration (setup and optimization):                      {time.time() - start}")
-                
+
         # run final simulation with real electrode including remeshing
         #########################################################################################################
         if self.run_final_electrode_simulation:
@@ -1221,32 +1217,32 @@ class TesFlexOptimization:
                     ),
                 )
                 self.fn_final_sim.append(s.run()[0])
-                
+
             # extract e-fields from FEM simulations, add extra data and show results
             base_file_name = os.path.splitext(os.path.basename(self._ff_subject.fnamehead))[0]
             base_file_name += '_tes_flex_opt'
-            
+
             fn_vis, m_head, m_surf = write_visualization(self.output_folder,
                                                          base_file_name,
-                                                         self.roi, 
+                                                         self.roi,
                                                          self.fn_final_sim,
                                                          self.e_postproc,
                                                          self.goal)
-            
+
             # extract key metrics from m_head, m_surf and add to summary log
             logger.log(26, make_summary_text(m_surf, m_head))
-            
+
             if self.open_in_gmsh:
                 for i in fn_vis:
                     mesh_io.open_in_gmsh(i, True)
-                        
+
         # append optimization results to summary
         self._log_summary_postopt()
-        
+
         # write results details (final fields via onlineFEM with dirichlet_corrections as txt and hdf5)
         if self.detailed_results:
             self._write_detailed_results_postopt(self.optim_funvalue)
-        
+
         self._finish_logger()
 
     def goal_fun(self, parameters):
@@ -1279,9 +1275,9 @@ class TesFlexOptimization:
             logger.info( f"Goal ({self.goal}): 2.0")
             logger.info( "-" * len(parameters_str))
             return 2.0
-        
+
         self.n_sim += 1
-        
+
         # post-process raw electric field (components Ex, Ey, Ez)
         if np.array(["TI" in _t for _t in self.e_postproc]).any():
             e_pp = [[0 for _ in range(self._n_roi)]]
@@ -1322,9 +1318,9 @@ class TesFlexOptimization:
 
         Parameters
         ----------
-        e: list of list of np.ndarrays of float 
+        e: list of list of np.ndarrays of float
             e-field magnitude, normal component, tangential component: [n_channel_stim][n_roi][n_roi_nodes]
-            dirTI, maxTI: [1][n_roi][n_roi_nodes] 
+            dirTI, maxTI: [1][n_roi][n_roi_nodes]
            Post-processed electric fields from simulated simulation conditions and ROIs.
 
         Returns
@@ -1334,10 +1330,10 @@ class TesFlexOptimization:
             average is taken according to self.weights over the different goal functions of the ROIs.
         """
         n_effective_channels = len(e) # for TI, fields of the channels were previously combined --> only one "effective channel"
-                    
+
         # focality based goal functions
         if "focality" in self.goal or "focality_inv" in self.goal:
-            
+
             y = np.zeros((n_effective_channels))  # one function value per channel
 
             for i_channel_stim in range(n_effective_channels):
@@ -1351,18 +1347,18 @@ class TesFlexOptimization:
                     y[i_channel_stim] = -100 * ( np.sqrt(2) - ROCval )
                 else:
                     y[i_channel_stim] = -100 * ROCval
-                                
-            # average over all effective channels   
+
+            # average over all effective channels
             y_weighted_sum = np.mean(y)
 
         # Mean/Max/ etc. based goal functions
         else:
 
             y = np.zeros((n_effective_channels, self._n_roi))  # one goal function value per channel and roi
-            
+
             for i_roi in range(self._n_roi):
                 for i_channel_stim in range(n_effective_channels):
-                    
+
                     # mean electric field in the roi
                     if self.goal[i_roi] == "mean":
                         y[i_channel_stim, i_roi] = -np.mean(
@@ -1396,15 +1392,15 @@ class TesFlexOptimization:
 
             # average over all effective channels
             y_weighted_sum = np.mean(y, axis=0)
-    
+
             # weight and sum the goal function values of the ROIs
             y_weighted_sum = np.sum(y_weighted_sum * self.weights)
-        
+
         # if desired, track focality measures and goal function values
         for i_channel_stim in range(n_effective_channels):
             # goal fun value in rois
             self.goal_fun_value[i_channel_stim].append( y[i_channel_stim] )
-                        
+
             if self.track_focality:
                 e1 = e[i_channel_stim][0]
                 e2 = e[i_channel_stim][1]
@@ -1419,7 +1415,7 @@ class TesFlexOptimization:
             else:
                 self.AUC[i_channel_stim].append(0)
                 self.integral_focality[i_channel_stim].append(0)
-                
+
         return y_weighted_sum
 
     def get_bounds(self, constrain_electrode_locations, overlap_factor=1.0):
@@ -1673,7 +1669,7 @@ class TesFlexOptimization:
 
             if valid:
                 return para_test_grid[i, :]
-            
+
             logger.info( f"> electrode_pos_valid: {node_idx_dict[1]}")
 
         raise RuntimeError("failed to find valid electrode position.")
@@ -1971,7 +1967,7 @@ class TesFlexOptimization:
                 ele_idx, tmp = ellipsoid2subject(
                     coords=electrode_coords_eli_eli[electrode_array_idx == i_array, :],
                     ellipsoid=self._ellipsoid,
-                    surface=self._skin_surface,
+                    mesh=self._skin_surface,
                 )
                 tmp_arrays.append(tmp)
 
@@ -1993,14 +1989,14 @@ class TesFlexOptimization:
                 for _electrode in _electrode_array.electrodes:
                     if _electrode.type == "spherical":
                         mask, posmat = get_node_mask_spherical_electrode(
-                            node_coords_skin=self._skin_surface.nodes,
+                            node_coords_skin=self._skin_surface.nodes.node_coord,
                             ele_coords_center=electrode_coords_subject[i_channel_stim][i_ele, :],
                             ele_radius=_electrode.radius
                         )
 
                     elif _electrode.type == "rectangular":
                         mask, posmat = get_node_mask_rectangular_electrode(
-                            node_coords_skin=self._skin_surface.nodes,
+                            node_coords_skin=self._skin_surface.nodes.node_coord,
                             ele_coords_center=electrode_coords_subject[i_channel_stim][i_ele, :],
                             ele_dir_y=cy[i_channel_stim][i_array, :],
                             ele_dir_n=n[i_channel_stim][i_ele, :],
@@ -2017,7 +2013,7 @@ class TesFlexOptimization:
                     _electrode.posmat = posmat
 
                     # node areas
-                    _electrode.node_area = self._skin_surface.nodes_areas[mask]
+                    _electrode.node_area = self._skin_surface.nodes_areas().value[mask]
 
                     # total effective area of all nodes
                     _electrode.area_skin = _electrode.node_area_total
@@ -2037,7 +2033,7 @@ class TesFlexOptimization:
                     _electrode.node_idx = self._node_idx_msh[mask]
 
                     # save node coords (refering to global mesh)
-                    _electrode.node_coords = self._skin_surface.nodes[mask]
+                    _electrode.node_coords = self._skin_surface.nodes.node_coord[mask]
 
                     node_coords_list[i_array_global].append(_electrode.node_coords)
 
@@ -2094,14 +2090,14 @@ class TesFlexOptimization:
             # some electrodes overlap --> return
             logger.info( node_idx_dict[0] )
             return None
-            
+
         # perform one electric field calculation for every stimulation condition (one at a time is on)
         logger.info("Electrode positions valid")
         e = [[] for _ in range(self.n_channel_stim)]
         for i_channel_stim in range(self.n_channel_stim):
-            
+
             if plot:
-                # when using Dirichlet correction, online FEM will save 
+                # when using Dirichlet correction, online FEM will save
                 # electrode node coords and the optimized currents to this file
                 fn_electrode_txt = os.path.join(
                     self._detailed_results_folder,
@@ -2109,168 +2105,19 @@ class TesFlexOptimization:
                 )
             else:
                 fn_electrode_txt = None
-                
+
             e[i_channel_stim] = self._ofem.update_field(electrode=self.electrode[i_channel_stim],
                                                          dirichlet_correction=self.electrode[i_channel_stim].dirichlet_correction,
                                                          fn_electrode_txt=fn_electrode_txt)[0]
-            
+
             # store number of dirichlet iterations for convergence analysis
             if self.electrode[i_channel_stim].dirichlet_correction:
                 self.n_iter_dirichlet_correction[i_channel_stim].append(
                     self._ofem.n_iter_dirichlet_correction
                 )
-                
+
         return e
 
-
-def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance=0.0):
-    """
-    Determine the nodes of the scalp surface where the electrode can be applied (not ears and face etc.)
-
-    Parameters
-    ----------
-    skin_surface : Surface object
-        Surface of the mesh (mesh_tools/surface.py)
-    mesh : Msh object
-        Mesh object created by SimNIBS (mesh_tools/mesh_io.py)
-    additional_distance : float, optional, default: 0
-        Additional distance in anterior part to put between original MNI template registration
-    """
-    nodes_all = copy.deepcopy(skin_surface.nodes)
-    tr_nodes_all = copy.deepcopy(skin_surface.tr_nodes)
-    # load mask of valid electrode positions (in MNI space)
-    mask_img = nibabel.load(fn_electrode_mask)
-    mask_img_data = mask_img.get_fdata()
-
-    # add a certain distance to mask out closer to the eyes
-    for i_border in range(mask_img_data.shape[0]):
-        if mask_img_data[:, :, i_border].all():
-            break
-
-    mask_img_data[:, :, (i_border - additional_distance) : i_border] = 1
-
-    # transform skin surface points to MNI space
-    skin_nodes_mni_ras = subject2mni_coords(
-        coordinates=skin_surface.nodes,
-        m2m_folder=os.path.split(mesh.fn)[0],
-        transformation_type="nonl",
-    )
-
-    # transform coordinates to voxel space
-    skin_nodes_mni_voxel = (
-        np.floor(
-            np.linalg.inv(mask_img.affine)
-            @ np.hstack(
-                (
-                    skin_nodes_mni_ras,
-                    np.ones(skin_nodes_mni_ras.shape[0])[:, np.newaxis],
-                )
-            ).transpose()
-        )[:3, :]
-        .transpose()
-        .astype(int)
-    )
-    skin_nodes_mni_voxel[skin_nodes_mni_voxel[:, 0] >= mask_img.shape[0], 0] = (
-        mask_img.shape[0] - 1
-    )
-    skin_nodes_mni_voxel[skin_nodes_mni_voxel[:, 1] >= mask_img.shape[1], 1] = (
-        mask_img.shape[1] - 1
-    )
-    skin_nodes_mni_voxel[skin_nodes_mni_voxel[:, 2] >= mask_img.shape[2], 2] = (
-        mask_img.shape[2] - 1
-    )
-
-    # get boolean mask of valid skin points
-    skin_surface.mask_valid_nodes = mask_img_data[
-        skin_nodes_mni_voxel[:, 0],
-        skin_nodes_mni_voxel[:, 1],
-        skin_nodes_mni_voxel[:, 2],
-    ].astype(bool)
-
-    # remove points outside of MNI space (lower neck)
-    skin_surface.mask_valid_nodes[(skin_nodes_mni_voxel < 0).any(axis=1)] = False
-
-    skin_surface.mask_valid_tr = np.zeros(skin_surface.tr_centers.shape).astype(bool)
-
-    unique_points = np.unique(
-        skin_surface.tr_nodes[
-            skin_surface.mask_valid_nodes[skin_surface.tr_nodes].all(axis=1), :
-        ]
-    )
-    for point in unique_points:
-        idx_where = np.where(skin_surface.tr_nodes == point)
-        skin_surface.mask_valid_tr[idx_where[0], idx_where[1]] = True
-    skin_surface.mask_valid_tr = skin_surface.mask_valid_tr.all(axis=1)
-
-    # determine connectivity list of valid skin region (creates new node and connectivity list)
-    skin_surface.nodes, skin_surface.tr_nodes = create_new_connectivity_list_point_mask(
-        points=skin_surface.nodes,
-        con=skin_surface.tr_nodes,
-        point_mask=skin_surface.mask_valid_nodes,
-    )
-
-    # identify spurious skin patches inside head and remove them
-    tri_domain = np.ones(skin_surface.tr_nodes.shape[0]).astype(int) * -1
-    point_domain = np.ones(skin_surface.nodes.shape[0]).astype(int) * -1
-
-    domain = 0
-    while (tri_domain == -1).any():
-        nodes_idx_of_domain = np.array([])
-        tri_idx_of_domain = np.where(tri_domain == -1)[0][0]
-
-        n_current = -1
-        n_last = 0
-        while n_last != n_current:
-            n_last = copy.deepcopy(n_current)
-            nodes_idx_of_domain = np.unique(
-                np.append(
-                    nodes_idx_of_domain, skin_surface.tr_nodes[tri_idx_of_domain, :]
-                )
-            ).astype(int)
-            tri_idx_of_domain = np.isin(skin_surface.tr_nodes, nodes_idx_of_domain).any(
-                axis=1
-            )
-            n_current = np.sum(tri_idx_of_domain)
-            # print(f"domain: {domain}, n_current: {n_current}")
-
-        tri_domain[tri_idx_of_domain] = domain
-        point_domain[nodes_idx_of_domain] = domain
-        domain += 1
-
-    domain_idx_main = np.argmax([np.sum(point_domain == d) for d in range(domain)])
-
-    skin_surface.nodes, skin_surface.tr_nodes = create_new_connectivity_list_point_mask(
-        points=skin_surface.nodes,
-        con=skin_surface.tr_nodes,
-        point_mask=point_domain == domain_idx_main,
-    )
-
-    # update masks
-    skin_surface.mask_valid_nodes = np.zeros(nodes_all.shape[0]).astype(bool)
-    for i_p, p in enumerate(nodes_all):
-        if p in skin_surface.nodes:
-            skin_surface.mask_valid_nodes[i_p] = True
-
-    skin_surface.mask_valid_tr = np.zeros(tr_nodes_all.shape[0]).astype(bool)
-    for i_t, t in enumerate(tr_nodes_all):
-        if t in skin_surface.tr_nodes:
-            skin_surface.mask_valid_tr[i_t] = True
-
-    skin_surface.nodes_areas = skin_surface.nodes_areas[skin_surface.mask_valid_nodes]
-    skin_surface.nodes_normals = skin_surface.nodes_normals[
-        skin_surface.mask_valid_nodes, :
-    ]
-    skin_surface.surf2msh_nodes = skin_surface.surf2msh_nodes[
-        skin_surface.mask_valid_nodes
-    ]
-    skin_surface.surf2msh_triangles = skin_surface.surf2msh_triangles[
-        skin_surface.mask_valid_tr
-    ]
-    skin_surface.tr_areas = skin_surface.tr_areas[skin_surface.mask_valid_tr]
-    skin_surface.tr_centers = skin_surface.tr_centers[skin_surface.mask_valid_tr, :]
-    skin_surface.tr_normals = skin_surface.tr_normals[skin_surface.mask_valid_tr, :]
-
-    return skin_surface
 
 
 def get_array_direction(electrode_pos, ellipsoid):
@@ -2315,7 +2162,7 @@ def get_array_direction(electrode_pos, ellipsoid):
 
 
 def get_element_properties(roi):
-    
+
     vol = None
     node_normals = None
     if roi.method == 'surface':
@@ -2327,7 +2174,7 @@ def get_element_properties(roi):
     elif roi.method in ["volume", "volume_from_surface"]:
         # return element volumes
         vol = np.mean(roi._mesh.elements_volumes_and_areas().value[roi._mask])
-        
+
     return vol, node_normals
 
 
@@ -2392,20 +2239,20 @@ def postprocess_e(e, e2=None, dirvec=None, type="magn"):
 def write_visualization(folder_path, base_file_name, roi_list, results_list, e_postproc, goal_list):
     ''' uses the final FEM simulation results to create
         surface and/or volume meshes with results for each metric in e_postproc
-        
+
         writes the meshes including geo and opt files to disc
         returns volume and surface mesh
     '''
     # e_postproc has a postprocessing option for each roi --> keep only unique set
     e_postproc = list(np.unique(e_postproc))
-    
+
     for i in e_postproc:
         if i not in ["max_TI", "dir_TI", "magn", "normal", "tangential"]:
             raise ValueError(f"postprocessing option {i} unknown")
-    
+
     n_roi = len(roi_list)
     n_results = len(results_list)
-    
+
     # 1) initialize visualization
     roi_txt = ['ROI']
     if n_roi > 1:
@@ -2413,11 +2260,11 @@ def write_visualization(folder_path, base_file_name, roi_list, results_list, e_p
             roi_txt = ['ROI','non-ROI']
         else:
             roi_txt = ['ROI_'+str(x) for x in range(n_roi)]
-    
+
     results_txt = ['']
     if n_results > 1:
         results_txt = ['channel_'+str(x) for x in range(n_results)]
-    
+
     roi_result_vis = RoiResultVisualization(
         roi_list,
         results_list,
@@ -2426,56 +2273,56 @@ def write_visualization(folder_path, base_file_name, roi_list, results_list, e_p
         roi_txt,
         results_txt
         )
-    
+
     # 2a) append head mesh data to visualization
     headmesh_newdata = []
     m_head = None
     if roi_result_vis.has_head_mesh():
         m_head = roi_result_vis.get_head_mesh()
-    
+
         if 'magn' in e_postproc and n_results > 1:
             # append magnE averaged across channels
             fieldnames = [results_txt[i]+'__magnE' for i in range(len(results_txt))]
             idx = [i for i, data in enumerate(m_head.elmdata) if data.field_name in fieldnames]
-    
+
             data = np.zeros_like(m_head.elmdata[idx[0]].value)
             for i in idx:
                 data += m_head.elmdata[i].value
             data /= n_results
             headmesh_newdata.append(m_head.add_element_field(data, 'average__magnE'))
-    
+
         if 'max_TI' in e_postproc and n_results == 2:
             # append maxTI
             fieldnames = [results_txt[i]+'__E' for i in range(len(results_txt))]
             idx = [i for i, data in enumerate(m_head.elmdata) if data.field_name in fieldnames]
             if len(idx) != 2:
                 raise ValueError('Exact two E fields needed to calculate maxTI')
-    
-            data = postprocess_e(m_head.elmdata[idx[0]].value, 
-                                 e2=m_head.elmdata[idx[1]].value, 
-                                 dirvec=None, 
+
+            data = postprocess_e(m_head.elmdata[idx[0]].value,
+                                 e2=m_head.elmdata[idx[1]].value,
+                                 dirvec=None,
                                  type='max_TI'
                                  )
             headmesh_newdata.append(m_head.add_element_field(data, 'max_TI'))
-    
+
     # 2b) append surface data to visualization
     surfacemesh_newdata = []
     m_surf = None
     if roi_result_vis.has_surface_mesh():
         m_surf = roi_result_vis.get_surface_mesh()
         dirvec = m_surf.nodes_normals().value
-        
+
         if 'magn' in e_postproc and n_results > 1:
             # append magnE averaged across channels
             fieldnames = [results_txt[i]+'__magnE' for i in range(len(results_txt))]
             idx = [i for i, data in enumerate(m_surf.nodedata) if data.field_name in fieldnames]
-    
+
             data = np.zeros_like(m_surf.nodedata[idx[0]].value)
             for i in idx:
                 data += m_surf.nodedata[i].value
             data /= n_results
             surfacemesh_newdata.append(m_surf.add_node_field(data, 'average__magnE'))
-        
+
         for metric in ["normal", "tangential"]:
             if metric in e_postproc:
                 # append normal and tangential components (and average across channels if n_results > 1)
@@ -2484,23 +2331,23 @@ def write_visualization(folder_path, base_file_name, roi_list, results_list, e_p
                 else:
                     fieldnames = [results_txt[i]+'__E' for i in range(len(results_txt))]
                 idx = [i for i, data in enumerate(m_surf.nodedata) if data.field_name in fieldnames]
-                
+
                 for idx_txt, i_nodedata in enumerate(idx):
-                    data = postprocess_e(m_surf.nodedata[i_nodedata].value, 
-                                         e2=None, 
-                                         dirvec=dirvec, 
+                    data = postprocess_e(m_surf.nodedata[i_nodedata].value,
+                                         e2=None,
+                                         dirvec=dirvec,
                                          type=metric
                                          )
-                    surfacemesh_newdata.append(m_surf.add_node_field(data, results_txt[idx_txt]+'__'+metric)) 
+                    surfacemesh_newdata.append(m_surf.add_node_field(data, results_txt[idx_txt]+'__'+metric))
                     if idx_txt == 0:
                         d_avg = np.copy(data)
                     else:
                         d_avg += data
-        
+
                 if len(idx) > 1:
                     d_avg /= len(idx)
                     surfacemesh_newdata.append(m_surf.add_node_field(d_avg, 'average__'+metric))
-                    
+
         for metric in ['max_TI', 'dir_TI']:
             if metric in e_postproc and n_results == 2:
                 # append maxTI and dirTI
@@ -2508,42 +2355,42 @@ def write_visualization(folder_path, base_file_name, roi_list, results_list, e_p
                 idx = [i for i, data in enumerate(m_surf.nodedata) if data.field_name in fieldnames]
                 if len(idx) != 2:
                     raise ValueError('Exact two E fields needed to calculate maxTI and dirTI')
-        
-                data = postprocess_e(m_surf.nodedata[idx[0]].value, 
-                                     e2=m_surf.nodedata[idx[1]].value, 
-                                     dirvec=dirvec, 
+
+                data = postprocess_e(m_surf.nodedata[idx[0]].value,
+                                     e2=m_surf.nodedata[idx[1]].value,
+                                     dirvec=dirvec,
                                      type=metric
                                      )
-                surfacemesh_newdata.append(m_surf.add_node_field(data, metric))   
-            
-    
+                surfacemesh_newdata.append(m_surf.add_node_field(data, metric))
+
+
     # 3) create new meshes including geo and opt file data
     roi_result_vis.create_visualization()
-    
+
     # 4) delete raw E field data to save some disc space
     fieldnames = [results_txt[i]+'__E' for i in range(len(results_txt))]
     fieldnames.append('E')
     for i in fieldnames:
         if roi_result_vis.has_head_mesh():
             roi_result_vis.remove_field_from_head_mesh(i)
-        if roi_result_vis.has_surface_mesh():    
+        if roi_result_vis.has_surface_mesh():
             roi_result_vis.remove_field_from_surface_mesh(i)
-        
+
     # 5) update visualization settings in opt-files
     for _, view in roi_result_vis.head_mesh_data_name_to_gmsh_view.items():
         view.Visible = 0 # disable visiblity of all data fields
-    
+
     if roi_result_vis.has_head_mesh():
         # get tissue list from volume ROIs
         tissues = []
         for i in roi_list:
             if i.method in ["volume", "volume_from_surface"] and i.tissues is not None:
                 tissues += i.tissues
-    
+
         for i in headmesh_newdata:
             view = roi_result_vis.head_mesh_data_name_to_gmsh_view[i.field_name]
             view2 = i.view_options(visible_tags=tissues)
-            
+
             view.Visible = 1
             view.RangeType = view2.RangeType
             view.CenterGlyphs = view2.CenterGlyphs
@@ -2551,24 +2398,24 @@ def write_visualization(folder_path, base_file_name, roi_list, results_list, e_p
             view.VectorType = view2.VectorType
             view.CustomMax = view2.CustomMax
             view.CustomMin = view2.CustomMin
-            view.SaturateValues = view2.SaturateValues 
-            view.RangeType = view2.RangeType 
+            view.SaturateValues = view2.SaturateValues
+            view.RangeType = view2.RangeType
             view.ShowScale = view2.ShowScale
             view.ColormapNumber = view2.ColormapNumber
             view.ColorTable = view2.ColorTable
-            
+
         if len(headmesh_newdata) == 0:
             view = roi_result_vis.head_mesh_data_name_to_gmsh_view[m_head.elmdata[-1].field_name]
             view.Visible = 1
-    
+
     for _, view in roi_result_vis.surface_mesh_data_name_to_gmsh_view.items():
-        view.Visible = 0 # disable visiblity of all data fields    
-        
+        view.Visible = 0 # disable visiblity of all data fields
+
     if roi_result_vis.has_surface_mesh():
         for i in surfacemesh_newdata:
             view = roi_result_vis.surface_mesh_data_name_to_gmsh_view[i.field_name]
             view2 = i.view_options()
-            
+
             view.Visible = 1
             view.RangeType = view2.RangeType
             view.CenterGlyphs = view2.CenterGlyphs
@@ -2576,19 +2423,19 @@ def write_visualization(folder_path, base_file_name, roi_list, results_list, e_p
             view.VectorType = view2.VectorType
             view.CustomMax = view2.CustomMax
             view.CustomMin = view2.CustomMin
-            view.SaturateValues = view2.SaturateValues 
-            view.RangeType = view2.RangeType 
+            view.SaturateValues = view2.SaturateValues
+            view.RangeType = view2.RangeType
             view.ShowScale = view2.ShowScale
             view.ColormapNumber = view2.ColormapNumber
             view.ColorTable = view2.ColorTable
-            
+
         if len(surfacemesh_newdata) == 0:
             view = roi_result_vis.surface_mesh_data_name_to_gmsh_view[m_surf.nodedata[-1].field_name]
             view.Visible = 1
-                            
+
     # 6) write out visualization meshes together with their geo and opt files
-    fn_vis = roi_result_vis.write_visualization() 
-    
+    fn_vis = roi_result_vis.write_visualization()
+
     return fn_vis, m_head, m_surf
 
 
@@ -2600,13 +2447,13 @@ def make_summary_text(m_surf, m_head, tissues_m_head = [ElementTags.GM]):
         m_head (mesh_io.Msh): volume mesh created by write_visualization
         tissues_m_head (list of ElementTags): optional, standard: [ElementTags.GM]
                         tissue types included in evaluation of summary metrics for m_head
-        
+
     Returns:
         summary text (str)
     """
     def summary_for_mesh(m):
         # get fields with final results
-        result_field_names = {'max_TI', 'dir_TI', 'magnE', 'E__normal', 'E__tangential', 
+        result_field_names = {'max_TI', 'dir_TI', 'magnE', 'E__normal', 'E__tangential',
                             'average__magnE', 'average__normal', 'average__tangential'}
         result_fields = m.field.keys() & result_field_names
 
@@ -2625,7 +2472,7 @@ def make_summary_text(m_surf, m_head, tissues_m_head = [ElementTags.GM]):
             idx=np.argwhere(m.field[r].value>0)+1
             for idx_f, f in enumerate(result_fields):
                 arr_medians[idx_f+1,0] = f
-                arr_medians[idx_f+1,idx_r+1] = f'{m.field[f].get_percentiles(percentile=[50], roi=idx)[0]: .2e}' 
+                arr_medians[idx_f+1,idx_r+1] = f'{m.field[f].get_percentiles(percentile=[50], roi=idx)[0]: .2e}'
 
         # assemble summary text
         summary_text = '======================\n'

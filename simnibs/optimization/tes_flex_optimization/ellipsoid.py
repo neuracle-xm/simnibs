@@ -10,8 +10,7 @@ warnings.filterwarnings("ignore")
 warnings.filterwarnings('ignore', 'The iteration is not making good progress')
 
 from simnibs.mesh_tools import cgal
-from simnibs.mesh_tools.surface import Surface
-
+from simnibs.mesh_tools.mesh_io import Msh
 
 class Ellipsoid():
     """
@@ -497,21 +496,21 @@ class Ellipsoid():
         if n_cpu is None:
             n_cpu = multiprocessing.cpu_count()
         n_cpu = min(n_cpu, n_points)
-        
+
         if n_cpu == 1:
             coords_destination = np.zeros((n_points,3))
             for i in range(n_points):
-                coords_destination[i] = self._get_geodesic_destination(start[i], alpha[i], distance[i], 
+                coords_destination[i] = self._get_geodesic_destination(start[i], alpha[i], distance[i],
                                                                        n_steps=n_steps, method=method)
         else:
             # prepare input data
             input_data = [np.hstack(([start[i, :].flatten(), alpha[i], distance[i]])) for i in range(n_points)]
-            
+
             workhorse = partial(self._workhorse_geodesic_destination_wrapper, n_steps=n_steps, method=method)
-    
+
             pool = multiprocessing.Pool(n_cpu)
             coords_destination = np.vstack((pool.map(workhorse, input_data)))
-    
+
             pool.close()
             pool.join()
 
@@ -995,7 +994,7 @@ def subject2ellipsoid(coords: np.ndarray, normals: np.ndarray, ellipsoid: Ellips
     return eli_intersect_sphere
 
 
-def ellipsoid2subject(coords: np.ndarray, ellipsoid: Ellipsoid, surface: Surface) -> (int, np.ndarray):
+def ellipsoid2subject(coords: np.ndarray, ellipsoid: Ellipsoid, mesh: Msh) -> tuple[int, np.ndarray]:
     """
     Transform coordinates from ellipsoid to given surface by projecting the points given in "coords" (on ellipsoid)
     in normal direction to the given surface. Returns the index and the coordinates on the surface of the triangle hit.
@@ -1007,7 +1006,7 @@ def ellipsoid2subject(coords: np.ndarray, ellipsoid: Ellipsoid, surface: Surface
         Spherical coordinates [theta, phi] in radiant on the ellipsoid surface.
     ellipsoid : Ellipsoid class instance
         Ellipsoid
-    surface : Surface class instance
+    mesh : Msh class instance
         Surface of subject the coordinates are projected on
 
     Returns
@@ -1028,8 +1027,8 @@ def ellipsoid2subject(coords: np.ndarray, ellipsoid: Ellipsoid, surface: Surface
     far = (x0 + 100*n)
 
     indices, points = cgal.segment_triangle_intersection(
-        surface.nodes,
-        surface.tr_nodes,
+        mesh.nodes.node_coord,
+        mesh.elm.node_number_list[:,:3] - 1,
         [near[i, :] for i in range(coords.shape[0])],
         [far[i, :] for i in range(coords.shape[0])]  # near[i, :], far[i, :]
     )

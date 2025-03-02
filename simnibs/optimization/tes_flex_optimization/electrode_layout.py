@@ -1,13 +1,142 @@
-import os
 import copy
+import nibabel
 import numpy as np
-import simnibs
+import os
+
+from simnibs.mesh_tools.mesh_io import make_surface_mesh
 from .current_estimator import CurrentEstimator
 from simnibs.simulation.sim_struct import SESSION
 from .ellipsoid import subject2ellipsoid, ellipsoid2subject
-from simnibs.mesh_tools.surface import Surface
 from .ellipsoid import Ellipsoid
 from simnibs.utils.file_finder import Templates
+from simnibs.utils.transformations import (
+    subject2mni_coords,
+    create_new_connectivity_list_point_mask,
+)
+
+def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance=0.0):
+    """
+    Determine the nodes of the scalp surface where the electrode can be applied (not ears and face etc.)
+
+    Parameters
+    ----------
+    skin_surface : Surface object
+        Surface of the mesh (mesh_tools/surface.py)
+    mesh : Msh object
+        Mesh object created by SimNIBS (mesh_tools/mesh_io.py)
+    additional_distance : float, optional, default: 0
+        Additional distance in anterior part to put between original MNI template registration
+    """
+    nodes_all = copy.deepcopy(skin_surface.nodes.node_coord)
+    tr_nodes_all = copy.deepcopy(skin_surface.elm.node_number_list[:,:3] - 1)
+    # load mask of valid electrode positions (in MNI space)
+    mask_img = nibabel.load(fn_electrode_mask)
+    mask_img_data = mask_img.get_fdata()
+
+    # add a certain distance to mask out closer to the eyes
+    for i_border in range(mask_img_data.shape[0]):
+        if mask_img_data[:, :, i_border].all():
+            break
+
+    mask_img_data[:, :, (i_border - additional_distance) : i_border] = 1
+
+    # transform skin surface points to MNI space
+    skin_nodes_mni_ras = subject2mni_coords(
+        coordinates=nodes_all,
+        m2m_folder=os.path.split(mesh.fn)[0],
+        transformation_type="nonl",
+    )
+
+    # transform coordinates to voxel space
+    skin_nodes_mni_voxel = (
+        np.floor(
+            np.linalg.inv(mask_img.affine)
+            @ np.hstack(
+                (
+                    skin_nodes_mni_ras,
+                    np.ones(skin_nodes_mni_ras.shape[0])[:, np.newaxis],
+                )
+            ).transpose()
+        )[:3, :]
+        .transpose()
+        .astype(int)
+    )
+    skin_nodes_mni_voxel[skin_nodes_mni_voxel[:, 0] >= mask_img.shape[0], 0] = (
+        mask_img.shape[0] - 1
+    )
+    skin_nodes_mni_voxel[skin_nodes_mni_voxel[:, 1] >= mask_img.shape[1], 1] = (
+        mask_img.shape[1] - 1
+    )
+    skin_nodes_mni_voxel[skin_nodes_mni_voxel[:, 2] >= mask_img.shape[2], 2] = (
+        mask_img.shape[2] - 1
+    )
+
+    # get boolean mask of valid skin points
+    mask_valid_nodes = mask_img_data[
+        skin_nodes_mni_voxel[:, 0],
+        skin_nodes_mni_voxel[:, 1],
+        skin_nodes_mni_voxel[:, 2],
+    ].astype(bool)
+
+    # remove points outside of MNI space (lower neck)
+    mask_valid_nodes[(skin_nodes_mni_voxel < 0).any(axis=1)] = False
+
+    mask_valid_tr = np.zeros((skin_surface.elm.nr, 3)).astype(bool)
+
+    unique_points = np.unique(
+        tr_nodes_all[
+            mask_valid_nodes[tr_nodes_all].all(axis=1), :
+        ]
+    )
+    for point in unique_points:
+        idx_where = np.where(tr_nodes_all == point)
+        mask_valid_tr[idx_where[0], idx_where[1]] = True
+    mask_valid_tr = mask_valid_tr.all(axis=1)
+
+    # determine connectivity list of valid skin region (creates new node and connectivity list)
+    nodes_all, tr_nodes_all = create_new_connectivity_list_point_mask(
+        points=nodes_all,
+        con=tr_nodes_all,
+        point_mask=mask_valid_nodes,
+    )
+
+    # identify spurious skin patches inside head and remove them
+    tri_domain = np.ones(len(tr_nodes_all)).astype(int) * -1
+    point_domain = np.ones(len(nodes_all)).astype(int) * -1
+
+    domain = 0
+    while (tri_domain == -1).any():
+        nodes_idx_of_domain = np.array([])
+        tri_idx_of_domain = np.where(tri_domain == -1)[0][0]
+
+        n_current = -1
+        n_last = 0
+        while n_last != n_current:
+            n_last = copy.deepcopy(n_current)
+            nodes_idx_of_domain = np.unique(
+                np.append(
+                    nodes_idx_of_domain, tr_nodes_all[tri_idx_of_domain, :]
+                )
+            ).astype(int)
+            tri_idx_of_domain = np.isin(tr_nodes_all, nodes_idx_of_domain).any(
+                axis=1
+            )
+            n_current = np.sum(tri_idx_of_domain)
+            # print(f"domain: {domain}, n_current: {n_current}")
+
+        tri_domain[tri_idx_of_domain] = domain
+        point_domain[nodes_idx_of_domain] = domain
+        domain += 1
+
+    domain_idx_main = np.argmax([np.sum(point_domain == d) for d in range(domain)])
+
+    nodes_all,tr_nodes_all = create_new_connectivity_list_point_mask(
+        points=nodes_all,
+        con=tr_nodes_all,
+        point_mask=point_domain == domain_idx_main,
+    )
+
+    return make_surface_mesh(nodes_all, tr_nodes_all + 1)
 
 
 class ElectrodeLayout:
@@ -159,28 +288,17 @@ class ElectrodeLayout:
             Head mesh
         fn_electrode_mask : str, optional, default: Templates().mni_volume_upper_head_mask
             Filename of mask to use to define valid skin region, where the electrodes can be applied
-        """
-        # get some paths
-        subpath = os.path.split(mesh.fn)[0]
-
+    """
         if fn_electrode_mask is None:
             ff_templates = Templates()
             fn_electrode_mask = ff_templates.mni_volume_upper_head_mask
 
-        # relabel internal air
-        mesh_relabel = simnibs.opt_struct.relabel_internal_air(
-            m=mesh,
-            subpath=subpath,
-            label_skin=1005,
-            label_new=1099,
-            label_internal_air=501,
-        )
+        mesh_relabel = mesh.relabel_internal_air()
 
         # make final skin surface including some additional distance
-        skin_surface_ellipsoid = Surface(mesh=mesh_relabel, labels=1005)
-        skin_surface = copy.deepcopy(skin_surface_ellipsoid)
-        skin_surface_ellipsoid = simnibs.opt_struct.valid_skin_region(
-            skin_surface=skin_surface_ellipsoid,
+        skin_surface = mesh_relabel.crop_mesh(tags=1005)
+        skin_surface_ellipsoid = valid_skin_region(
+            skin_surface,
             fn_electrode_mask=fn_electrode_mask,
             mesh=mesh_relabel,
             additional_distance=0,
@@ -188,12 +306,12 @@ class ElectrodeLayout:
 
         # get mapping between skin_surface node indices and global mesh nodes
         node_idx_msh = np.where(
-            np.isin(mesh.nodes.node_coord, skin_surface.nodes).all(axis=1)
+            np.isin(mesh.nodes.node_coord, skin_surface.nodes.node_coord).all(axis=1)
         )[0]
 
         # fit optimal ellipsoid to valid skin points
         ellipsoid = Ellipsoid()
-        ellipsoid.fit(points=skin_surface_ellipsoid.nodes)
+        ellipsoid.fit(points=skin_surface_ellipsoid.nodes.node_coord)
 
         alpha_array = []
         start_array = []
@@ -288,7 +406,7 @@ class ElectrodeLayout:
             ele_idx, tmp = ellipsoid2subject(
                 coords=electrode_coords_eli_eli[electrode_array_idx == i_array, :],
                 ellipsoid=ellipsoid,
-                surface=skin_surface,
+                mesh=skin_surface,
             )
             tmp_arrays.append(tmp)
 
@@ -305,7 +423,7 @@ class ElectrodeLayout:
                     # mask with a sphere
                     mask = (
                         np.linalg.norm(
-                            skin_surface.nodes - electrode_coords_subject[i_ele, :],
+                            skin_surface.nodes.node_coord - electrode_coords_subject[i_ele, :],
                             axis=1,
                         )
                         < _electrode.radius
@@ -341,7 +459,7 @@ class ElectrodeLayout:
                         )
                     )
 
-                    skin_nodes_rotated = (skin_surface.nodes - center) @ rotmat
+                    skin_nodes_rotated = (skin_surface.nodes.node_coord - center) @ rotmat
 
                     # mask with a box
                     mask_x = np.logical_and(
@@ -362,7 +480,7 @@ class ElectrodeLayout:
                     )
 
                 # node areas
-                _electrode.node_area = skin_surface.nodes_areas[mask]
+                _electrode.node_area = skin_surface.nodes_areas().value[mask]
 
                 # total effective area of all nodes
                 _electrode.area_skin = _electrode.node_area_total
@@ -375,7 +493,7 @@ class ElectrodeLayout:
                 _electrode.node_idx = node_idx_msh[mask]
 
                 # save node coords (refering to global mesh)
-                _electrode.node_coords = skin_surface.nodes[mask]
+                _electrode.node_coords = skin_surface.nodes.node_coord[mask]
 
                 i_ele += 1
 
@@ -990,14 +1108,14 @@ class ElectrodeArray:
 
         prop_cycle = plt.rcParams["axes.prop_cycle"]
         colors = prop_cycle.by_key()["color"]
-            
+
         if usesDirichlet:
             channel_idx = self.channel_id
         else:
             channel_idx = self.ele_id
 
         if len(colors) < np.max(channel_idx):
-            colors = list(np.tile(colors, 
+            colors = list(np.tile(colors,
                                   int(np.ceil(np.max(channel_idx) / len(colors)))
                                   )
                          )
@@ -1419,7 +1537,7 @@ class ElectrodeArrayPair(ElectrodeLayout):
         """
         if center is not None:
             self.center = center
-        
+
         if radius is not None:
             if not hasattr(radius, "__len__"):
                 radius = np.array([radius])
@@ -1479,7 +1597,7 @@ class CircularArray(ElectrodeLayout):
         Has to sum up to zero net current.
     current_estimator_method : str, optional, default: "linear"
         Method to estimate the electrode currents:
-        
+
         - "linear": linear regression
         - "gpc": generalized polynomial chaos
     dirichlet_correction : bool, optional, default: True
@@ -1945,12 +2063,12 @@ def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thicknes
         # each electrode has its own channel
         tdcslist.currents = electrode_array.current
         channel_idx = np.arange(len(electrode_array.current))
-        
+
     # Initialize the electrodes
     counter = 0
     for i_array, _electrode_array in enumerate(electrode_array._electrode_arrays):
         for i_ele, _electrode in enumerate(_electrode_array.electrodes):
-                        
+
             # add new electrode
             electrode = tdcslist.add_electrode()
 
@@ -2003,7 +2121,7 @@ def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thicknes
 
             # Electrode direction
             electrode.pos_ydir = electrode.centre + 20*_electrode.posmat[:3, 1]
-            
+
             counter += 1
-        
+
     return s

@@ -9,8 +9,9 @@ from copy import deepcopy
 from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import TesFlexOptimization
 from simnibs.utils.matlab_read import dict_from_matlab
 from simnibs.mesh_tools.mesh_io import read_msh
-from simnibs.mesh_tools import surface, mesh_io, gmsh_view
-from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import valid_skin_region, write_visualization, make_summary_text
+from simnibs.mesh_tools import mesh_io, gmsh_view
+from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import write_visualization, make_summary_text
+from simnibs.optimization.tes_flex_optimization.electrode_layout import valid_skin_region
 from simnibs.optimization.tes_flex_optimization.ellipsoid import Ellipsoid
 from simnibs.utils.file_finder import Templates
 from simnibs.utils.region_of_interest import RegionOfInterest
@@ -307,19 +308,22 @@ class TestToFromDict:
         mesh_relabel = mesh.relabel_internal_air()
 
         # make final skin surface including some additional distance
-        skin_surface = surface.Surface(mesh=mesh_relabel, labels=1005)
         skin_surface = valid_skin_region(
-            skin_surface=skin_surface,
+            mesh_relabel.crop_mesh(tags=1005),
             fn_electrode_mask=fn_electrode_mask,
             mesh=mesh_relabel,
             additional_distance=0,
         )
 
-        np.testing.assert_equal(skin_surface.nodes.shape[0], 5427)
-        np.testing.assert_allclose(skin_surface.nodes[0, :], [9.80649432, 104.20439836,  58.96501272], rtol=1e-6)
+        np.testing.assert_equal(skin_surface.nodes.nr, 5427)
+        np.testing.assert_allclose(
+            skin_surface.nodes.node_coord[0, :],
+            [9.80649432, 104.20439836,  58.96501272],
+            rtol=1e-6
+        )
 
         # fit optimal ellipsoid to valid skin points
-        ellipsoid.fit(points=skin_surface.nodes)
+        ellipsoid.fit(points=skin_surface.nodes.node_coord)
 
         np.testing.assert_allclose(ellipsoid.radii, [113.60465987, 105.76692858,  86.19796459], rtol=1e-6)
         np.testing.assert_allclose(ellipsoid.center, [ 1.47022674, 16.43981549, -4.79728615], rtol=1e-6)
@@ -340,7 +344,7 @@ class Test_Write_Visualization:
         roi_1.roi_sphere_center = [0., 0., 80.]
         roi_1.roi_sphere_radius = 20
         roi_1._prepare()
-        
+
         roi_2 = RegionOfInterest()
         roi_2.load_mesh(input_mesh)
         roi_2.tissues = [3]
@@ -349,12 +353,12 @@ class Test_Write_Visualization:
         roi_2.roi_sphere_center = [0., 0., -80.]
         roi_2.roi_sphere_radius = 20
         roi_2._prepare()
-        
+
         #Create result mesh 1
         result_mesh_1_file_path = os.path.join(tmp_path, "test1_TMS_scalar.msh")
         result_mesh_1 = deepcopy(sphere3_msh)
         opt_1 = gmsh_view.Visualization(result_mesh_1)
-        
+
         opt_1.add_view(ColormapNumber=1)
         result_mesh_1.add_element_field(
             np.tile(np.arange(result_mesh_1.elm.nr),3).reshape((result_mesh_1.elm.nr,3)), "E"
@@ -375,12 +379,12 @@ class Test_Write_Visualization:
         opt_1.add_view(ColormapNumber=4)
         result_mesh_1.write(result_mesh_1_file_path)
         opt_1.write_opt(result_mesh_1_file_path)
-        
+
         #Create result mesh 2
         result_mesh_2_file_path = os.path.join(tmp_path, "test2_TMS_scalar.msh")
         result_mesh_2 = deepcopy(sphere3_msh)
         opt_2 = gmsh_view.Visualization(result_mesh_2)
-        
+
         opt_2.add_view(ColormapNumber=5)
         result_mesh_2.add_element_field(
             np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape((result_mesh_2.elm.nr,3)), "E"
@@ -401,56 +405,56 @@ class Test_Write_Visualization:
         opt_2.add_view(ColormapNumber=8)
         result_mesh_2.write(result_mesh_2_file_path)
         opt_2.write_opt(result_mesh_2_file_path)
-        
+
         # write visualization
         roi_list = [roi_1,roi_2]
         results_list = [result_mesh_1_file_path, result_mesh_2_file_path]
         base_file_name = 'volmask'
-        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn'] 
+        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn']
         goal_list = ['mean']
-        
+
         write_visualization(tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list)
-        
+
         fn_vis_head = os.path.join(tmp_path, "volmask_head_mesh.msh")
         fn_vis_surf = os.path.join(tmp_path, "volmask_surface_mesh.msh")
         assert os.path.exists(fn_vis_head)
         assert not os.path.exists(fn_vis_surf)
-        
-        if os.path.exists(fn_vis_head):    
+
+        if os.path.exists(fn_vis_head):
             m = mesh_io.read_msh(fn_vis_head)
             field_names = list(m.field.keys())
             field_names_ref=['ROI_0', 'ROI_1', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE', 'max_TI']
-            
+
             assert 'E' not in field_names
             assert 'magnE' not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
 
-    
+
     def test_surface_rois(self, sphere3_msh: mesh_io.Msh, tmp_path):
         input_mesh = deepcopy(sphere3_msh)
         surf_mesh = input_mesh.crop_mesh(tags = 1003)
         surf_mesh_file_path = os.path.join(tmp_path, "surf_roi.msh")
         mesh_io.write_msh(surf_mesh, surf_mesh_file_path)
-        
+
         #Create Roi 1
         roi_1 = RegionOfInterest()
         roi_1.method = "surface"
         roi_1.surface_type = "custom"
         roi_1.surface_path = surf_mesh_file_path
         roi_1._prepare()
-        
+
         #Create Roi 2
         roi_2 = RegionOfInterest()
         roi_2.method = "surface"
         roi_2.surface_type = "custom"
         roi_2.surface_path = surf_mesh_file_path
         roi_2._prepare()
-        
+
         #Create result mesh 1
         result_mesh_1_file_path = os.path.join(tmp_path, "test1_TMS_scalar.msh")
         result_mesh_1 = deepcopy(sphere3_msh)
         opt_1 = gmsh_view.Visualization(result_mesh_1)
-        
+
         opt_1.add_view(ColormapNumber=1)
         result_mesh_1.add_element_field(
             np.tile(np.arange(result_mesh_1.elm.nr),3).reshape((result_mesh_1.elm.nr,3)), "E"
@@ -471,12 +475,12 @@ class Test_Write_Visualization:
         opt_1.add_view(ColormapNumber=4)
         result_mesh_1.write(result_mesh_1_file_path)
         opt_1.write_opt(result_mesh_1_file_path)
-        
+
         #Create result mesh 2
         result_mesh_2_file_path = os.path.join(tmp_path, "test2_TMS_scalar.msh")
         result_mesh_2 = deepcopy(sphere3_msh)
         opt_2 = gmsh_view.Visualization(result_mesh_2)
-        
+
         opt_2.add_view(ColormapNumber=5)
         result_mesh_2.add_element_field(
             np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape((result_mesh_2.elm.nr,3)), "E"
@@ -497,47 +501,47 @@ class Test_Write_Visualization:
         opt_2.add_view(ColormapNumber=8)
         result_mesh_2.write(result_mesh_2_file_path)
         opt_2.write_opt(result_mesh_2_file_path)
-        
+
         # write visualization
         roi_list = [roi_1,roi_2]
         results_list = [result_mesh_1_file_path, result_mesh_2_file_path]
         base_file_name = 'surfmask'
-        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn'] 
+        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn']
         goal_list = ['mean']
-            
+
         write_visualization(tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list)
-        
+
         fn_vis_head = os.path.join(tmp_path, "surfmask_head_mesh.msh")
         fn_vis_surf = os.path.join(tmp_path, "surfmask_surface_mesh.msh")
         assert not os.path.exists(fn_vis_head)
         assert os.path.exists(fn_vis_surf)
-            
-        if os.path.exists(fn_vis_surf):    
+
+        if os.path.exists(fn_vis_surf):
             m = mesh_io.read_msh(fn_vis_surf)
             field_names = list(m.field.keys())
-            field_names_ref=['ROI_0', 'ROI_1', 'channel_0__magnE', 'channel_1__magnE', 
-                             'average__magnE', 'channel_0__normal', 'channel_1__normal', 
-                             'average__normal', 'channel_0__tangential', 'channel_1__tangential', 
+            field_names_ref=['ROI_0', 'ROI_1', 'channel_0__magnE', 'channel_1__magnE',
+                             'average__magnE', 'channel_0__normal', 'channel_1__normal',
+                             'average__normal', 'channel_0__tangential', 'channel_1__tangential',
                              'average__tangential', 'max_TI', 'dir_TI']
-            
+
             assert 'E' not in field_names
             assert 'magnE' not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
-    
-    
+
+
     def test_surface_and_volume_rois(self, sphere3_msh: mesh_io.Msh, tmp_path):
         input_mesh = deepcopy(sphere3_msh)
         surf_mesh = input_mesh.crop_mesh(tags = 1003)
         surf_mesh_file_path = os.path.join(tmp_path, "surf_roi.msh")
         mesh_io.write_msh(surf_mesh, surf_mesh_file_path)
-        
+
         #Create Roi 1
         roi_1 = RegionOfInterest()
         roi_1.method = "surface"
         roi_1.surface_type = "custom"
         roi_1.surface_path = surf_mesh_file_path
         roi_1._prepare()
-        
+
         #Create Roi 2
         roi_2 = RegionOfInterest()
         roi_2.load_mesh(input_mesh)
@@ -547,12 +551,12 @@ class Test_Write_Visualization:
         roi_2.roi_sphere_center = [0., 0., -80.]
         roi_2.roi_sphere_radius = 20
         roi_2._prepare()
-        
+
         #Create result mesh 1
         result_mesh_1_file_path = os.path.join(tmp_path, "test1_TMS_scalar.msh")
         result_mesh_1 = deepcopy(sphere3_msh)
         opt_1 = gmsh_view.Visualization(result_mesh_1)
-        
+
         opt_1.add_view(ColormapNumber=1)
         result_mesh_1.add_element_field(
             np.tile(np.arange(result_mesh_1.elm.nr),3).reshape((result_mesh_1.elm.nr,3)), "E"
@@ -573,12 +577,12 @@ class Test_Write_Visualization:
         opt_1.add_view(ColormapNumber=4)
         result_mesh_1.write(result_mesh_1_file_path)
         opt_1.write_opt(result_mesh_1_file_path)
-        
+
         #Create result mesh 2
         result_mesh_2_file_path = os.path.join(tmp_path, "test2_TMS_scalar.msh")
         result_mesh_2 = deepcopy(sphere3_msh)
         opt_2 = gmsh_view.Visualization(result_mesh_2)
-        
+
         opt_2.add_view(ColormapNumber=5)
         result_mesh_2.add_element_field(
             np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape((result_mesh_2.elm.nr,3)), "E"
@@ -599,38 +603,38 @@ class Test_Write_Visualization:
         opt_2.add_view(ColormapNumber=8)
         result_mesh_2.write(result_mesh_2_file_path)
         opt_2.write_opt(result_mesh_2_file_path)
-        
+
         # write visualization
         roi_list = [roi_1,roi_2]
         results_list = [result_mesh_1_file_path, result_mesh_2_file_path]
         base_file_name = 'bothmasks'
-        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn'] 
+        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn']
         goal_list = ['mean']
-            
+
         write_visualization(tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list)
-        
+
         fn_vis_head = os.path.join(tmp_path, "bothmasks_head_mesh.msh")
         fn_vis_surf = os.path.join(tmp_path, "bothmasks_surface_mesh.msh")
         assert os.path.exists(fn_vis_head)
         assert os.path.exists(fn_vis_surf)
-        
-        if os.path.exists(fn_vis_head):    
+
+        if os.path.exists(fn_vis_head):
             m = mesh_io.read_msh(fn_vis_head)
             field_names = list(m.field.keys())
             field_names_ref=['ROI_1', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE', 'max_TI']
-            
+
             assert 'E' not in field_names
             assert 'magnE' not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
-            
-        if os.path.exists(fn_vis_surf):    
+
+        if os.path.exists(fn_vis_surf):
             m = mesh_io.read_msh(fn_vis_surf)
             field_names = list(m.field.keys())
-            field_names_ref=['ROI_0', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE', 
+            field_names_ref=['ROI_0', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE',
                              'channel_0__normal', 'channel_1__normal', 'average__normal',
                              'channel_0__tangential', 'channel_1__tangential', 'average__tangential',
                              'max_TI', 'dir_TI']
-            
+
             assert 'E' not in field_names
             assert 'magnE' not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
@@ -641,15 +645,15 @@ class Test_Make_Summary_Text:
         m_head = sphere3_msh.crop_mesh(elm_type=4)
         m_head.elm.tag1[m_head.elm.tag1 == 4] = 2
         m_head.elm.tag2 = m_head.elm.tag1
-        
+
         m_surf = None
-        
+
         m_head.add_element_field(
             np.tile(np.arange(m_head.elm.nr),3).reshape((m_head.elm.nr,3)), "E"
         )
         m_head.add_element_field(
             np.ones(m_head.elm.nr), "max_TO"
-        )  
+        )
         m_head.add_element_field(
             np.ones(m_head.elm.nr), "magnE"
         )
@@ -670,27 +674,27 @@ class Test_Make_Summary_Text:
         )
 
         summary_txt = make_summary_text(m_surf, m_head)
-        
+
         assert summary_txt.count('|magnE') == 3
         assert summary_txt.count('|average__magnE') == 3
         assert summary_txt.count('|E') == 0
         assert summary_txt.count('max_TO') == 0
-        
+
         assert summary_txt.count('|ROI_1 ') == 1
         assert summary_txt.count('|non-ROI ') == 1
         assert summary_txt.count('|ROI ') == 1
         assert summary_txt.count('ROI_2 ') == 0
-    
+
     def test_m_surf(self, sphere3_msh: mesh_io.Msh, tmp_path):
-        m_head = None        
+        m_head = None
         m_surf = sphere3_msh.crop_mesh(elm_type=2)
-                
+
         m_surf.add_node_field(
             np.tile(np.arange(m_surf.nodes.nr),3).reshape((m_surf.nodes.nr,3)), "E"
         )
         m_surf.add_node_field(
             np.ones(m_surf.nodes.nr), "max_TO"
-        )  
+        )
         m_surf.add_node_field(
             np.ones(m_surf.nodes.nr), "magnE"
         )
@@ -711,30 +715,30 @@ class Test_Make_Summary_Text:
         )
 
         summary_txt = make_summary_text(m_surf, m_head)
-        
+
         assert summary_txt.count('|magnE') == 3
         assert summary_txt.count('|average__magnE') == 3
         assert summary_txt.count('|E') == 0
         assert summary_txt.count('max_TO') == 0
-        
+
         assert summary_txt.count('|ROI_1 ') == 1
         assert summary_txt.count('|non-ROI ') == 1
         assert summary_txt.count('|ROI ') == 1
         assert summary_txt.count('ROI_2 ') == 0
-           
+
     def test_m_head_and_m_surf(self, sphere3_msh: mesh_io.Msh):
         m_head = sphere3_msh.crop_mesh(elm_type=4)
         m_head.elm.tag1[m_head.elm.tag1 == 4] = 2
         m_head.elm.tag2 = m_head.elm.tag1
-        
+
         m_surf = sphere3_msh.crop_mesh(elm_type=2)
-        
+
         m_head.add_element_field(
             np.tile(np.arange(m_head.elm.nr),3).reshape((m_head.elm.nr,3)), "E"
         )
         m_head.add_element_field(
             np.ones(m_head.elm.nr), "max_TO"
-        )  
+        )
         m_head.add_element_field(
             np.ones(m_head.elm.nr), "magnE"
         )
@@ -747,13 +751,12 @@ class Test_Make_Summary_Text:
         m_surf.add_node_field(
             np.ones(m_surf.nodes.nr), "non-ROI"
         )
-        
+
         summary_txt = make_summary_text(m_surf, m_head)
-        
+
         assert summary_txt.count('|magnE') == 3
         assert summary_txt.count('|average__magnE') == 3
         assert summary_txt.count('|E') == 0
         assert summary_txt.count('max_TO') == 0
         assert summary_txt.count('|ROI_1 ') == 1
         assert summary_txt.count('|non-ROI ') == 1
-                 
