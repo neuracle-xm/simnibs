@@ -2,7 +2,7 @@ name: simnibs_env
 channels:
   - conda-forge
 dependencies:
-- python=3.11
+  - python=3.11
   - cgal-cpp=5.5
   - cython
   - freeglut
