@@ -2,7 +2,7 @@ name: simnibs_env
 channels:
   - conda-forge
 dependencies:
-  - python=3.11
+  - python
   - cgal-cpp=5.5
   - cython
   - freeglut
@@ -10,11 +10,11 @@ dependencies:
   - jsonschema
   - libwebp
   - matplotlib-base
-  - mkl
+  - mkl=2024
   - mock
   - nibabel
   - numba
-  - numpy=1.26
+  - numpy
   - pillow
   - pip
   - pyopengl
@@ -28,15 +28,15 @@ dependencies:
   - mesa-libgl-cos6-x86_64
   - jupyterlab
   - pytorch::ignite
-  - pytorch::pytorch=2.5
+  - pytorch::pytorch
   - pytorch::cpuonly
   - pip:
     - pyqt5
     - fmm3dpy==1.0.0
-    - samseg==0.4a0
+    - https://github.com/oulap/samseg_wheels/releases/download/dev/samseg-0.4a0+4.g00dd614.dirty-cp311-cp311-linux_x86_64.whl
     - pygpc==0.4
     - https://github.com/simnibs/petsc4py/releases/download/v3.21.5/petsc4py-3.21.5-cp311-cp311-manylinux_2_28_x86_64.whl
-    - https://github.com/simnibs/cortech/releases/download/v0.1/cortech-0.1-cp311-cp311-manylinux_2_24_x86_64.whl
+    - https://github.com/simnibs/cortech/releases/download/v0.1/cortech-0.1-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
     # - https://github.com/simnibs/brainsynth/releases/download/v0.1a/BrainSynth-0.1a0-py3-none-any.whl
     # - https://github.com/simnibs/brainnet/releases/download/v0.1a/BrainNet-0.1a0-py3-none-any.whl
     - brainsynth@git+https://github.com/simnibs/brainsynth@324dbc1 # v0.1a

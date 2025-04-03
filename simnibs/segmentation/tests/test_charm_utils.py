@@ -28,13 +28,13 @@ def testmni_nii():
 @pytest.fixture(scope='module')
 def testtemplate_nii():
     fn = os.path.join(
-        SIMNIBSDIR, 'segmentation', 'atlases', 'charm_atlas_mni', 'template.nii')
+        SIMNIBSDIR, 'segmentation', 'atlases', 'charm_atlas_mni_v1-1', 'template.nii')
     return fn
 
 @pytest.fixture(scope='module')
 def testaffinemesh_msh():
     fn = os.path.join(
-        SIMNIBSDIR, 'segmentation', 'atlases', 'charm_atlas_mni', 'affine_no_neck.txt.gz')
+        SIMNIBSDIR, 'segmentation', 'atlases', 'charm_atlas_mni_v1-1', 'affine_no_neck.txt.gz')
     return fn
 
 @pytest.fixture(scope='module')
