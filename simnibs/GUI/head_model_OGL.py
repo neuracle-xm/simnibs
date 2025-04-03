@@ -22,7 +22,6 @@
 
 import math
 import sys
-import time
 import numpy
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -40,9 +39,10 @@ except NotImplementedError as e:
 from OpenGL import GL, GLU
 import OpenGL
 
+from simnibs.GUI.surface import Surface
+from simnibs.mesh_tools import mesh_io
 from simnibs.simulation.tms_coil.tms_coil import TmsCoil
-from ..mesh_tools import surface, mesh_io
-from ..utils.csv_reader import read_csv_positions
+from simnibs.utils.csv_reader import read_csv_positions
 
 global YELLOW
 global BLUE
@@ -150,11 +150,11 @@ class GLHeadModel(QtWidgets.QOpenGLWidget):
 
         self.loadStage.emit(1)
         QtWidgets.QApplication.processEvents()
-        self.skin_surf = surface.Surface(mesh_struct, [5,1005])
+        self.skin_surf = Surface(mesh_struct, [5,1005])
 
         self.loadStage.emit(2)
         QtWidgets.QApplication.processEvents()
-        self.gm_surf = surface.Surface(mesh_struct, [2,1002])
+        self.gm_surf = Surface(mesh_struct, [2,1002])
         self.loadStage.emit(3)
 
         QtWidgets.QApplication.processEvents()
@@ -309,7 +309,7 @@ class GLHeadModel(QtWidgets.QOpenGLWidget):
 
     #double clickng gets the position
     def mouseDoubleClickEvent(self, event):
-        if isinstance(self.skin_surf,  surface.Surface):
+        if isinstance(self.skin_surf,  Surface):
             self.lastPos = QtCore.QPoint(event.pos())
             x = float(self.lastPos.x())
             y = float(self.view[3] - self.lastPos.y())
@@ -400,7 +400,7 @@ class GLHeadModel(QtWidgets.QOpenGLWidget):
             print('Invalid argument at drawModel')
             sys.exit(1)
 
-        if not isinstance(rendered_surf, surface.Surface):
+        if not isinstance(rendered_surf, Surface):
             return 0
 
 
@@ -691,7 +691,7 @@ class GLHeadModel(QtWidgets.QOpenGLWidget):
                 QtWidgets.QApplication.processEvents()
                 coil_mesh.elm.tag1[:] = 1
                 coil_mesh.elm.tag2[:] = 1
-                rendered_surf = surface.Surface(coil_mesh, [1])
+                rendered_surf = Surface(coil_mesh, [1])
                 coil_color = [color.redF(), color.greenF(), color.blueF(), 0.4]
                 nodes_pos = numpy.array(rendered_surf.nodes, dtype='float32')
                 node_normals = numpy.array([normal for normal in rendered_surf.nodes_normals], dtype = 'float32')

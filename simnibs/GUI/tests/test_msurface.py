@@ -4,7 +4,8 @@ import pytest
 import numpy as np
 
 from simnibs import SIMNIBSDIR
-from simnibs.mesh_tools import mesh_io, surface
+from simnibs.GUI import surface
+from simnibs.mesh_tools import mesh_io
 
 
 @pytest.fixture(scope='module')
