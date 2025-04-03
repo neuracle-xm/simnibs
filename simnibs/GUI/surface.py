@@ -23,7 +23,7 @@
 import gc
 import numpy as np
 
-from . import cgal
+from simnibs.mesh_tools import cgal
 
 
 class Surface():
@@ -34,7 +34,7 @@ class Surface():
 
         Parameters:
         ----------------
-        mesh - gmsh mesh structure 
+        mesh - gmsh mesh structure
         labels - mesh labels with the surfaces of interest
 
         Notes:
@@ -255,7 +255,7 @@ class Surface():
         tangents.append(bases[dirs[1]])
         tangents[1] = tangents[1] - tangents[1].dot(normal) *\
             normal - tangents[1].dot(tangents[0]) * tangents[0]
-            
+
         tangents[1] = tangents[1] / np.linalg.norm(tangents[1])
 
         # gets the standard vectors
