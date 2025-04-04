@@ -2,7 +2,7 @@ name: simnibs_env
 channels:
   - conda-forge
 dependencies:
-  - python
+  - python=3.11
   - cgal-cpp=5.5
   - cython
   - freeglut
@@ -27,10 +27,9 @@ dependencies:
   - zlib
   - mesa-libgl-cos6-x86_64
   - jupyterlab
-  - pytorch::ignite
-  - pytorch::pytorch
-  - pytorch::cpuonly
   - pip:
+    - torch --index-url https://download.pytorch.org/whl/cpu
+    - pytorch-ignite
     - pyqt5
     - fmm3dpy==1.0.0
     - https://github.com/oulap/samseg_wheels/releases/download/dev/samseg-0.4a0+4.g00dd614.dirty-cp311-cp311-linux_x86_64.whl

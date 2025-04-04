@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [project.urls]  # Optional
-"Homepage" = "simnibs.org"
+"Homepage" = "http://simnibs.org"
 "Bug Reports" = "https://github.com/simnibs/simnibs/issues"
 "Source" = "https://github.com/simnibs/simnibs/"
 
