@@ -63,7 +63,6 @@ def build(simnibs_dist_dir, developer_id=None):
         '..'
     ))
     version = get_version(git_describe_command="git describe --tags --abbrev=0", version_scheme=custom_version_func)
-    breakpoint()
 
     pack_dir = os.path.abspath('simnibs_installer')
     env_prefix = os.path.join(pack_dir, 'simnibs_env_tmp')
