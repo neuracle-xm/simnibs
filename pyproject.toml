@@ -23,14 +23,14 @@ dependencies = [
     #"brainsynth",
     #"brainnet",
     #"cortech",
-    "fmm3dpy==1.0.0",
+    "fmm3dpy==1.0.4",
     "h5py",
     "jsonschema",
     # "matplotlib",
     "mkl ; sys_platform != 'darwin'",
     "nibabel",
     "numba",
-    "numpy",
+    "numpy>=2",
     "petsc4py",
     "pillow",
     "pygpc==0.4.1",
@@ -47,7 +47,7 @@ dependencies = [
 "Source" = "https://github.com/simnibs/simnibs/"
 
 [build-system]
-requires = ['setuptools>=68', 'wheel', 'build', 'numpy >= 1.26, < 2', 'cython','setuptools-scm>=8']
+requires = ['setuptools>=68', 'wheel', 'build', 'numpy>=2', 'cython','setuptools-scm>=8']
 build-backend = 'setuptools.build_meta'
 
 [tool.setuptools]
