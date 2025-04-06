@@ -1615,14 +1615,13 @@ class Msh:
         if compute_baricentric:
             M = np.transpose(th_nodes[th_with_points[inside], :3, :3] -
                              th_nodes[th_with_points[inside], 3, None, :], (0, 2, 1))
+            b = points[inside] - th_nodes[th_with_points[inside], 3, :]
             baricentric = np.zeros((len(points), 4), dtype=float)
-            baricentric[inside, :3] = np.linalg.solve(
-                M, points[inside] - th_nodes[th_with_points[inside], 3, :])
+            baricentric[inside, :3] = np.linalg.solve(M, b[..., None]).squeeze()
             baricentric[inside, 3] = 1 - np.sum(baricentric[inside], axis=1)
 
         # Return indices
-        th_with_points[inside] = \
-            th_indices[th_with_points[inside]]
+        th_with_points[inside] = th_indices[th_with_points[inside]]
 
         if compute_baricentric:
             return th_with_points, baricentric
@@ -4713,13 +4712,11 @@ class NodeData(Data):
         # Tetrahedra gradients
         elm_node_coords = mesh.nodes[mesh.elm[mesh.elm.tetrahedra]]
 
-        tetra_matrices = elm_node_coords[:, 1:4, :] - \
-            elm_node_coords[:, 0, :][:, None]
-
-        dif_between_tetra_nodes = self[mesh.elm[mesh.elm.tetrahedra][:, 1:4]] - \
-            self[mesh.elm[mesh.elm.tetrahedra][:, 0]][:, None]
-
-        th_grad = np.linalg.solve(tetra_matrices, dif_between_tetra_nodes)
+        tetra_matrices = elm_node_coords[:, 1:4, :] - elm_node_coords[:, 0, :][:, None]
+        dif_between_tetra_nodes = self[mesh.elm[mesh.elm.tetrahedra][:, 1:4]] - self[mesh.elm[mesh.elm.tetrahedra][:, 0]][:, None]
+        th_grad = np.linalg.solve(
+            tetra_matrices, dif_between_tetra_nodes[..., None]
+        ).squeeze()
 
         gradient = np.zeros((mesh.elm.nr, 3), dtype=float)
         gradient[mesh.elm.elm_type == 4] = th_grad
