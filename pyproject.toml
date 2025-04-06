@@ -6,7 +6,7 @@ authors = [
 maintainers = [
   {name = "SimNIBS developers", email = "support@simnibs.org" }
 ]
-license = {text = "GPL3"}
+license = "GPL-3.0-only"
 description = "Simulation of Non-Invasive Brain Stimulation"
 # long_description = file: README.md
 # long_description_content_type = text/markdown
