@@ -186,18 +186,6 @@ cgal_misc = Extension(
     extra_compile_args=cgal_compile_args,
     extra_link_args=cgal_link_args,
 )
-cgal_pmp = Extension(
-    "simnibs.mesh_tools.cgal.polygon_mesh_processing",
-    sources = ["simnibs/mesh_tools/cgal/polygon_mesh_processing.pyx"],
-    depends = ["simnibs/mesh_tools/cgal/polygon_mesh_processing_src.cpp"],
-    language='c++',
-    include_dirs=cgal_include,
-    libraries=cgal_libs,
-    library_dirs=cgal_dirs,
-    runtime_library_dirs=cgal_runtime,
-    extra_compile_args=cgal_compile_args,
-    extra_link_args=cgal_link_args,
-)
 
 extensions = [
     cython_msh,
@@ -207,7 +195,6 @@ extensions = [
     create_mesh_surf,
     create_mesh_vol,
     cgal_misc,
-    cgal_pmp,
 ]
 
 
