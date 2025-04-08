@@ -534,19 +534,19 @@ class TestTDCS:
         assert rdm(sol, x.value) < .1
         assert np.abs(mag(x.value, sol)) < np.log(1.1)
 
-    # def test_tdcs_petsc_3_el_mp(self, cube_msh):
-    #     m = cube_msh
-    #     cond = np.ones(m.elm.nr)
-    #     cond[m.elm.tag1 > 5] = 1e3
-    #     cond = mesh_io.ElementData(cond)
-    #     el_tags = [1100, 1101, 1101]
-    #     currents = [.5, -1.5, 1.]
-    #     x = fem.tdcs(m, cond, currents, el_tags, n_workers=2)
-    #     sol = (m.nodes.node_coord[:, 1] - 50) / 20
-    #     m.nodedata = [x, mesh_io.NodeData(sol, 'Analytical')]
-    #     #mesh_io.write_msh(m, '~/Tests/fem.msh')
-    #     assert rdm(sol, x.value) < .1
-    #     assert np.abs(mag(x.value, sol)) < np.log(1.1)
+    def test_tdcs_petsc_3_el_mp(self, cube_msh):
+        m = cube_msh
+        cond = np.ones(m.elm.nr)
+        cond[m.elm.tag1 > 5] = 1e3
+        cond = mesh_io.ElementData(cond)
+        el_tags = [1100, 1101, 1101]
+        currents = [.5, -1.5, 1.]
+        x = fem.tdcs(m, cond, currents, el_tags, n_workers=2)
+        sol = (m.nodes.node_coord[:, 1] - 50) / 20
+        m.nodedata = [x, mesh_io.NodeData(sol, 'Analytical')]
+        #mesh_io.write_msh(m, '~/Tests/fem.msh')
+        assert rdm(sol, x.value) < .1
+        assert np.abs(mag(x.value, sol)) < np.log(1.1)
 
 
 
