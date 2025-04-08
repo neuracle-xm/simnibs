@@ -1,10 +1,10 @@
 #!/usr/local/bin/python
 import os
 import logging
+import time
+
 import numpy as np
 import fmm3dpy as fmm
-import time
-import numpy.linalg as la
 
 logger = logging.getLogger('simnibs')
 #*********************************************************************
@@ -26,11 +26,11 @@ logger = logging.getLogger('simnibs')
    National Institutes of Health under Award Numbers K99MH120046, RF1MH114268,
    RF1MH114253, and U01AG050618. The content is solely the responsibility of the authors
    and does not necessarily represent the official views of the National Institutes of Health.
-   
+
    The copyrights of this software are owned by Duke University. As such, two licenses to this software are offered:
 
       * An open source license under the GNU General Public License (GPL-v2.0) (https://opensource.org/licenses/gpl-2.0.php).
-      * A custom license with Duke University, for use without the GPL-v2.0 restrictions. 
+      * A custom license with Duke University, for use without the GPL-v2.0 restrictions.
 
    As a recipient of this software, you may choose which license to receive the code under.
    Outside contributions to the Duke owned code base cannot be accepted unless the contributor transfers
@@ -38,11 +38,13 @@ logger = logging.getLogger('simnibs')
 
    To enter a license agreement without the GPL-v2.0 restrictions,
    please contact the Digital Innovations department at Duke Office of Licensing and Ventures
-   (https://olv.duke.edu/software/) at olvquestions@duke.edu with reference to “OLV File No. 7148” in your email. 
+   (https://olv.duke.edu/software/) at olvquestions@duke.edu with reference to “OLV File No. 7148” in your email.
 
    Please note that this software is distributed AS IS, WITHOUT ANY WARRANTY;
    and without the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 '''
+
+VACUUM_PERMEABILITY = 1e-7 * 4 * np.pi
 
 def recipcode(rv,jv,rs,ks,A):
 	#this function computes E-fields via reciprocity no auxiliary dipoles
@@ -57,10 +59,10 @@ def recipcode(rv,jv,rs,ks,A):
 
 	#reads in sizes of each array
 	npos=A.shape[2]; #number of scalp positions
-	ncoil=rs.shape[1]; 
+	ncoil=rs.shape[1];
 	nsource=rv.shape[1];
 	ntarget=ncoil*npos;
-	
+
 	#generate copies of coil
 	rp=np.transpose(np.c_[np.transpose(rs) ,np.ones([ncoil])]); #pads coil positions to 4 by ncoil
 	robs=np.array(np.zeros([3,ntarget]));
@@ -101,10 +103,10 @@ def ADM(rv,jv,rs,ks,A,coildir):
 	raux,kaux=resamplecoil(rs,ks,N,Nj,coildir);
 	#reads in sizes of each array
 	npos=A.shape[2]; #number of scalp positions
-	ncoil=raux.shape[1]; 
+	ncoil=raux.shape[1];
 	nsource=rv.shape[1];
 	ntarget=ncoil*npos;
-	
+
 	#generate copies of coil
 	rp=np.transpose(np.c_[np.transpose(raux) ,np.ones([ncoil])]); #pads coil positions to 4 by ncoil
 	robs=np.array(np.zeros([3,ntarget]));
@@ -119,7 +121,7 @@ def ADM(rv,jv,rs,ks,A,coildir):
 	end = time.time()
 	logger.debug(f"H-primary time: {end-start:.2f}s")
 	kp=kaux[:,:,0];
-	
+
 	Etotal=np.zeros([Nj,npos]);
 	for i in range(0,npos):
 		st=i*ncoil;
@@ -142,10 +144,10 @@ def recipcodemag(rv,jvx,jvy,jvz,rs,ks,A):
 
 	#reads in sizes of each array
 	npos=A.shape[2]; #number of scalp positions
-	ncoil=rs.shape[1]; 
+	ncoil=rs.shape[1];
 	nsource=rv.shape[1];
 	ntarget=ncoil*npos;
-	
+
 	#generate copies of coil
 	rp=np.transpose(np.c_[np.transpose(rs) ,np.ones([ncoil])]); #pads coil positions to 4 by ncoil
 	robs=np.array(np.zeros([3,ntarget]));
@@ -158,7 +160,7 @@ def recipcodemag(rv,jvx,jvy,jvz,rs,ks,A):
 	start = time.time()
 	logger.debug("Computing H-primary");
 	Hprimary=computeHprimary(rv,jvx,robs,prec);
-	end = time.time()	
+	end = time.time()
 	logger.info(f"H-primary time: {end-start:.2f}s")
 	start = end
 	for i in range(0,npos):
@@ -169,7 +171,7 @@ def recipcodemag(rv,jvx,jvy,jvz,rs,ks,A):
 	start = time.time()
 	logger.debug("Computing H-primary");
 	Hprimary=computeHprimary(rv,jvy,robs,prec);
-	end = time.time()	
+	end = time.time()
 	logger.info(f"H-primary time: {end-start:.2f}s")
 	start = end
 	for i in range(0,npos):
@@ -180,7 +182,7 @@ def recipcodemag(rv,jvx,jvy,jvz,rs,ks,A):
 	start = time.time()
 	logger.debug("Computing H-primary");
 	Hprimary=computeHprimary(rv,jvz,robs,prec);
-	end = time.time()	
+	end = time.time()
 	logger.info(f"H-primary time: {end-start:.2f}s")
 	start = end
 	for i in range(0,npos):
@@ -209,10 +211,10 @@ def ADMmag(rv,jvx,jvy,jvz,rs,ks,A,coildir):
 	raux,kaux=resamplecoil(rs,ks,N,Nj,coildir);
 	#reads in sizes of each array
 	npos=A.shape[2]; #number of scalp positions
-	ncoil=raux.shape[1]; 
+	ncoil=raux.shape[1];
 	nsource=rv.shape[1];
 	ntarget=ncoil*npos;
-	
+
 	#generate copies of coil
 	rp=np.transpose(np.c_[np.transpose(raux) ,np.ones([ncoil])]); #pads coil positions to 4 by ncoil
 	robs=np.array(np.zeros([3,ntarget]));
@@ -257,7 +259,7 @@ def ADMmag(rv,jvx,jvy,jvz,rs,ks,A,coildir):
 			Etotal[j,i,2]=-np.inner(Hprimary[:,st:en].flatten(),kp.flatten());
 	Etotal=np.sqrt(Etotal[:,:,0]**2+Etotal[:,:,1]**2+Etotal[:,:,2]**2);
 	return Etotal;
-	
+
 
 def computeHprimary(rs,js,robs,prec):
 	#this function computes H-fields via FMM3D library
@@ -268,7 +270,6 @@ def computeHprimary(rs,js,robs,prec):
 	# As such, this function is used to compute E-primary due to magnetic currents also.
 	outex=fmm.Output();
 	Hprimary=np.zeros([3,robs.shape[1]]);
-	muover4pi=-1e-7;
 	js1=js[0,:];
 	out=fmm.lfmm3d(eps=prec,sources=rs,targets=robs,charges=js1,pgt=2);
 	logger.debug("Run 1")
@@ -284,14 +285,13 @@ def computeHprimary(rs,js,robs,prec):
 	logger.debug("Run 3")
 	Hprimary[0,:]=Hprimary[0,:]-out.gradtarg[1,:];
 	Hprimary[1,:]=Hprimary[1,:]+out.gradtarg[0,:];
-	Hprimary *= muover4pi
-	return Hprimary;
+	return - VACUUM_PERMEABILITY * Hprimary
 
 def resamplecoil(rs,ks,N,Nj,coildir):
 	#rs is 3 by ncoil and has the coil dipole positions centered about the origin
 	#ks is 3 by ncoil and has the coil dipole weights
 	#N is 3 by 1 and has the number of auxiliary dipoles along each dimension
-	#Nj is an integer number of orientations 
+	#Nj is an integer number of orientations
 	#coildir is 3 by Nj and has the y orientation of the coil
 	#create copies of coil with different orientations
 	rs2=np.zeros([3,rs.shape[1],Nj]);
@@ -315,7 +315,7 @@ def resamplecoil(rs,ks,N,Nj,coildir):
 		#this assumes the original coil has 3 layers and the quadrature is gaussian
 		#will need to be changed for other coils
 	Zd=.6127016653792583*0.5*(Zp-Zm);
-	
+
 	Zm=Zm-Zd;
 	Zp=Zp+Zd;
 

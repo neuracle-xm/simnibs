@@ -16,6 +16,7 @@ from simnibs.simulation.tms_coil.tms_coil_model import TmsCoilModel
 from .tms_coil_deformation import TmsCoilDeformation
 from .tms_stimulator import TmsStimulator
 
+VACUUM_PERMEABILITY = 1e-7 * 4 * np.pi
 
 class TmsCoilElements(ABC, TcdElement):
     """A representation of a stimulating element of a TMS coil
@@ -579,9 +580,7 @@ class DipoleElements(PositionalTmsCoilElements):
         A[:, 1] = out.gradtarg[2][0] - out.gradtarg[0][2]
         A[:, 2] = out.gradtarg[0][1] - out.gradtarg[1][0]
 
-        A *= -1e-7
-
-        return A
+        return - VACUUM_PERMEABILITY * A
 
     def get_b_field(
         self,
@@ -629,8 +628,7 @@ class DipoleElements(PositionalTmsCoilElements):
                 pgt=2,
             )
 
-        B = out.gradtarg.T * -1e-7
-        return B
+        return - VACUUM_PERMEABILITY * out.gradtarg.T
 
     def generate_element_mesh(
         self,
@@ -804,8 +802,7 @@ class LineSegmentElements(PositionalTmsCoilElements):
                 pgt=1,
             )
 
-        A = 1e-7 * A.pottarg.T
-        return A
+        return VACUUM_PERMEABILITY * A.pottarg.T
 
     def get_b_field(
         self,
@@ -860,8 +857,7 @@ class LineSegmentElements(PositionalTmsCoilElements):
         B[:, 1] = out.gradtarg[2][0] - out.gradtarg[0][2]
         B[:, 2] = out.gradtarg[0][1] - out.gradtarg[1][0]
 
-        B *= -1e-7
-        return B
+        return - VACUUM_PERMEABILITY * B
 
     def generate_element_mesh(
         self,
