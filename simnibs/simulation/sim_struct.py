@@ -890,11 +890,11 @@ class SimuList(object):
             g.create_dataset('values', data=value_array)
             g.create_dataset('names',
                              data=np.array([c.name for c in self.cond],
-                                           dtype=np.string_))
+                                           dtype=np.bytes_))
             g.create_dataset('distribution_types',
                              data=np.array(
                                  [c.distribution_type for c in self.cond],
-                                 dtype=np.string_))
+                                 dtype=np.bytes_))
 
             distribution_parameters = np.nan * \
                 np.zeros((len(self.cond), 4), dtype=float)
