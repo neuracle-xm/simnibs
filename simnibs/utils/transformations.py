@@ -83,7 +83,7 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
     fix_boundary_zeros: bool (Optional)
         Whether to replace zeros at boundaries of deformation field by values
         of clostest non-zero voxel (Default: True)
-    
+
     Returns
     ------
     outdata: ndarray
@@ -94,12 +94,12 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
     df_data, df_affine = deformation
     if len(df_data.shape) > 4:
         df_data = df_data.squeeze()
-    
+
     # boundaries of deformation fields sometimes contain voxels with 0,0,0
     # --> replace by Infs
     if fix_boundary_zeros:
         df_data = _fix_boundary_zeros(df_data)
-    
+
     # If the resolution is to be changed
     if target_dimensions is None:
         target_dimensions = df_data.shape[:3]
@@ -152,7 +152,7 @@ def volumetric_nonlinear(image, deformation, target_space_affine=None,
             # Calculate gradient and multiply with vectors
             for i in range(3):
                 grad = np.gradient(inv_df_data[..., i], *spacing)
-                grad = np.nan_to_num(grad, copy=False)
+                grad = np.nan_to_num(grad, copy=None)
                 for j in range(3):
                     grad_t = scipy.ndimage.affine_transform(
                         grad[j], t[:3, :3], t[:3, 3],
@@ -200,14 +200,14 @@ def _fix_boundary_zeros(df_data):
     """
     assert df_data.ndim == 4
     assert df_data.shape[3] == 3
-    
+
     mask_imgregion = ~np.all(df_data == 0, axis=3)
-    mask_imgregion = scipy.ndimage.binary_fill_holes(mask_imgregion)    
+    mask_imgregion = scipy.ndimage.binary_fill_holes(mask_imgregion)
     if not np.all(mask_imgregion):
         df_data[~mask_imgregion,:] = np.inf
     del mask_imgregion
     gc.collect()
-    
+
     return df_data
 
 
@@ -320,7 +320,7 @@ def nifti_transform(image, warp, ref, out=None, mask=None, order=1, inverse_warp
         Whether to replace zeros at boundaries of deformation field by values
         of clostest non-zero voxel; relevant only for non-linear transforms
         (Default: True)
-            
+
     Returns
     ------
     img: nibabel.Nifti1Pair
@@ -330,10 +330,10 @@ def nifti_transform(image, warp, ref, out=None, mask=None, order=1, inverse_warp
         image = nib.load(image)
         im_data = np.asanyarray(image.dataobj)
         im_affine = image.affine.copy()
-        im_data = np.nan_to_num(im_data, copy=False)
+        im_data = np.nan_to_num(im_data, copy=None)
     else:
         im_data, im_affine = image
-        im_data = np.nan_to_num(im_data, copy=False)
+        im_data = np.nan_to_num(im_data, copy=None)
     reference_nifti = nib.load(ref)
     if mask is not None:
         mask = nib.load(mask)
@@ -1079,24 +1079,24 @@ def _convert_to_coord(coilpos,coil_skin_distance):
     coilpos = np.squeeze(np.asarray(coilpos, dtype=float))
     coil_skin_distance = np.squeeze(np.asarray(coil_skin_distance, dtype=float))
     coil_skin_distance = np.reshape(coil_skin_distance,(-1,1)) # ensure size (N,1)
-     
+
     if coilpos.ndim != 2 and coilpos.ndim != 3:
           raise ValueError('unknown format of coil position')
-          
+
     coord = [[], [], [], ['pos1'], [], []]
     if type_coilpos == list or type_coilpos == np.ndarray:
         # matsimnibs
         if coilpos.ndim == 2:
             coilpos = np.reshape(coilpos,(1,coilpos.shape[0],coilpos.shape[1]))  # ensure size (1,4,4)
         coord[1] = coilpos[:,:3,3]
-        
+
         if len(coil_skin_distance) == 1:
             coil_skin_distance = np.repeat(coil_skin_distance, coord[1].shape[0],axis=0)
         coord[2] = np.hstack((coilpos[:,:3,2], coilpos[:,:3,1], coil_skin_distance))
     elif type_coilpos == tuple:
         # (center_pos, ydir, zdir)
         coord[1] = coilpos[0].reshape(-1,3) # ensure size (N,3)
-        
+
         if len(coil_skin_distance) == 1:
             coil_skin_distance = np.repeat(coil_skin_distance, coord[1].shape[0],axis=0)
         coord[2] = np.hstack((coilpos[2].reshape(-1,3), coilpos[1].reshape(-1,3), coil_skin_distance))
@@ -1106,24 +1106,24 @@ def _convert_to_coord(coilpos,coil_skin_distance):
     coord[3] = ['pos'+str(r) for r in range(coord[1].shape[0])]
     return coord
 
-          
+
 def mni2subject_coilpos(coilpos, m2m_dir, coil_skin_distance=0., transformation_type='nonl'):
     """
     Converts one or more coil positions to subject space.
-    
+
     NOTE: Coil centers are projected on the head surface as standard. Set
           coil_skin_dist to ensure a specific distance of the coil center
-          to the head surface. 
-          
-          Coil centers away from the head are best defined by providing the 
-          closest positon on the surface of the MNI head and the desired 
+          to the head surface.
+
+          Coil centers away from the head are best defined by providing the
+          closest positon on the surface of the MNI head and the desired
           coil-skin-distance.
-          
-          Non-linear transformations (used as default) are accurate for 
-          positions in the head and on its surface, but not outside the 
-          head. Thus, coil centers are automatically projected on the head 
+
+          Non-linear transformations (used as default) are accurate for
+          positions in the head and on its surface, but not outside the
+          head. Thus, coil centers are automatically projected on the head
           surface during transformation.
-          
+
     Parameters
     ----------
     coilpos : One or more coil positions, provided as:
@@ -1133,18 +1133,18 @@ def mni2subject_coilpos(coilpos, m2m_dir, coil_skin_distance=0., transformation_
             center, ydir and zdir:
                 vectors (length 3) in case of a single postion, or
                 arrays (N,3) for N positions
-                
+
     m2m_dir :  str
         Path to the m2m_{subject_id} folder, generated during the segmentation
-        
+
     coil_skin_distance : float or list, optional
         skin-coil distance in [mm]. In case of several coil positions, either
         a single value can be supplied that is used for all positions, or a
         list with one value per position can be supplied. The default is 0..
-        
+
     transformation_type : {'nonl', '6dof', '12dof'}, optional
         Type of tranformation: non-linear, 6 or 12 degrees of freedom. The default is 'nonl'.
-    
+
     Returns
     -------
     matsimnibs : numpy array (4x4) or list of numpy arrays
@@ -1155,7 +1155,7 @@ def mni2subject_coilpos(coilpos, m2m_dir, coil_skin_distance=0., transformation_
     # for debugging: uncomment both to get geo-file for visual control
     #out_csv = 'debug.csv'
     #out_geo = 'debug.geo'
-    
+
     coord = _convert_to_coord(coilpos, coil_skin_distance)
     center, zdir_ydir = warp_coordinates(coord, m2m_dir,
                                          transformation_direction='mni2subject',
@@ -1174,7 +1174,7 @@ def mni2subject_coilpos(coilpos, m2m_dir, coil_skin_distance=0., transformation_
         mat_list.append(mat)
     if len(mat_list) == 1:
         mat_list = mat_list[0]
-        
+
     return mat_list
 
 

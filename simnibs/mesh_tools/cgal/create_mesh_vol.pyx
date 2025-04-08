@@ -73,14 +73,14 @@ def mesh_image_sizing_field(
         do_lloyd: bool = False,
     ):
 
-    cdef np.ndarray[float, ndim=3] sf_facet_size = np.array(
-        facet_size, dtype=np.float32, order='F', copy=False
+    cdef np.ndarray[float, ndim=3] sf_facet_size = np.asarray(
+        facet_size, dtype=np.float32, order='F',
     )
-    cdef np.ndarray[float, ndim=3] sf_cell_size = np.array(
-        cell_size, dtype=np.float32, order='F', copy=False
+    cdef np.ndarray[float, ndim=3] sf_cell_size = np.asarray(
+        cell_size, dtype=np.float32, order='F',
     )
-    cdef np.ndarray[float, ndim=3] sf_facet_distance = np.array(
-        facet_distance, dtype=np.float32, order='F', copy=False
+    cdef np.ndarray[float, ndim=3] sf_facet_distance = np.asarray(
+        facet_distance, dtype=np.float32, order='F',
     )
 
     return _mesh_image_sizing_field(
