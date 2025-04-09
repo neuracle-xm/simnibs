@@ -73,7 +73,7 @@ def _registration_overlay(T2):
     return nib.Nifti1Image(np.squeeze(d), T2_data.affine)
 
 
-def _final_overlay(labeling, labels = [1, 2, 3, 6, 9, 8, 7, 5], 
+def _final_overlay(labeling, labels = [1, 2, 3, 6, 9, 8, 7, 5],
                    medfilter_size = None):
     tissues_data = nib.load(labeling)
     tissues_buffer = np.round(np.squeeze(tissues_data.get_fdata()))
@@ -82,10 +82,10 @@ def _final_overlay(labeling, labels = [1, 2, 3, 6, 9, 8, 7, 5],
     #Create boolean buffer full of Falses
     tissue_mask = tissues_buffer == -1000
     label_buffer = np.zeros_like(tissues_buffer)
-    for l in labels:
-        tissue_mask = tissue_mask | (tissues_buffer == l)
+    for label in labels:
+        tissue_mask = tissue_mask | (tissues_buffer == label)
         ero = binary_erosion(np.squeeze(tissue_mask), se, 1)
-        label_buffer[(tissue_mask & ~ero & ~(label_buffer > 0))] = l
+        label_buffer[(tissue_mask & ~ero & ~(label_buffer > 0))] = label
 
     return nib.Nifti1Image(np.uint16(np.squeeze(label_buffer)), tissues_data.affine)
 
@@ -123,7 +123,7 @@ def write(sub_files, templates):
         select[1]=len(imgs)-1
 
     if os.path.exists(sub_files.template_coregistered):
-        imgs.append(_final_overlay(sub_files.template_coregistered, 
+        imgs.append(_final_overlay(sub_files.template_coregistered,
                                    labels = [6, 5], medfilter_size=5))
         cmaps.append(cmap_affine)
         interpolation_order.append(0)

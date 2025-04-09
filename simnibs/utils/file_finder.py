@@ -187,8 +187,8 @@ def get_atlas(atlas_name, hemi="both"):
         )
         labels, _, names = nibabel.freesurfer.io.read_annot(fn_atlas)
         atlas = {}
-        for l, name in enumerate(names):
-            atlas[name.decode()] = labels == l
+        for i, name in enumerate(names):
+            atlas[name.decode()] = labels == i
 
         return atlas
     # If both hemispheres

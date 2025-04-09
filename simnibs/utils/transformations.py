@@ -2014,8 +2014,8 @@ def subject_atlas(atlas_name, m2m_dir, hemi="both"):
         )
         labels_sub = morph.transform(labels)
         atlas = {}
-        for l, name in enumerate(names):
-            atlas[name.decode()] = labels_sub == l
+        for i, name in enumerate(names):
+            atlas[name.decode()] = labels_sub == i
 
         return atlas
 

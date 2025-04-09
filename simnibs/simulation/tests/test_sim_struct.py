@@ -78,25 +78,25 @@ class TestFiducials:
 
 class TestList:
     def test_list_anisotropy(self):
-        l = sim_struct.SimuList()
+        simlist = sim_struct.SimuList()
         with pytest.raises(ValueError):
-            l.anisotropy_type = None
+            simlist.anisotropy_type = None
 
     def test_list_postprocess(self):
-        l = sim_struct.SimuList()
+        simlist = sim_struct.SimuList()
         with pytest.raises(ValueError):
-            l.postprocess = 'Y'
+            simlist.postprocess = 'Y'
 
     def test_list_read_mat_cond(self, mat_session):
-        l = sim_struct.SimuList()
-        l.read_cond_mat_struct(mat_session['poslist'][0][0][0][0])
-        assert l.cond[1].name == 'GM'
+        simlist = sim_struct.SimuList()
+        simlist.read_cond_mat_struct(mat_session['poslist'][0][0][0][0])
+        assert simlist.cond[1].name == 'GM'
 
     def test_list_cond_mat_struct(self, mat_session):
-        l = sim_struct.SimuList()
-        l.cond[0].distribution_type = 'uniform'
-        l.cond[0].distribution_parameters = [1.5, 3.0]
-        mat = l.cond_mat_struct()
+        simlist = sim_struct.SimuList()
+        simlist.cond[0].distribution_type = 'uniform'
+        simlist.cond[0].distribution_parameters = [1.5, 3.0]
+        mat = simlist.cond_mat_struct()
         scipy.io.savemat('tmp.mat', mat)
 
         mat = scipy.io.loadmat(
@@ -108,35 +108,35 @@ class TestList:
         assert np.all(l2.cond[0].distribution_parameters == [1.5, 3.0])
 
     def test_list_cond_array(self, sphere3_msh):
-        l = sim_struct.SimuList()
-        l.cond[0].value = None
-        l.cond[1].value = None
-        l.cond[2].value = 21
-        l.cond[3].value = 31
-        l.cond[4].value = 41
-        l.mesh = sphere3_msh
-        elmcond = l.cond2elmdata()
+        simlist = sim_struct.SimuList()
+        simlist.cond[0].value = None
+        simlist.cond[1].value = None
+        simlist.cond[2].value = 21
+        simlist.cond[3].value = 31
+        simlist.cond[4].value = 41
+        simlist.mesh = sphere3_msh
+        elmcond = simlist.cond2elmdata()
         assert np.all(elmcond.value[sphere3_msh.elm.tag1 == 3] == 21)
         assert np.all(elmcond.value[sphere3_msh.elm.tag1 == 4] == 31)
         assert np.all(elmcond.value[sphere3_msh.elm.tag1 == 5] == 41)
 
     def test_get_conductivity(self):
-        l = sim_struct.SimuList()
-        l.cond[0].value = 5
-        assert l.conductivity[1].value == 5
+        simlist = sim_struct.SimuList()
+        simlist.cond[0].value = 5
+        assert simlist.conductivity[1].value == 5
 
     def test_set_conductivity(self):
-        l = sim_struct.SimuList()
-        l.conductivity[1].value = 5
-        assert l.cond[0].value == 5
+        simlist = sim_struct.SimuList()
+        simlist.conductivity[1].value = 5
+        assert simlist.cond[0].value == 5
 
     def test_list_cond_array_aniso(self, sphere3_msh):
-        l = sim_struct.SimuList()
-        l.anisotropy_type = 'dir'
-        l.cond[3].value = 7
-        l.cond[4].value = 9
+        simlist = sim_struct.SimuList()
+        simlist.anisotropy_type = 'dir'
+        simlist.cond[3].value = 7
+        simlist.cond[4].value = 9
         with tempfile.NamedTemporaryFile(suffix='.nii.gz') as f:
-            l.fn_tensor_nifti = f.name
+            simlist.fn_tensor_nifti = f.name
         v = np.zeros((255, 255, 255, 6))
         for i in range(6):
             v[:, :, :, i] = i
@@ -146,29 +146,29 @@ class TestList:
                            [0, 0, 0, 1]])
 
         img = nibabel.Nifti1Image(v, affine)
-        nibabel.save(img, l.fn_tensor_nifti)
+        nibabel.save(img, simlist.fn_tensor_nifti)
         msh = copy.deepcopy(sphere3_msh)
         msh.elm.tag1[msh.elm.tag1 == 3] = 1
 
-        l.mesh = msh
-        elmcond = l.cond2elmdata()
+        simlist.mesh = msh
+        elmcond = simlist.cond2elmdata()
         assert np.allclose(elmcond.value[sphere3_msh.elm.tag1 == 1],
                            [0, -1, -2, -1, 3, 4, -2, 4, 5])
         assert np.allclose(elmcond.value[sphere3_msh.elm.tag1 == 4],
                            [7, 0, 0, 0, 7, 0, 0, 0, 7])
         assert np.allclose(elmcond.value[sphere3_msh.elm.tag1 == 5],
                            [9, 0, 0, 0, 9, 0, 0, 0, 9])
-        os.remove(l.fn_tensor_nifti)
+        os.remove(simlist.fn_tensor_nifti)
 
     def test_list_cond_array_aniso_vn(self, sphere3_msh):
-        l = sim_struct.SimuList()
-        l.anisotropy_type = 'vn'
-        l.conductivity[3].value = 2
-        l.conductivity[4].value = 7
-        l.conductivity[5].value = 9
-        l.anisotropic_tissues = [3]
-        l.fn_tensor_nifti = '/tmp/test_aniso.nii.gz'
-        l.mesh = sphere3_msh
+        simlist = sim_struct.SimuList()
+        simlist.anisotropy_type = 'vn'
+        simlist.conductivity[3].value = 2
+        simlist.conductivity[4].value = 7
+        simlist.conductivity[5].value = 9
+        simlist.anisotropic_tissues = [3]
+        simlist.fn_tensor_nifti = '/tmp/test_aniso.nii.gz'
+        simlist.mesh = sphere3_msh
         v = np.zeros((255, 255, 255, 6))
         # set-up tensor
         v1 = np.random.rand(3)
@@ -187,10 +187,10 @@ class TestList:
                            [0, 0, 1, -127],
                            [0, 0, 0, 1]])
 
-        l.anisotropy_vol = v
-        l.anisotropy_affine = affine
+        simlist.anisotropy_vol = v
+        simlist.anisotropy_affine = affine
 
-        elmcond = l.cond2elmdata()
+        elmcond = simlist.cond2elmdata()
         tensor = elmcond.value[sphere3_msh.elm.tag1 == 3].reshape(-1, 3, 3)
         t = affine[:3, :3].dot(t).dot(affine[:3, :3])
         assert np.allclose(np.linalg.det(tensor), 2 ** 3)
@@ -204,11 +204,11 @@ class TestList:
 
 
     def test_write_to_hdf5(self):
-        l = sim_struct.SimuList()
-        l.anisotropy_type = 'vn'
-        l.cond[3].value = 2
-        l.cond[0].distribution_type = 'beta'
-        l.anisotropic_tissues = [3]
+        simlist = sim_struct.SimuList()
+        simlist.anisotropy_type = 'vn'
+        simlist.cond[3].value = 2
+        simlist.cond[0].distribution_type = 'beta'
+        simlist.anisotropic_tissues = [3]
         v = np.zeros((255, 255, 255, 6))
         for i in range(6):
             v[:, :, :, i] = i
@@ -216,11 +216,11 @@ class TestList:
                            [0, 1, 0, -128],
                            [0, 0, 1, -127],
                            [0, 0, 0, 1]])
-        l.anisotropy_vol = v
-        l.anisotropy_affine = affine
+        simlist.anisotropy_vol = v
+        simlist.anisotropy_affine = affine
         with tempfile.NamedTemporaryFile(suffix='.hdf5') as f:
             fn_hdf5 = f.name
-        l._write_conductivity_to_hdf5(fn_hdf5)
+        simlist._write_conductivity_to_hdf5(fn_hdf5)
 
         with h5py.File(fn_hdf5, 'r') as f:
             assert np.isclose(f['cond/values'][3], 2)
@@ -235,11 +235,11 @@ class TestList:
         os.remove(fn_hdf5)
 
     def test_read_from_hdf5(self):
-        l = sim_struct.SimuList()
-        l.anisotropy_type = 'vn'
-        l.cond[3].value = 2
-        l.anisotropic_tissues = [3]
-        l.cond[0].distribution_type = 'beta'
+        simlist = sim_struct.SimuList()
+        simlist.anisotropy_type = 'vn'
+        simlist.cond[3].value = 2
+        simlist.anisotropic_tissues = [3]
+        simlist.cond[0].distribution_type = 'beta'
         v = np.zeros((255, 255, 255, 6))
         for i in range(6):
             v[:, :, :, i] = i
@@ -247,12 +247,12 @@ class TestList:
                            [0, 1, 0, -128],
                            [0, 0, 1, -127],
                            [0, 0, 0, 1]])
-        l.anisotropy_vol = v
-        l.anisotropy_affine = affine
+        simlist.anisotropy_vol = v
+        simlist.anisotropy_affine = affine
 
         with tempfile.NamedTemporaryFile(suffix='.hdf5') as f:
             fn_hdf5 = f.name
-        l._write_conductivity_to_hdf5(fn_hdf5)
+        simlist._write_conductivity_to_hdf5(fn_hdf5)
         l2 = sim_struct.SimuList()
         l2._get_conductivity_from_hdf5(fn_hdf5)
 
@@ -320,18 +320,18 @@ class TestLeadfield:
             shutil.rmtree(dir_fn)
         os.mkdir(dir_fn)
         shutil.copy(sphere3_fn,dir_fn) # meshes are inside the m2m dir since version 4
-        
-        l = sim_struct.LEADFIELD()
-        l.pathfem = ''
-        l.fnamehead = os.path.join(dir_fn, n)       
-        l._prepare()
-        assert os.path.abspath(l.subpath) == os.path.abspath(dir_fn)
-        
-        l = sim_struct.LEADFIELD()
-        l.pathfem = ''
-        l.subpath = dir_fn
-        l._prepare()
-        assert os.path.abspath(l.fnamehead) == os.path.abspath(os.path.join(dir_fn, n))
+
+        lf = sim_struct.LEADFIELD()
+        lf.pathfem = ''
+        lf.fnamehead = os.path.join(dir_fn, n)
+        lf._prepare()
+        assert os.path.abspath(lf.subpath) == os.path.abspath(dir_fn)
+
+        lf = sim_struct.LEADFIELD()
+        lf.pathfem = ''
+        lf.subpath = dir_fn
+        lf._prepare()
+        assert os.path.abspath(lf.fnamehead) == os.path.abspath(os.path.join(dir_fn, n))
         shutil.rmtree(dir_fn)
 
 
