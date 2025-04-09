@@ -445,7 +445,6 @@ def _ensure_skull(label_img, tissues, se, num_iter=1):
     # Relabel air pockets to air
     label_img[label_img == tissues["Air_pockets"]] = 0
 
-
 def _morphological_operations(label_img, upper_part, simnibs_tissues):
     """Does morphological operations to
     1. Smooth out the labeling and remove noise
@@ -880,62 +879,93 @@ def update_labeling_from_cortical_surfaces(
 
 
 def update_labeling_from_cortical_surfaces_(
-    sm_labeling, fs_labeling, white_surf_mask, pial_surf_mask, protect, tissue_mapping
+    label_image: npt.NDArray,
+    protect_labeling: npt.NDArray,
+    white_surf_mask: npt.NDArray,
+    pial_surf_mask: npt.NDArray,
+    protect: dict[str, list[int]],
+    tissue_mapping: dict[str,int],
 ):
+    """The behavior of this function for WM and GM in bone, skin etc. is not
+    well defined.
 
-    # if "csf_to_wm" not in protect:
-    #     protect["csf_to_wm"] = protect["csf_to_gm"] + protect["gm_to_wm"]
+    Parameters
+    ----------
+    label_image
+        Label image to be corrected.
+    protect_labeling
+        Label image from which areas to be "protected" are derived.
+    white_surf_mask:
+        Mask where all voxels inside the white matter surface is True.
+    pial_surf_mask:
+        Mask where all voxels inside the gray matter surface (also incl. those
+        inside the white_surf_mask) is True.
+    protect:
+        Mapping of tissues to protect (labels refer to those in
+        `protect_labeling`).
+    tissue_mapping:
+        Mapping of tissue names to tissue labels where the labels refer to
+        those in `label_image`.
 
+    Returns
+    -------
+    The corrected labeling image.
+    """
 
-    ndim = sm_labeling.ndim
+    ndim = label_image.ndim
 
     # (1) Build masks
 
     # cortical WM mask
     white_surf_mask = binary_opening(white_surf_mask, iterations=1)
 
-    wm_extra_mask = np.isin(fs_labeling, protect["wm_to_gm"])
+    wm_extra_mask = np.isin(protect_labeling, protect["wm_to_gm"])
     wm_extra_mask = binary_dilation(wm_extra_mask, iterations=2)
 
     # cortical GM mask
     pial_surf_mask = binary_opening(pial_surf_mask, iterations=1)
 
-    gm_extra_mask = np.isin(fs_labeling, protect["gm_to_csf"])
+    gm_extra_mask = np.isin(protect_labeling, protect["gm_to_csf"])
     gm_extra_mask = binary_dilation(gm_extra_mask, iterations=2)
 
     # relabel GM inside of white surfaces to WM
     # structures to protect from becoming WM (subcortical structures)
-    wm_ignore_mask = np.isin(fs_labeling, protect["gm_to_wm"])
+    wm_ignore_mask = np.isin(protect_labeling, protect["gm_to_wm"])
     wm_ignore_mask = binary_dilation(wm_ignore_mask, iterations=2)
 
     # Ensure a layer of CSF
     bone = np.isin(
-        sm_labeling, (tissue_mapping["Compact_bone"], tissue_mapping["Spongy_bone"])
+        label_image, (tissue_mapping["Compact_bone"], tissue_mapping["Spongy_bone"])
     )
     se = ndimage.generate_binary_structure(ndim, ndim)
     dilated_bone = binary_dilation(bone, se)
-    csf_blood_mask_shrunk = np.isin(sm_labeling, (tissue_mapping["CSF"], tissue_mapping["Blood"])) & ~dilated_bone
-    csf_ignore_mask = np.isin(fs_labeling, protect["csf_to_gm"])
+    csf_blood_mask_shrunk = np.isin(label_image, (tissue_mapping["CSF"], tissue_mapping["Blood"])) & ~dilated_bone
+    csf_ignore_mask = np.isin(protect_labeling, protect["csf_to_gm"])
 
     # (2) Apply
+    # Mind the order in which the steps are applied!
 
-    # GM to CSF
-    replace = (sm_labeling == tissue_mapping["GM"]) & ~(pial_surf_mask | gm_extra_mask)
-    sm_labeling[replace] = tissue_mapping["CSF"]
-    # WM to GM
-    replace = (sm_labeling == tissue_mapping["WM"]) & ~(white_surf_mask | wm_extra_mask)
-    sm_labeling[replace] = tissue_mapping["GM"]
-    # GM to WM
-    replace = (sm_labeling == tissue_mapping["GM"]) & white_surf_mask & ~wm_ignore_mask
-    sm_labeling[replace] = tissue_mapping["WM"]
-    # CSF/blood to GM
-    replace = csf_blood_mask_shrunk & pial_surf_mask & ~white_surf_mask & ~csf_ignore_mask
-    sm_labeling[replace] = tissue_mapping["GM"]
-    # CSF/blood to WM
+    # Cortical white matter
+    # (1) GM (inside WM surface but not subcortical) to WM
+    replace = (label_image == tissue_mapping["GM"]) & white_surf_mask & ~wm_ignore_mask
+    label_image[replace] = tissue_mapping["WM"]
+    # (2) CSF/blood (inside WM surface but not subcortical nor ventricles) to WM
     replace = csf_blood_mask_shrunk & white_surf_mask & ~csf_ignore_mask & ~wm_ignore_mask
-    sm_labeling[replace] = tissue_mapping["WM"]
+    label_image[replace] = tissue_mapping["WM"]
+    # (3) WM (outside WM surface but not cerebellar WM, brainstem etc.) to GM
+    replace = (label_image == tissue_mapping["WM"]) & ~(white_surf_mask | wm_extra_mask)
+    label_image[replace] = tissue_mapping["GM"]
 
-    return sm_labeling
+    # Cortical gray matter
+
+    # (1) CSF/blood (inside GM surface but not inside WM surface nor venctricles) to GM
+    replace = csf_blood_mask_shrunk & pial_surf_mask & ~white_surf_mask & ~csf_ignore_mask
+    label_image[replace] = tissue_mapping["GM"]
+    # (2) GM (outside GM surface but not subcortical, cerebellar GM etc.) to CSF
+    replace = (label_image == tissue_mapping["GM"]) & ~(pial_surf_mask | gm_extra_mask)
+    label_image[replace] = tissue_mapping["CSF"]
+
+    return label_image
 
 
 def _cut_and_combine_labels(
