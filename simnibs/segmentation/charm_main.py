@@ -388,7 +388,7 @@ def run(
                 surface_settings["central_surface_method"],
             )
 
-            for h,s in hemispheres.items():
+            for h, s in hemispheres.items():
                 m = make_surface_mesh(s.white.vertices, s.white.faces + 1)
                 write_gifti_surface(m, sub_files.surfaces["white"][h])
 
@@ -769,6 +769,8 @@ def _load_freesurfer_pial_surface(fs_sub):
 
 
 def _fs_lut_labels_to_fs_lut_values(labels_dict: dict[str, list[str]]):
-    values, labels, _ = charm_utils.read_freesurfer_lut(file_finder.templates.labeling_LUT)
+    values, labels, _ = charm_utils.read_freesurfer_lut(
+        file_finder.templates.labeling_LUT
+    )
     mapper = dict(zip(labels, values))
-    return {k: [mapper[i] for i in v] for k,v in labels_dict.items()}
+    return {k: [mapper[i] for i in v] for k, v in labels_dict.items()}

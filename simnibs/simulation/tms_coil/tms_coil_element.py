@@ -18,6 +18,7 @@ from .tms_stimulator import TmsStimulator
 
 VACUUM_PERMEABILITY = 1e-7 * 4 * np.pi
 
+
 class TmsCoilElements(ABC, TcdElement):
     """A representation of a stimulating element of a TMS coil
 
@@ -374,14 +375,16 @@ class TmsCoilElements(ABC, TcdElement):
         if tcd_coil_element["type"] == 1:
             if isinstance(tcd_coil_element["points"], str):
                 points = np.frombuffer(
-                    zlib.decompress(base64.b64decode(tcd_coil_element["points"])), dtype=np.float64
+                    zlib.decompress(base64.b64decode(tcd_coil_element["points"])),
+                    dtype=np.float64,
                 ).reshape(-1, 3)
             else:
                 points = np.array(tcd_coil_element["points"])
 
             if isinstance(tcd_coil_element["values"], str):
                 values = np.frombuffer(
-                    zlib.decompress(base64.b64decode(tcd_coil_element["values"])), dtype=np.float64
+                    zlib.decompress(base64.b64decode(tcd_coil_element["values"])),
+                    dtype=np.float64,
                 ).reshape(-1, 3)
             else:
                 values = np.array(tcd_coil_element["values"])
@@ -398,14 +401,16 @@ class TmsCoilElements(ABC, TcdElement):
         elif tcd_coil_element["type"] == 2:
             if isinstance(tcd_coil_element["points"], str):
                 points = np.frombuffer(
-                    zlib.decompress(base64.b64decode(tcd_coil_element["points"])), dtype=np.float64
+                    zlib.decompress(base64.b64decode(tcd_coil_element["points"])),
+                    dtype=np.float64,
                 ).reshape(-1, 3)
             else:
                 points = np.array(tcd_coil_element["points"])
 
             if isinstance(tcd_coil_element["values"], str):
                 values = np.frombuffer(
-                    zlib.decompress(base64.b64decode(tcd_coil_element["values"])), dtype=np.float64
+                    zlib.decompress(base64.b64decode(tcd_coil_element["values"])),
+                    dtype=np.float64,
                 ).reshape(-1, 3)
             else:
                 values = np.array(tcd_coil_element["values"])
@@ -415,7 +420,9 @@ class TmsCoilElements(ABC, TcdElement):
             )
         elif tcd_coil_element["type"] == 3:
             if isinstance(tcd_coil_element["data"], str):
-                data = pickle.loads(zlib.decompress(base64.b64decode(tcd_coil_element["data"])))
+                data = pickle.loads(
+                    zlib.decompress(base64.b64decode(tcd_coil_element["data"]))
+                )
             else:
                 data = np.array(tcd_coil_element["data"])
 
@@ -580,7 +587,7 @@ class DipoleElements(PositionalTmsCoilElements):
         A[:, 1] = out.gradtarg[2][0] - out.gradtarg[0][2]
         A[:, 2] = out.gradtarg[0][1] - out.gradtarg[1][0]
 
-        return - VACUUM_PERMEABILITY * A
+        return -VACUUM_PERMEABILITY * A
 
     def get_b_field(
         self,
@@ -628,7 +635,7 @@ class DipoleElements(PositionalTmsCoilElements):
                 pgt=2,
             )
 
-        return - VACUUM_PERMEABILITY * out.gradtarg.T
+        return -VACUUM_PERMEABILITY * out.gradtarg.T
 
     def generate_element_mesh(
         self,
@@ -706,12 +713,12 @@ class DipoleElements(PositionalTmsCoilElements):
             tcd_coil_element["points"] = self.points.tolist()
             tcd_coil_element["values"] = self.values.tolist()
         else:
-            tcd_coil_element["points"] = base64.b64encode(zlib.compress(self.points.tobytes())).decode(
-                "ascii"
-            )
-            tcd_coil_element["values"] = base64.b64encode(zlib.compress(self.values.tobytes())).decode(
-                "ascii"
-            )
+            tcd_coil_element["points"] = base64.b64encode(
+                zlib.compress(self.points.tobytes())
+            ).decode("ascii")
+            tcd_coil_element["values"] = base64.b64encode(
+                zlib.compress(self.values.tobytes())
+            ).decode("ascii")
 
         return tcd_coil_element
 
@@ -857,7 +864,7 @@ class LineSegmentElements(PositionalTmsCoilElements):
         B[:, 1] = out.gradtarg[2][0] - out.gradtarg[0][2]
         B[:, 2] = out.gradtarg[0][1] - out.gradtarg[1][0]
 
-        return - VACUUM_PERMEABILITY * B
+        return -VACUUM_PERMEABILITY * B
 
     def generate_element_mesh(
         self,
@@ -938,12 +945,12 @@ class LineSegmentElements(PositionalTmsCoilElements):
             tcd_coil_element["points"] = self.points.tolist()
             tcd_coil_element["values"] = self.values.tolist()
         else:
-            tcd_coil_element["points"] = base64.b64encode(zlib.compress(self.points.tobytes())).decode(
-                "ascii"
-            )
-            tcd_coil_element["values"] = base64.b64encode(zlib.compress(self.values.tobytes())).decode(
-                "ascii"
-            )
+            tcd_coil_element["points"] = base64.b64encode(
+                zlib.compress(self.points.tobytes())
+            ).decode("ascii")
+            tcd_coil_element["values"] = base64.b64encode(
+                zlib.compress(self.values.tobytes())
+            ).decode("ascii")
 
         return tcd_coil_element
 
@@ -1151,9 +1158,9 @@ class SampledGridPointElements(TmsCoilElements):
         if ascii_mode:
             tcd_coil_element["data"] = data.tolist()
         else:
-            tcd_coil_element["data"] = base64.b64encode(zlib.compress(pickle.dumps(data))).decode(
-                "ascii"
-            )
+            tcd_coil_element["data"] = base64.b64encode(
+                zlib.compress(pickle.dumps(data))
+            ).decode("ascii")
 
         tcd_coil_element["affine"] = self.affine.tolist()
         return tcd_coil_element

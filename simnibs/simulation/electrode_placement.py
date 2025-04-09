@@ -1,21 +1,21 @@
 """
-    Electrode placement in meshes
-    This program is part of the SimNIBS package.
-    Please check on www.simnibs.org how to cite our work in publications.
+Electrode placement in meshes
+This program is part of the SimNIBS package.
+Please check on www.simnibs.org how to cite our work in publications.
 
-    Copyright (C) 2018 Guilherme Saturnino
+Copyright (C) 2018 Guilherme Saturnino
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
@@ -552,7 +552,6 @@ def _move_point(
 
     gamma_threshold = 7.0
     for t in np.linspace(loop_count / 6, 0, num=10):
-
         moved_tr_nodes[to_be_moved, :2] = old_position[:2] + t * d
         # node movement in tetrahedra is done in original 3D space to assess th quality ->
         # apply inverse affine on node movement to map to original space

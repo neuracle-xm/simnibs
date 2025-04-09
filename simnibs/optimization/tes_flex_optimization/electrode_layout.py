@@ -11,6 +11,7 @@ from simnibs.utils.transformations import (
     create_new_connectivity_list_point_mask,
 )
 
+
 def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance=0.0):
     """
     Determine the nodes of the scalp surface where the electrode can be applied (not ears and face etc.)
@@ -25,7 +26,7 @@ def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance
         Additional distance in anterior part to put between original MNI template registration
     """
     nodes_all = copy.deepcopy(skin_surface.nodes.node_coord)
-    tr_nodes_all = copy.deepcopy(skin_surface.elm.node_number_list[:,:3] - 1)
+    tr_nodes_all = copy.deepcopy(skin_surface.elm.node_number_list[:, :3] - 1)
     # load mask of valid electrode positions (in MNI space)
     mask_img = nibabel.load(fn_electrode_mask)
     mask_img_data = mask_img.get_fdata()
@@ -81,9 +82,7 @@ def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance
     mask_valid_tr = np.zeros((skin_surface.elm.nr, 3)).astype(bool)
 
     unique_points = np.unique(
-        tr_nodes_all[
-            mask_valid_nodes[tr_nodes_all].all(axis=1), :
-        ]
+        tr_nodes_all[mask_valid_nodes[tr_nodes_all].all(axis=1), :]
     )
     for point in unique_points:
         idx_where = np.where(tr_nodes_all == point)
@@ -111,13 +110,9 @@ def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance
         while n_last != n_current:
             n_last = copy.deepcopy(n_current)
             nodes_idx_of_domain = np.unique(
-                np.append(
-                    nodes_idx_of_domain, tr_nodes_all[tri_idx_of_domain, :]
-                )
+                np.append(nodes_idx_of_domain, tr_nodes_all[tri_idx_of_domain, :])
             ).astype(int)
-            tri_idx_of_domain = np.isin(tr_nodes_all, nodes_idx_of_domain).any(
-                axis=1
-            )
+            tri_idx_of_domain = np.isin(tr_nodes_all, nodes_idx_of_domain).any(axis=1)
             n_current = np.sum(tri_idx_of_domain)
             # print(f"domain: {domain}, n_current: {n_current}")
 
@@ -127,7 +122,7 @@ def valid_skin_region(skin_surface, mesh, fn_electrode_mask, additional_distance
 
     domain_idx_main = np.argmax([np.sum(point_domain == d) for d in range(domain)])
 
-    nodes_all,tr_nodes_all = create_new_connectivity_list_point_mask(
+    nodes_all, tr_nodes_all = create_new_connectivity_list_point_mask(
         points=nodes_all,
         con=tr_nodes_all,
         point_mask=point_domain == domain_idx_main,
@@ -672,7 +667,6 @@ class LayoutElectrode:
         node_idx=None,
         node_coords=None,
     ):
-
         if (ele_voltage is not None and ele_current is not None) or (
             node_voltage is not None and node_current is not None
         ):
@@ -1112,10 +1106,9 @@ class ElectrodeArray:
             channel_idx = self.ele_id
 
         if len(colors) < np.max(channel_idx):
-            colors = list(np.tile(colors,
-                                  int(np.ceil(np.max(channel_idx) / len(colors)))
-                                  )
-                         )
+            colors = list(
+                np.tile(colors, int(np.ceil(np.max(channel_idx) / len(colors))))
+            )
         plt.ioff()
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -1157,14 +1150,14 @@ class ElectrodeArray:
         ax.set_axisbelow(True)
         ax.set_xlim(
             (
-                np.min(self.center - 1.5 * np.max((self.radius, self.length_x/2))),
-                np.max(self.center + 1.5 * np.max((self.radius, self.length_x/2))),
+                np.min(self.center - 1.5 * np.max((self.radius, self.length_x / 2))),
+                np.max(self.center + 1.5 * np.max((self.radius, self.length_x / 2))),
             )
         )
         ax.set_ylim(
             (
-                np.min(self.center - 1.5 * np.max((self.radius, self.length_y/2))),
-                np.max(self.center + 1.5 * np.max((self.radius, self.length_y/2))),
+                np.min(self.center - 1.5 * np.max((self.radius, self.length_y / 2))),
+                np.max(self.center + 1.5 * np.max((self.radius, self.length_y / 2))),
             )
         )
         ax.set_aspect("equal", "box")
@@ -1258,10 +1251,9 @@ class ElectrodeArrayPair(ElectrodeLayout):
         self._prepared = False
 
         if settings_dict:
-           self.from_dict(settings_dict)
+            self.from_dict(settings_dict)
 
     def _prepare(self):
-
         if self.dirichlet_correction_detailed:
             self.dirichlet_correction = True
 
@@ -1638,10 +1630,9 @@ class CircularArray(ElectrodeLayout):
         self._prepared = False
 
         if settings_dict:
-           self.from_dict(settings_dict)
+            self.from_dict(settings_dict)
 
     def _prepare(self):
-
         if self.dirichlet_correction_detailed:
             self.dirtichlet_correction = True
 
@@ -1992,9 +1983,17 @@ class CircularArray(ElectrodeLayout):
         ]
 
 
-def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thickness=None,
-                                   plug_center=None, plug_dimensions=None, rubber_size=None,
-                                   sigma_rubber=None, sigma_saline=None):
+def create_tdcs_session_from_array(
+    electrode_array,
+    fnamehead,
+    pathfem,
+    thickness=None,
+    plug_center=None,
+    plug_dimensions=None,
+    rubber_size=None,
+    sigma_rubber=None,
+    sigma_saline=None,
+):
     """
     Create a sim_struct.SESSION including a TDCSLIST object with ELECTRODE instances for regular TDCS
     simulations including electrode meshing etc. for reference simulations.
@@ -2053,7 +2052,10 @@ def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thicknes
         tdcslist.cond[499].value = sigma_saline
 
     # Set currents
-    if electrode_array.dirichlet_correction == True or electrode_array.dirichlet_correction_detailed == True:
+    if (
+        electrode_array.dirichlet_correction == True
+        or electrode_array.dirichlet_correction_detailed == True
+    ):
         # this corresponds to several electrodes sharing a common channel
         tdcslist.currents = electrode_array._current_channel
     else:
@@ -2065,34 +2067,44 @@ def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thicknes
     counter = 0
     for i_array, _electrode_array in enumerate(electrode_array._electrode_arrays):
         for i_ele, _electrode in enumerate(_electrode_array.electrodes):
-
             # add new electrode
             electrode = tdcslist.add_electrode()
 
             if _electrode.type == "spherical":
                 # Circular shape
-                electrode.shape = 'ellipse'
+                electrode.shape = "ellipse"
 
                 # Electrode (rubber) and Sponge dimension
                 if len(thickness) == 3:
-                    electrode.dimensions_sponge = [2 * _electrode.radius, 2 * _electrode.radius]
+                    electrode.dimensions_sponge = [
+                        2 * _electrode.radius,
+                        2 * _electrode.radius,
+                    ]
                     electrode.dimensions = rubber_size[i_ele]
                 else:
-                    electrode.dimensions = [2*_electrode.radius, 2*_electrode.radius]
+                    electrode.dimensions = [
+                        2 * _electrode.radius,
+                        2 * _electrode.radius,
+                    ]
 
             elif _electrode.type == "rectangular":
                 # Rectangular shape
-                electrode.shape = 'rect'
+                electrode.shape = "rect"
 
                 # Electrode (rubber) and Sponge dimension
                 if len(thickness) == 3:
-                    electrode.dimensions_sponge = [_electrode.length_x, _electrode.length_y]
+                    electrode.dimensions_sponge = [
+                        _electrode.length_x,
+                        _electrode.length_y,
+                    ]
                     electrode.dimensions = rubber_size[i_ele]
                 else:
                     electrode.dimensions = [_electrode.length_x, _electrode.length_y]
 
             else:
-                raise AssertionError("Electrodes have to be either 'spherical' or 'rectangular'")
+                raise AssertionError(
+                    "Electrodes have to be either 'spherical' or 'rectangular'"
+                )
 
             # add plug
             if plug_center is not None:
@@ -2105,7 +2117,10 @@ def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thicknes
                     plug.dimensions = plug_dimensions
 
             # Connect electrode to its channel
-            if electrode_array.dirichlet_correction == True or electrode_array.dirichlet_correction_detailed == True:
+            if (
+                electrode_array.dirichlet_correction == True
+                or electrode_array.dirichlet_correction_detailed == True
+            ):
                 electrode.channelnr = _electrode.channel_id
             else:
                 electrode.channelnr = channel_idx[counter]
@@ -2117,7 +2132,7 @@ def create_tdcs_session_from_array(electrode_array, fnamehead, pathfem, thicknes
             electrode.centre = _electrode.posmat[:3, 3]
 
             # Electrode direction
-            electrode.pos_ydir = electrode.centre + 20*_electrode.posmat[:3, 1]
+            electrode.pos_ydir = electrode.centre + 20 * _electrode.posmat[:3, 1]
 
             counter += 1
 

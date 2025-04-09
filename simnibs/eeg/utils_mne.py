@@ -31,6 +31,7 @@ landmarks_mapper = {
     "mne_to_simnibs": {"nasion": "Nz", "inion": "Iz", "lpa": "LPA", "rpa": "RPA"},
 }
 
+
 # Modify load_subject_surfaces and load_reference_surfaces to return a dict of
 # dicts instead of a dict of mesh objects as this is a little easier to work
 # with in this context
@@ -546,8 +547,12 @@ def prepare_montage(
         ch_names += fid_names
 
     csv_reader.write_csv_positions(
-        fname, ch_types, ch_pos, ch_names,
+        fname,
+        ch_types,
+        ch_pos,
+        ch_names,
     )
+
 
 def simnibs_montage_to_mne_montage(montage, coord_frame="unknown"):
     valid_entries = {"Electrode", "ReferenceElectrode"}

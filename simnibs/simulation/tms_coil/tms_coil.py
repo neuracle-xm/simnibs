@@ -358,9 +358,11 @@ class TmsCoil(TcdElement):
                 include_casing=False,
                 apply_deformation=apply_deformations,
                 include_optimization_points=False,
-                include_coil_elements=not(self.version is not None and self.version.endswith('.o'))
+                include_coil_elements=not (
+                    self.version is not None and self.version.endswith(".o")
+                ),
             ),
-            add_logo=True
+            add_logo=True,
         )
         casings = self.get_mesh(
             apply_deformation=apply_deformations,
@@ -376,8 +378,8 @@ class TmsCoil(TcdElement):
         visualization.visibility = np.unique(visualization.mesh.elm.tag1)
 
         for i, key in enumerate(visualization.mesh.field.keys()):
-            #What is this for? O.O
-            if self.version is not None and self.version.endswith('.o'):
+            # What is this for? O.O
+            if self.version is not None and self.version.endswith(".o"):
                 continue
             if isinstance(self.elements[i], DipoleElements):
                 visualization.add_view(Visible=1, VectorType=2, CenterGlyphs=0)
@@ -446,8 +448,8 @@ class TmsCoil(TcdElement):
             os.remove(geo_file_name)
 
         for tag in np.unique(optimization_points.elm.tag1):
-            #What is this for? O.O
-            if self.version is not None and self.version.endswith('.o'):
+            # What is this for? O.O
+            if self.version is not None and self.version.endswith(".o"):
                 continue
             element_optimization_points = optimization_points.crop_mesh(tags=[tag])
             index = str(tag)[:-2]
@@ -509,12 +511,12 @@ class TmsCoil(TcdElement):
         msh_skin: Msh,
         coil_matrix: npt.NDArray[np.float64],
         visibility=1,
-        infix='',
-        axis_vectors=True
+        infix="",
+        axis_vectors=True,
     ):
         for i, element in enumerate(self.elements):
-            #And here again? *.*
-            if self.version is not None and self.version.endswith('.o'):
+            # And here again? *.*
+            if self.version is not None and self.version.endswith(".o"):
                 continue
             points = []
             vectors = []
@@ -544,7 +546,11 @@ class TmsCoil(TcdElement):
                     ArrowSizeMin=30,
                 )
                 mesh_io.write_geo_vectors(
-                    points, vectors, goe_fn, name=f"{i+1}{infix}-line_segments", mode="ba"
+                    points,
+                    vectors,
+                    goe_fn,
+                    name=f"{i+1}{infix}-line_segments",
+                    mode="ba",
                 )
             elif isinstance(element, SampledGridPointElements):
                 y_axis = np.arange(1, 10, dtype=float)[:, None] * (0, 1, 0)
@@ -565,18 +571,21 @@ class TmsCoil(TcdElement):
                 )
 
         if axis_vectors:
-            visualization.add_view(Visible=visibility, ShowScale=0,
-                    VectorType=4,
-                    CenterGlyphs=0,
-                    GlyphLocation=2,
-                    ArrowSizeMax=65,
-                    ArrowSizeMin=65,
-                    RangeType=2,
-                    CustomMin=0.999,
-                    CustomMax=3.001,
-                    SaturateValues=1,
-                    PointType=1,
-                    PointSize=8.0)
+            visualization.add_view(
+                Visible=visibility,
+                ShowScale=0,
+                VectorType=4,
+                CenterGlyphs=0,
+                GlyphLocation=2,
+                ArrowSizeMax=65,
+                ArrowSizeMin=65,
+                RangeType=2,
+                CustomMin=0.999,
+                CustomMax=3.001,
+                SaturateValues=1,
+                PointType=1,
+                PointSize=8.0,
+            )
             mesh_io.write_geo_axis_vectors(
                 coil_matrix,
                 goe_fn,
@@ -694,7 +703,6 @@ class TmsCoil(TcdElement):
             elements_by_stimulators[element.stimulator] = [element]
 
         return elements_by_stimulators
-
 
     @classmethod
     def from_file(cls, fn: str):
@@ -1161,9 +1169,18 @@ class TmsCoil(TcdElement):
 
         limits = np.array(
             [
-                [affine[0][3], data.shape[0] * resolution[0] + affine[0][3] - resolution[0]],
-                [affine[1][3], data.shape[1] * resolution[1] + affine[1][3] - resolution[1]],
-                [affine[2][3], data.shape[2] * resolution[2] + affine[2][3] - resolution[2]],
+                [
+                    affine[0][3],
+                    data.shape[0] * resolution[0] + affine[0][3] - resolution[0],
+                ],
+                [
+                    affine[1][3],
+                    data.shape[1] * resolution[1] + affine[1][3] - resolution[1],
+                ],
+                [
+                    affine[2][3],
+                    data.shape[2] * resolution[2] + affine[2][3] - resolution[2],
+                ],
             ]
         )
 
@@ -1213,7 +1230,7 @@ class TmsCoil(TcdElement):
         fn: str,
         limits: Optional[npt.NDArray[np.float64]] = None,
         resolution: Optional[npt.NDArray[np.float64]] = None,
-        b_field: bool = False
+        b_field: bool = False,
     ):
         """Writes the A field of the coil in the NIfTI file format.
         If multiple stimulators are present, the NIfTI file will be 5D and containing vector data for each stimulator group.
@@ -1253,18 +1270,13 @@ class TmsCoil(TcdElement):
                 else:
                     stimulator_field += element.get_a_field(sample_positions, np.eye(4))
 
-
-            stimulator_field = stimulator_field.reshape(
-                (dims[0], dims[1], dims[2], 3)
-            )
+            stimulator_field = stimulator_field.reshape((dims[0], dims[1], dims[2], 3))
             data_per_stimulator.append(stimulator_field)
 
         data = np.stack(data_per_stimulator, axis=-2)
 
         if data.shape[3] == 1:
-            data = data.reshape(
-                (dims[0], dims[1], dims[2], 3)
-            )
+            data = data.reshape((dims[0], dims[1], dims[2], 3))
 
         affine = np.array(
             [
@@ -1310,7 +1322,8 @@ class TmsCoil(TcdElement):
             raise ValueError("resolution needs to be set")
 
         dims = [
-            int((max_ - min_) // res) + 1 for [min_, max_], res in zip(limits, resolution)
+            int((max_ - min_) // res) + 1
+            for [min_, max_], res in zip(limits, resolution)
         ]
 
         dx = np.spacing(1e4)

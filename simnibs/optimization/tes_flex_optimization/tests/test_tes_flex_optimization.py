@@ -6,12 +6,19 @@ import scipy
 from pathlib import Path
 from copy import deepcopy
 
-from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import TesFlexOptimization
+from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import (
+    TesFlexOptimization,
+)
 from simnibs.utils.matlab_read import dict_from_matlab
 from simnibs.mesh_tools.mesh_io import read_msh
 from simnibs.mesh_tools import mesh_io, gmsh_view
-from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import write_visualization, make_summary_text
-from simnibs.optimization.tes_flex_optimization.electrode_layout import valid_skin_region
+from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import (
+    write_visualization,
+    make_summary_text,
+)
+from simnibs.optimization.tes_flex_optimization.electrode_layout import (
+    valid_skin_region,
+)
 from simnibs.optimization.tes_flex_optimization.ellipsoid import Ellipsoid
 from simnibs.utils.file_finder import Templates
 from simnibs.utils.region_of_interest import RegionOfInterest
@@ -23,7 +30,7 @@ class TestToFromDict:
         opt.subpath = "m2m_ernie"
         opt.output_folder = "tes_optimze_4x1tes_focality"
 
-        ''' Set up goal function '''
+        """ Set up goal function """
         opt.goal = "focality"
         opt.threshold = [0.1, 0.2]
         opt.e_postproc = "magn"
@@ -35,27 +42,29 @@ class TestToFromDict:
         electrode.n_outer = 4
         electrode.dirichlet_correction = False
         electrode.dirichlet_correction_detailed = False
-        electrode.current = [0.002, -0.002/4, -0.002/4, -0.002/4, -0.002/4]
+        electrode.current = [0.002, -0.002 / 4, -0.002 / 4, -0.002 / 4, -0.002 / 4]
 
         roi = opt.add_roi()
         roi.method = "surface"
         roi.surface_type = "central"
         roi.roi_sphere_center_space = "subject"
-        roi.roi_sphere_center = [-41.0, -13.0,  66.0]
+        roi.roi_sphere_center = [-41.0, -13.0, 66.0]
         roi.roi_sphere_radius = 20
 
         roi = opt.add_roi()
         roi.method = "surface"
         roi.surface_type = "central"
         roi.roi_sphere_center_space = "subject"
-        roi.roi_sphere_center = [-41.0, -13.0,  66.0]
+        roi.roi_sphere_center = [-41.0, -13.0, 66.0]
         roi.roi_sphere_radius = 25
         roi.roi_sphere_operator = "difference"
 
         mat_path = os.path.join(tmp_path, "test.mat")
 
         scipy.io.savemat(mat_path, opt.to_dict())
-        tes_flex_opt_loaded = TesFlexOptimization(dict_from_matlab(scipy.io.loadmat(mat_path)))
+        tes_flex_opt_loaded = TesFlexOptimization(
+            dict_from_matlab(scipy.io.loadmat(mat_path))
+        )
 
         np.testing.assert_equal(opt.to_dict(), tes_flex_opt_loaded.to_dict())
 
@@ -72,16 +81,22 @@ class TestToFromDict:
         del dict_after["electrode"]
 
         np.testing.assert_equal(dict_before, dict_after)
-        np.testing.assert_equal(opt.roi[0].__dict__, tes_flex_opt_loaded.roi[0].__dict__)
-        np.testing.assert_equal(opt.roi[1].__dict__, tes_flex_opt_loaded.roi[1].__dict__)
-        np.testing.assert_equal(opt.electrode[0].__dict__, tes_flex_opt_loaded.electrode[0].__dict__)
+        np.testing.assert_equal(
+            opt.roi[0].__dict__, tes_flex_opt_loaded.roi[0].__dict__
+        )
+        np.testing.assert_equal(
+            opt.roi[1].__dict__, tes_flex_opt_loaded.roi[1].__dict__
+        )
+        np.testing.assert_equal(
+            opt.electrode[0].__dict__, tes_flex_opt_loaded.electrode[0].__dict__
+        )
 
     @pytest.mark.slow
     def test_write_read_mat_after_prepare(self, tmp_path: Path, example_dataset):
         opt = TesFlexOptimization()
         # path of m2m folder containing the headmodel
-        opt.subpath = os.path.join(example_dataset, 'm2m_ernie')
-        opt.seed = 42                   # seed optimizer for reproducibility
+        opt.subpath = os.path.join(example_dataset, "m2m_ernie")
+        opt.seed = 42  # seed optimizer for reproducibility
 
         # output folder
         opt.output_folder = os.path.join(tmp_path, "tes_optimize_ti_intensity")
@@ -97,19 +112,27 @@ class TestToFromDict:
 
         # define first pair of electrodes
         electrode = opt.add_electrode_layout("ElectrodeArrayPair")
-        electrode.center = [[0, 0],                             # electrode center in reference electrode space (x-y plane)
-                            [0, 20]]
-        electrode.radius = [10, 10]                             # radius of electrodes
-        electrode.dirichlet_correction_detailed = False         # node wise dirichlet correction
-        electrode.current = [0.002, 0.002, -0.002, -0.002]      # electrode currents
+        electrode.center = [
+            [0, 0],  # electrode center in reference electrode space (x-y plane)
+            [0, 20],
+        ]
+        electrode.radius = [10, 10]  # radius of electrodes
+        electrode.dirichlet_correction_detailed = (
+            False  # node wise dirichlet correction
+        )
+        electrode.current = [0.002, 0.002, -0.002, -0.002]  # electrode currents
 
         # define second pair of electrodes
         electrode = opt.add_electrode_layout("ElectrodeArrayPair")
-        electrode.center = [[0, 0],                             # electrode center in reference electrode space (x-y plane)
-                            [0, 20]]
-        electrode.radius = [10, 10]                             # radius of electrodes
-        electrode.dirichlet_correction_detailed = False         # node wise dirichlet correction
-        electrode.current = [0.002, 0.002, -0.002, -0.002]      # electrode currents
+        electrode.center = [
+            [0, 0],  # electrode center in reference electrode space (x-y plane)
+            [0, 20],
+        ]
+        electrode.radius = [10, 10]  # radius of electrodes
+        electrode.dirichlet_correction_detailed = (
+            False  # node wise dirichlet correction
+        )
+        electrode.current = [0.002, 0.002, -0.002, -0.002]  # electrode currents
 
         # define ROI
         roi = opt.add_roi()
@@ -118,7 +141,7 @@ class TestToFromDict:
 
         # center of spherical ROI in subject space (in mm)
         roi.roi_sphere_center_space = "subject"
-        roi.roi_sphere_center = [-41.0, -13.0,  66.0]
+        roi.roi_sphere_center = [-41.0, -13.0, 66.0]
 
         # radius of spherical ROI (in mm)
         roi.roi_sphere_radius = 20
@@ -131,7 +154,9 @@ class TestToFromDict:
         scipy.io.savemat(mat_path, opt.to_dict())
 
         # load .mat structure and initialize new opt instance
-        tes_flex_opt_loaded = TesFlexOptimization(dict_from_matlab(scipy.io.loadmat(mat_path)))
+        tes_flex_opt_loaded = TesFlexOptimization(
+            dict_from_matlab(scipy.io.loadmat(mat_path))
+        )
 
         # prepare loaded opt instance
         tes_flex_opt_loaded._prepare()
@@ -142,12 +167,12 @@ class TestToFromDict:
     @pytest.mark.slow
     def test_run_opt_from_mat(self, tmp_path: Path, example_dataset):
         opt = TesFlexOptimization()
-        opt.seed = 42                   # seed optimizer for reproducibility
+        opt.seed = 42  # seed optimizer for reproducibility
         opt.open_in_gmsh = False
         opt.detailed_results = True
 
         # path of m2m folder containing the headmodel
-        opt.subpath = os.path.join(example_dataset, 'm2m_ernie')
+        opt.subpath = os.path.join(example_dataset, "m2m_ernie")
 
         # output folder
         opt.output_folder = os.path.join(tmp_path, "tes_optimize_tes_intensity_org")
@@ -160,9 +185,13 @@ class TestToFromDict:
 
         # define first pair of electrodes
         electrode = opt.add_electrode_layout("ElectrodeArrayPair")
-        electrode.center = [[0, 0]]  # electrode center in reference electrode space (x-y plane)
+        electrode.center = [
+            [0, 0]
+        ]  # electrode center in reference electrode space (x-y plane)
         electrode.radius = [10]  # radius of electrodes
-        electrode.dirichlet_correction_detailed = False  # node wise dirichlet correction
+        electrode.dirichlet_correction_detailed = (
+            False  # node wise dirichlet correction
+        )
         electrode.current = [0.002, -0.002]  # electrode currents
 
         # define ROI
@@ -181,8 +210,12 @@ class TestToFromDict:
         scipy.io.savemat(mat_path, opt.to_dict())
 
         # load .mat structure and initialize new opt instance
-        tes_flex_opt_loaded = TesFlexOptimization(dict_from_matlab(scipy.io.loadmat(mat_path)))
-        tes_flex_opt_loaded.output_folder = os.path.join(tmp_path, "tes_optimize_tes_intensity_mat")
+        tes_flex_opt_loaded = TesFlexOptimization(
+            dict_from_matlab(scipy.io.loadmat(mat_path))
+        )
+        tes_flex_opt_loaded.output_folder = os.path.join(
+            tmp_path, "tes_optimize_tes_intensity_mat"
+        )
 
         # prepare loaded opt instance
         tes_flex_opt_loaded._prepare()
@@ -194,17 +227,25 @@ class TestToFromDict:
         tes_flex_opt_loaded.run()
 
         # compare results
-        msh_org = read_msh(os.path.join(opt.output_folder, "ernie_tes_flex_opt_surface_mesh.msh"))
-        msh_mat = read_msh(os.path.join(tes_flex_opt_loaded.output_folder, "ernie_tes_flex_opt_surface_mesh.msh"))
+        msh_org = read_msh(
+            os.path.join(opt.output_folder, "ernie_tes_flex_opt_surface_mesh.msh")
+        )
+        msh_mat = read_msh(
+            os.path.join(
+                tes_flex_opt_loaded.output_folder, "ernie_tes_flex_opt_surface_mesh.msh"
+            )
+        )
 
-        np.testing.assert_allclose(msh_org.field["magnE"].value, msh_mat.field["magnE"].value)
+        np.testing.assert_allclose(
+            msh_org.field["magnE"].value, msh_mat.field["magnE"].value
+        )
 
     @pytest.mark.slow
     def test_compute_goal(self, tmp_path: Path, example_dataset):
         opt = TesFlexOptimization()
 
         # path of m2m folder containing the headmodel
-        opt.subpath = os.path.join(example_dataset, 'm2m_ernie')
+        opt.subpath = os.path.join(example_dataset, "m2m_ernie")
 
         # output folder
         opt.output_folder = os.path.join(tmp_path, "tes_optimize_compute_goal")
@@ -217,9 +258,13 @@ class TestToFromDict:
 
         # define first pair of electrodes
         electrode = opt.add_electrode_layout("ElectrodeArrayPair")
-        electrode.center = [[0, 0]]  # electrode center in reference electrode space (x-y plane)
+        electrode.center = [
+            [0, 0]
+        ]  # electrode center in reference electrode space (x-y plane)
         electrode.radius = [10]  # radius of electrodes
-        electrode.dirichlet_correction_detailed = False  # node wise dirichlet correction
+        electrode.dirichlet_correction_detailed = (
+            False  # node wise dirichlet correction
+        )
         electrode.current = [0.002, -0.002]  # electrode currents
 
         # define ROI
@@ -302,7 +347,7 @@ class TestToFromDict:
         ellipsoid = Ellipsoid()
         fn_electrode_mask = Templates().mni_volume_upper_head_mask
 
-        mesh = read_msh(os.path.join(example_dataset, 'm2m_ernie', 'ernie.msh'))
+        mesh = read_msh(os.path.join(example_dataset, "m2m_ernie", "ernie.msh"))
 
         # relabel internal air
         mesh_relabel = mesh.relabel_internal_air()
@@ -318,30 +363,42 @@ class TestToFromDict:
         np.testing.assert_equal(skin_surface.nodes.nr, 5427)
         np.testing.assert_allclose(
             skin_surface.nodes.node_coord[0, :],
-            [9.80649432, 104.20439836,  58.96501272],
-            rtol=1e-6
+            [9.80649432, 104.20439836, 58.96501272],
+            rtol=1e-6,
         )
 
         # fit optimal ellipsoid to valid skin points
         ellipsoid.fit(points=skin_surface.nodes.node_coord)
 
-        np.testing.assert_allclose(ellipsoid.radii, [113.60465987, 105.76692858,  86.19796459], rtol=1e-6)
-        np.testing.assert_allclose(ellipsoid.center, [ 1.47022674, 16.43981549, -4.79728615], rtol=1e-6)
-        np.testing.assert_allclose(ellipsoid.rotmat, np.array([[-0.02356704, -0.06572103, -0.99755969],
-                                                               [-0.77416654, -0.63015041,  0.05980489],
-                                                               [ 0.63254309, -0.77368676,  0.03602824]]), rtol=1e-6)
+        np.testing.assert_allclose(
+            ellipsoid.radii, [113.60465987, 105.76692858, 86.19796459], rtol=1e-6
+        )
+        np.testing.assert_allclose(
+            ellipsoid.center, [1.47022674, 16.43981549, -4.79728615], rtol=1e-6
+        )
+        np.testing.assert_allclose(
+            ellipsoid.rotmat,
+            np.array(
+                [
+                    [-0.02356704, -0.06572103, -0.99755969],
+                    [-0.77416654, -0.63015041, 0.05980489],
+                    [0.63254309, -0.77368676, 0.03602824],
+                ]
+            ),
+            rtol=1e-6,
+        )
 
 
 class Test_Write_Visualization:
     def test_volume_rois(self, sphere3_msh: mesh_io.Msh, tmp_path):
         input_mesh = deepcopy(sphere3_msh)
-        #Create Roi 1
+        # Create Roi 1
         roi_1 = RegionOfInterest()
         roi_1.load_mesh(input_mesh)
         roi_1.tissues = [3]
         roi_1.method = "volume"
         roi_1.roi_sphere_center_space = "subject"
-        roi_1.roi_sphere_center = [0., 0., 80.]
+        roi_1.roi_sphere_center = [0.0, 0.0, 80.0]
         roi_1.roi_sphere_radius = 20
         roi_1._prepare()
 
@@ -350,23 +407,24 @@ class Test_Write_Visualization:
         roi_2.tissues = [3]
         roi_2.method = "volume"
         roi_2.roi_sphere_center_space = "subject"
-        roi_2.roi_sphere_center = [0., 0., -80.]
+        roi_2.roi_sphere_center = [0.0, 0.0, -80.0]
         roi_2.roi_sphere_radius = 20
         roi_2._prepare()
 
-        #Create result mesh 1
+        # Create result mesh 1
         result_mesh_1_file_path = os.path.join(tmp_path, "test1_TMS_scalar.msh")
         result_mesh_1 = deepcopy(sphere3_msh)
         opt_1 = gmsh_view.Visualization(result_mesh_1)
 
         opt_1.add_view(ColormapNumber=1)
         result_mesh_1.add_element_field(
-            np.tile(np.arange(result_mesh_1.elm.nr),3).reshape((result_mesh_1.elm.nr,3)), "E"
+            np.tile(np.arange(result_mesh_1.elm.nr), 3).reshape(
+                (result_mesh_1.elm.nr, 3)
+            ),
+            "E",
         )
         opt_1.add_view(ColormapNumber=2)
-        result_mesh_1.add_element_field(
-            np.arange(result_mesh_1.elm.nr) * 2, "magnE"
-        )
+        result_mesh_1.add_element_field(np.arange(result_mesh_1.elm.nr) * 2, "magnE")
         opt_1.add_view(ColormapNumber=3)
         geo_file_path = os.path.join(tmp_path, "test1_TMS_coil_pos.geo")
         opt_1.add_merge(geo_file_path)
@@ -380,19 +438,20 @@ class Test_Write_Visualization:
         result_mesh_1.write(result_mesh_1_file_path)
         opt_1.write_opt(result_mesh_1_file_path)
 
-        #Create result mesh 2
+        # Create result mesh 2
         result_mesh_2_file_path = os.path.join(tmp_path, "test2_TMS_scalar.msh")
         result_mesh_2 = deepcopy(sphere3_msh)
         opt_2 = gmsh_view.Visualization(result_mesh_2)
 
         opt_2.add_view(ColormapNumber=5)
         result_mesh_2.add_element_field(
-            np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape((result_mesh_2.elm.nr,3)), "E"
+            np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape(
+                (result_mesh_2.elm.nr, 3)
+            ),
+            "E",
         )
         opt_2.add_view(ColormapNumber=6)
-        result_mesh_2.add_element_field(
-            np.arange(result_mesh_2.elm.nr) * 4, "magnE"
-        )
+        result_mesh_2.add_element_field(np.arange(result_mesh_2.elm.nr) * 4, "magnE")
         opt_2.add_view(ColormapNumber=7)
         geo_file_path = os.path.join(tmp_path, "test2_TMS_coil_pos.geo")
         opt_2.add_merge(geo_file_path)
@@ -407,13 +466,15 @@ class Test_Write_Visualization:
         opt_2.write_opt(result_mesh_2_file_path)
 
         # write visualization
-        roi_list = [roi_1,roi_2]
+        roi_list = [roi_1, roi_2]
         results_list = [result_mesh_1_file_path, result_mesh_2_file_path]
-        base_file_name = 'volmask'
-        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn']
-        goal_list = ['mean']
+        base_file_name = "volmask"
+        e_postproc = ["max_TI", "max_TI", "dir_TI", "tangential", "normal", "magn"]
+        goal_list = ["mean"]
 
-        write_visualization(tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list)
+        write_visualization(
+            tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list
+        )
 
         fn_vis_head = os.path.join(tmp_path, "volmask_head_mesh.msh")
         fn_vis_surf = os.path.join(tmp_path, "volmask_surface_mesh.msh")
@@ -423,46 +484,53 @@ class Test_Write_Visualization:
         if os.path.exists(fn_vis_head):
             m = mesh_io.read_msh(fn_vis_head)
             field_names = list(m.field.keys())
-            field_names_ref=['ROI_0', 'ROI_1', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE', 'max_TI']
+            field_names_ref = [
+                "ROI_0",
+                "ROI_1",
+                "channel_0__magnE",
+                "channel_1__magnE",
+                "average__magnE",
+                "max_TI",
+            ]
 
-            assert 'E' not in field_names
-            assert 'magnE' not in field_names
+            assert "E" not in field_names
+            assert "magnE" not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
-
 
     def test_surface_rois(self, sphere3_msh: mesh_io.Msh, tmp_path):
         input_mesh = deepcopy(sphere3_msh)
-        surf_mesh = input_mesh.crop_mesh(tags = 1003)
+        surf_mesh = input_mesh.crop_mesh(tags=1003)
         surf_mesh_file_path = os.path.join(tmp_path, "surf_roi.msh")
         mesh_io.write_msh(surf_mesh, surf_mesh_file_path)
 
-        #Create Roi 1
+        # Create Roi 1
         roi_1 = RegionOfInterest()
         roi_1.method = "surface"
         roi_1.surface_type = "custom"
         roi_1.surface_path = surf_mesh_file_path
         roi_1._prepare()
 
-        #Create Roi 2
+        # Create Roi 2
         roi_2 = RegionOfInterest()
         roi_2.method = "surface"
         roi_2.surface_type = "custom"
         roi_2.surface_path = surf_mesh_file_path
         roi_2._prepare()
 
-        #Create result mesh 1
+        # Create result mesh 1
         result_mesh_1_file_path = os.path.join(tmp_path, "test1_TMS_scalar.msh")
         result_mesh_1 = deepcopy(sphere3_msh)
         opt_1 = gmsh_view.Visualization(result_mesh_1)
 
         opt_1.add_view(ColormapNumber=1)
         result_mesh_1.add_element_field(
-            np.tile(np.arange(result_mesh_1.elm.nr),3).reshape((result_mesh_1.elm.nr,3)), "E"
+            np.tile(np.arange(result_mesh_1.elm.nr), 3).reshape(
+                (result_mesh_1.elm.nr, 3)
+            ),
+            "E",
         )
         opt_1.add_view(ColormapNumber=2)
-        result_mesh_1.add_element_field(
-            np.arange(result_mesh_1.elm.nr) * 2, "magnE"
-        )
+        result_mesh_1.add_element_field(np.arange(result_mesh_1.elm.nr) * 2, "magnE")
         opt_1.add_view(ColormapNumber=3)
         geo_file_path = os.path.join(tmp_path, "test1_TMS_coil_pos.geo")
         opt_1.add_merge(geo_file_path)
@@ -476,19 +544,20 @@ class Test_Write_Visualization:
         result_mesh_1.write(result_mesh_1_file_path)
         opt_1.write_opt(result_mesh_1_file_path)
 
-        #Create result mesh 2
+        # Create result mesh 2
         result_mesh_2_file_path = os.path.join(tmp_path, "test2_TMS_scalar.msh")
         result_mesh_2 = deepcopy(sphere3_msh)
         opt_2 = gmsh_view.Visualization(result_mesh_2)
 
         opt_2.add_view(ColormapNumber=5)
         result_mesh_2.add_element_field(
-            np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape((result_mesh_2.elm.nr,3)), "E"
+            np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape(
+                (result_mesh_2.elm.nr, 3)
+            ),
+            "E",
         )
         opt_2.add_view(ColormapNumber=6)
-        result_mesh_2.add_element_field(
-            np.arange(result_mesh_2.elm.nr) * 4, "magnE"
-        )
+        result_mesh_2.add_element_field(np.arange(result_mesh_2.elm.nr) * 4, "magnE")
         opt_2.add_view(ColormapNumber=7)
         geo_file_path = os.path.join(tmp_path, "test2_TMS_coil_pos.geo")
         opt_2.add_merge(geo_file_path)
@@ -503,13 +572,15 @@ class Test_Write_Visualization:
         opt_2.write_opt(result_mesh_2_file_path)
 
         # write visualization
-        roi_list = [roi_1,roi_2]
+        roi_list = [roi_1, roi_2]
         results_list = [result_mesh_1_file_path, result_mesh_2_file_path]
-        base_file_name = 'surfmask'
-        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn']
-        goal_list = ['mean']
+        base_file_name = "surfmask"
+        e_postproc = ["max_TI", "max_TI", "dir_TI", "tangential", "normal", "magn"]
+        goal_list = ["mean"]
 
-        write_visualization(tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list)
+        write_visualization(
+            tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list
+        )
 
         fn_vis_head = os.path.join(tmp_path, "surfmask_head_mesh.msh")
         fn_vis_surf = os.path.join(tmp_path, "surfmask_surface_mesh.msh")
@@ -519,52 +590,63 @@ class Test_Write_Visualization:
         if os.path.exists(fn_vis_surf):
             m = mesh_io.read_msh(fn_vis_surf)
             field_names = list(m.field.keys())
-            field_names_ref=['ROI_0', 'ROI_1', 'channel_0__magnE', 'channel_1__magnE',
-                             'average__magnE', 'channel_0__normal', 'channel_1__normal',
-                             'average__normal', 'channel_0__tangential', 'channel_1__tangential',
-                             'average__tangential', 'max_TI', 'dir_TI']
+            field_names_ref = [
+                "ROI_0",
+                "ROI_1",
+                "channel_0__magnE",
+                "channel_1__magnE",
+                "average__magnE",
+                "channel_0__normal",
+                "channel_1__normal",
+                "average__normal",
+                "channel_0__tangential",
+                "channel_1__tangential",
+                "average__tangential",
+                "max_TI",
+                "dir_TI",
+            ]
 
-            assert 'E' not in field_names
-            assert 'magnE' not in field_names
+            assert "E" not in field_names
+            assert "magnE" not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
-
 
     def test_surface_and_volume_rois(self, sphere3_msh: mesh_io.Msh, tmp_path):
         input_mesh = deepcopy(sphere3_msh)
-        surf_mesh = input_mesh.crop_mesh(tags = 1003)
+        surf_mesh = input_mesh.crop_mesh(tags=1003)
         surf_mesh_file_path = os.path.join(tmp_path, "surf_roi.msh")
         mesh_io.write_msh(surf_mesh, surf_mesh_file_path)
 
-        #Create Roi 1
+        # Create Roi 1
         roi_1 = RegionOfInterest()
         roi_1.method = "surface"
         roi_1.surface_type = "custom"
         roi_1.surface_path = surf_mesh_file_path
         roi_1._prepare()
 
-        #Create Roi 2
+        # Create Roi 2
         roi_2 = RegionOfInterest()
         roi_2.load_mesh(input_mesh)
         roi_2.tissues = [3]
         roi_2.method = "volume"
         roi_2.roi_sphere_center_space = "subject"
-        roi_2.roi_sphere_center = [0., 0., -80.]
+        roi_2.roi_sphere_center = [0.0, 0.0, -80.0]
         roi_2.roi_sphere_radius = 20
         roi_2._prepare()
 
-        #Create result mesh 1
+        # Create result mesh 1
         result_mesh_1_file_path = os.path.join(tmp_path, "test1_TMS_scalar.msh")
         result_mesh_1 = deepcopy(sphere3_msh)
         opt_1 = gmsh_view.Visualization(result_mesh_1)
 
         opt_1.add_view(ColormapNumber=1)
         result_mesh_1.add_element_field(
-            np.tile(np.arange(result_mesh_1.elm.nr),3).reshape((result_mesh_1.elm.nr,3)), "E"
+            np.tile(np.arange(result_mesh_1.elm.nr), 3).reshape(
+                (result_mesh_1.elm.nr, 3)
+            ),
+            "E",
         )
         opt_1.add_view(ColormapNumber=2)
-        result_mesh_1.add_element_field(
-            np.arange(result_mesh_1.elm.nr) * 2, "magnE"
-        )
+        result_mesh_1.add_element_field(np.arange(result_mesh_1.elm.nr) * 2, "magnE")
         opt_1.add_view(ColormapNumber=3)
         geo_file_path = os.path.join(tmp_path, "test1_TMS_coil_pos.geo")
         opt_1.add_merge(geo_file_path)
@@ -578,19 +660,20 @@ class Test_Write_Visualization:
         result_mesh_1.write(result_mesh_1_file_path)
         opt_1.write_opt(result_mesh_1_file_path)
 
-        #Create result mesh 2
+        # Create result mesh 2
         result_mesh_2_file_path = os.path.join(tmp_path, "test2_TMS_scalar.msh")
         result_mesh_2 = deepcopy(sphere3_msh)
         opt_2 = gmsh_view.Visualization(result_mesh_2)
 
         opt_2.add_view(ColormapNumber=5)
         result_mesh_2.add_element_field(
-            np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape((result_mesh_2.elm.nr,3)), "E"
+            np.tile(np.arange(result_mesh_2.elm.nr) * 3, 3).reshape(
+                (result_mesh_2.elm.nr, 3)
+            ),
+            "E",
         )
         opt_2.add_view(ColormapNumber=6)
-        result_mesh_2.add_element_field(
-            np.arange(result_mesh_2.elm.nr) * 4, "magnE"
-        )
+        result_mesh_2.add_element_field(np.arange(result_mesh_2.elm.nr) * 4, "magnE")
         opt_2.add_view(ColormapNumber=7)
         geo_file_path = os.path.join(tmp_path, "test2_TMS_coil_pos.geo")
         opt_2.add_merge(geo_file_path)
@@ -605,13 +688,15 @@ class Test_Write_Visualization:
         opt_2.write_opt(result_mesh_2_file_path)
 
         # write visualization
-        roi_list = [roi_1,roi_2]
+        roi_list = [roi_1, roi_2]
         results_list = [result_mesh_1_file_path, result_mesh_2_file_path]
-        base_file_name = 'bothmasks'
-        e_postproc = ['max_TI', 'max_TI', 'dir_TI', 'tangential', 'normal','magn']
-        goal_list = ['mean']
+        base_file_name = "bothmasks"
+        e_postproc = ["max_TI", "max_TI", "dir_TI", "tangential", "normal", "magn"]
+        goal_list = ["mean"]
 
-        write_visualization(tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list)
+        write_visualization(
+            tmp_path, base_file_name, roi_list, results_list, e_postproc, goal_list
+        )
 
         fn_vis_head = os.path.join(tmp_path, "bothmasks_head_mesh.msh")
         fn_vis_surf = os.path.join(tmp_path, "bothmasks_surface_mesh.msh")
@@ -621,22 +706,38 @@ class Test_Write_Visualization:
         if os.path.exists(fn_vis_head):
             m = mesh_io.read_msh(fn_vis_head)
             field_names = list(m.field.keys())
-            field_names_ref=['ROI_1', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE', 'max_TI']
+            field_names_ref = [
+                "ROI_1",
+                "channel_0__magnE",
+                "channel_1__magnE",
+                "average__magnE",
+                "max_TI",
+            ]
 
-            assert 'E' not in field_names
-            assert 'magnE' not in field_names
+            assert "E" not in field_names
+            assert "magnE" not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
 
         if os.path.exists(fn_vis_surf):
             m = mesh_io.read_msh(fn_vis_surf)
             field_names = list(m.field.keys())
-            field_names_ref=['ROI_0', 'channel_0__magnE', 'channel_1__magnE', 'average__magnE',
-                             'channel_0__normal', 'channel_1__normal', 'average__normal',
-                             'channel_0__tangential', 'channel_1__tangential', 'average__tangential',
-                             'max_TI', 'dir_TI']
+            field_names_ref = [
+                "ROI_0",
+                "channel_0__magnE",
+                "channel_1__magnE",
+                "average__magnE",
+                "channel_0__normal",
+                "channel_1__normal",
+                "average__normal",
+                "channel_0__tangential",
+                "channel_1__tangential",
+                "average__tangential",
+                "max_TI",
+                "dir_TI",
+            ]
 
-            assert 'E' not in field_names
-            assert 'magnE' not in field_names
+            assert "E" not in field_names
+            assert "magnE" not in field_names
             assert len(set(field_names_ref).difference(field_names)) == 0
 
 
@@ -649,82 +750,54 @@ class Test_Make_Summary_Text:
         m_surf = None
 
         m_head.add_element_field(
-            np.tile(np.arange(m_head.elm.nr),3).reshape((m_head.elm.nr,3)), "E"
+            np.tile(np.arange(m_head.elm.nr), 3).reshape((m_head.elm.nr, 3)), "E"
         )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "max_TO"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "magnE"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "average__magnE"
-        )
-        m_head.add_element_field(
-            m_head.elm.tag1 == 2, "ROI"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "ROI_1"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "non-ROI"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), " ROI_2"
-        )
+        m_head.add_element_field(np.ones(m_head.elm.nr), "max_TO")
+        m_head.add_element_field(np.ones(m_head.elm.nr), "magnE")
+        m_head.add_element_field(np.ones(m_head.elm.nr), "average__magnE")
+        m_head.add_element_field(m_head.elm.tag1 == 2, "ROI")
+        m_head.add_element_field(np.ones(m_head.elm.nr), "ROI_1")
+        m_head.add_element_field(np.ones(m_head.elm.nr), "non-ROI")
+        m_head.add_element_field(np.ones(m_head.elm.nr), " ROI_2")
 
         summary_txt = make_summary_text(m_surf, m_head)
 
-        assert summary_txt.count('|magnE') == 3
-        assert summary_txt.count('|average__magnE') == 3
-        assert summary_txt.count('|E') == 0
-        assert summary_txt.count('max_TO') == 0
+        assert summary_txt.count("|magnE") == 3
+        assert summary_txt.count("|average__magnE") == 3
+        assert summary_txt.count("|E") == 0
+        assert summary_txt.count("max_TO") == 0
 
-        assert summary_txt.count('|ROI_1 ') == 1
-        assert summary_txt.count('|non-ROI ') == 1
-        assert summary_txt.count('|ROI ') == 1
-        assert summary_txt.count('ROI_2 ') == 0
+        assert summary_txt.count("|ROI_1 ") == 1
+        assert summary_txt.count("|non-ROI ") == 1
+        assert summary_txt.count("|ROI ") == 1
+        assert summary_txt.count("ROI_2 ") == 0
 
     def test_m_surf(self, sphere3_msh: mesh_io.Msh, tmp_path):
         m_head = None
         m_surf = sphere3_msh.crop_mesh(elm_type=2)
 
         m_surf.add_node_field(
-            np.tile(np.arange(m_surf.nodes.nr),3).reshape((m_surf.nodes.nr,3)), "E"
+            np.tile(np.arange(m_surf.nodes.nr), 3).reshape((m_surf.nodes.nr, 3)), "E"
         )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "max_TO"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "magnE"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "average__magnE"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "ROI"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "ROI_1"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "non-ROI"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), " ROI_2"
-        )
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "max_TO")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "magnE")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "average__magnE")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "ROI")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "ROI_1")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "non-ROI")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), " ROI_2")
 
         summary_txt = make_summary_text(m_surf, m_head)
 
-        assert summary_txt.count('|magnE') == 3
-        assert summary_txt.count('|average__magnE') == 3
-        assert summary_txt.count('|E') == 0
-        assert summary_txt.count('max_TO') == 0
+        assert summary_txt.count("|magnE") == 3
+        assert summary_txt.count("|average__magnE") == 3
+        assert summary_txt.count("|E") == 0
+        assert summary_txt.count("max_TO") == 0
 
-        assert summary_txt.count('|ROI_1 ') == 1
-        assert summary_txt.count('|non-ROI ') == 1
-        assert summary_txt.count('|ROI ') == 1
-        assert summary_txt.count('ROI_2 ') == 0
+        assert summary_txt.count("|ROI_1 ") == 1
+        assert summary_txt.count("|non-ROI ") == 1
+        assert summary_txt.count("|ROI ") == 1
+        assert summary_txt.count("ROI_2 ") == 0
 
     def test_m_head_and_m_surf(self, sphere3_msh: mesh_io.Msh):
         m_head = sphere3_msh.crop_mesh(elm_type=4)
@@ -734,29 +807,19 @@ class Test_Make_Summary_Text:
         m_surf = sphere3_msh.crop_mesh(elm_type=2)
 
         m_head.add_element_field(
-            np.tile(np.arange(m_head.elm.nr),3).reshape((m_head.elm.nr,3)), "E"
+            np.tile(np.arange(m_head.elm.nr), 3).reshape((m_head.elm.nr, 3)), "E"
         )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "max_TO"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "magnE"
-        )
-        m_head.add_element_field(
-            np.ones(m_head.elm.nr), "ROI_1"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "average__magnE"
-        )
-        m_surf.add_node_field(
-            np.ones(m_surf.nodes.nr), "non-ROI"
-        )
+        m_head.add_element_field(np.ones(m_head.elm.nr), "max_TO")
+        m_head.add_element_field(np.ones(m_head.elm.nr), "magnE")
+        m_head.add_element_field(np.ones(m_head.elm.nr), "ROI_1")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "average__magnE")
+        m_surf.add_node_field(np.ones(m_surf.nodes.nr), "non-ROI")
 
         summary_txt = make_summary_text(m_surf, m_head)
 
-        assert summary_txt.count('|magnE') == 3
-        assert summary_txt.count('|average__magnE') == 3
-        assert summary_txt.count('|E') == 0
-        assert summary_txt.count('max_TO') == 0
-        assert summary_txt.count('|ROI_1 ') == 1
-        assert summary_txt.count('|non-ROI ') == 1
+        assert summary_txt.count("|magnE") == 3
+        assert summary_txt.count("|average__magnE") == 3
+        assert summary_txt.count("|E") == 0
+        assert summary_txt.count("max_TO") == 0
+        assert summary_txt.count("|ROI_1 ") == 1
+        assert summary_txt.count("|non-ROI ") == 1

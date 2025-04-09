@@ -365,6 +365,7 @@ def full_tcd_coil() -> TmsCoil:
     )
     return coil
 
+
 @pytest.fixture(scope="module")
 def tcd_json_schema():
     with open(file_finder.templates.tcd_json_schema, "r") as fid:

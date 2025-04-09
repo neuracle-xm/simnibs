@@ -48,7 +48,6 @@ def _register_atlas_to_input_affine(
     k_values=[20.0, 10.0, 5.0],
     debug=False,
 ):
-
     # Import the affine registration function
     scales = init_atlas_settings["affine_scales"]
     thetas = init_atlas_settings["affine_rotations"]
@@ -135,7 +134,6 @@ def _denoise_input_and_save(input_name, output_name):
 
 
 def _init_atlas_affine(t1_scan, mni_template, affine_settings):
-
     registerer = samseg.gems.KvlAffineRegistration(
         affine_settings["translation_scale"],
         affine_settings["max_iter"],
@@ -170,7 +168,6 @@ def _estimate_parameters(
     user_model_specifications=None,
     parameter_filename=None,
 ):
-
     ds_targets = segment_settings["downsampling_targets"]
     kernel_size = segment_settings["bias_kernel_width"]
     bg_mask_sigma = segment_settings["background_mask_sigma"]
@@ -259,7 +256,6 @@ def _post_process_segmentation(
     upper_mask,
     debug=False,
 ):
-
     logger.info("Upsampling bias corrected images.")
     for input_number, bias_corrected in enumerate(bias_corrected_image_names):
         corrected_input = nib.load(bias_corrected)
@@ -442,6 +438,7 @@ def _ensure_skull(label_img, tissues, se, num_iter=1):
     label_img[SKULL_outer] = tissues["Compact_bone"]
     # Relabel air pockets to air
     label_img[label_img == tissues["Air_pockets"]] = 0
+
 
 def _morphological_operations(label_img, upper_part, simnibs_tissues):
     """Does morphological operations to
@@ -805,7 +802,7 @@ def _registerT1T2(fixed_image, moving_image, output_image):
 def read_freesurfer_lut(filename):
     value, label, r, g, b, a = np.loadtxt(filename, dtype=str, unpack=True)
     value = value.astype(int)
-    ctab = np.stack((r,g,b,a), axis=1).astype(int)
+    ctab = np.stack((r, g, b, a), axis=1).astype(int)
     return value, label, ctab
 
 
@@ -890,7 +887,7 @@ def update_labeling_from_cortical_surfaces_(
     white_surf_mask: npt.NDArray,
     pial_surf_mask: npt.NDArray,
     protect: dict[str, list[int]],
-    tissue_mapping: dict[str,int],
+    tissue_mapping: dict[str, int],
 ):
     """The behavior of this function for WM and GM in bone, skin etc. is not
     well defined.
@@ -945,7 +942,10 @@ def update_labeling_from_cortical_surfaces_(
     )
     se = ndimage.generate_binary_structure(ndim, ndim)
     dilated_bone = binary_dilation(bone, se)
-    csf_blood_mask_shrunk = np.isin(label_image, (tissue_mapping["CSF"], tissue_mapping["Blood"])) & ~dilated_bone
+    csf_blood_mask_shrunk = (
+        np.isin(label_image, (tissue_mapping["CSF"], tissue_mapping["Blood"]))
+        & ~dilated_bone
+    )
     csf_ignore_mask = np.isin(protect_labeling, protect["csf_to_gm"])
 
     # (2) Apply
@@ -956,7 +956,9 @@ def update_labeling_from_cortical_surfaces_(
     replace = (label_image == tissue_mapping["GM"]) & white_surf_mask & ~wm_ignore_mask
     label_image[replace] = tissue_mapping["WM"]
     # (2) CSF/blood (inside WM surface but not subcortical nor ventricles) to WM
-    replace = csf_blood_mask_shrunk & white_surf_mask & ~csf_ignore_mask & ~wm_ignore_mask
+    replace = (
+        csf_blood_mask_shrunk & white_surf_mask & ~csf_ignore_mask & ~wm_ignore_mask
+    )
     label_image[replace] = tissue_mapping["WM"]
     # (3) WM (outside WM surface but not cerebellar WM, brainstem etc.) to GM
     replace = (label_image == tissue_mapping["WM"]) & ~(white_surf_mask | wm_extra_mask)
@@ -965,7 +967,9 @@ def update_labeling_from_cortical_surfaces_(
     # Cortical gray matter
 
     # (1) CSF/blood (inside GM surface but not inside WM surface nor venctricles) to GM
-    replace = csf_blood_mask_shrunk & pial_surf_mask & ~white_surf_mask & ~csf_ignore_mask
+    replace = (
+        csf_blood_mask_shrunk & pial_surf_mask & ~white_surf_mask & ~csf_ignore_mask
+    )
     label_image[replace] = tissue_mapping["GM"]
     # (2) GM (outside GM surface but not subcortical, cerebellar GM etc.) to CSF
     replace = (label_image == tissue_mapping["GM"]) & ~(pial_surf_mask | gm_extra_mask)

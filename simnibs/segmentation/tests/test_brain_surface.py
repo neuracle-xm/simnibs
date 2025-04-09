@@ -7,17 +7,17 @@ from simnibs import SIMNIBSDIR
 from simnibs.mesh_tools import mesh_io
 from simnibs.segmentation import brain_surface
 
+
 @pytest.fixture
 def sphere_surf():
-    fn = os.path.join(
-            SIMNIBSDIR, '_internal_resources', 'testing_files', 'sphere3.msh')
+    fn = os.path.join(SIMNIBSDIR, "_internal_resources", "testing_files", "sphere3.msh")
     mesh = mesh_io.read_msh(fn)
     return mesh.crop_mesh(1005)
 
+
 @pytest.fixture
 def sphere_2_surfs():
-    fn = os.path.join(
-            SIMNIBSDIR, '_internal_resources', 'testing_files', 'sphere3.msh')
+    fn = os.path.join(SIMNIBSDIR, "_internal_resources", "testing_files", "sphere3.msh")
     mesh = mesh_io.read_msh(fn)
     return mesh.crop_mesh([1004, 1005])
 
@@ -36,34 +36,49 @@ def one_sphere_image():
 
     """
 
-    imgsize=[161, 141, 141]
-    voxsize=0.25
+    imgsize = [161, 141, 141]
+    voxsize = 0.25
 
-    radius_wm=8
-    radius_gm=12
-    radius_csf=15
+    radius_wm = 8
+    radius_gm = 12
+    radius_csf = 15
 
-    vox2mm=np.array(([voxsize, 0, 0, -voxsize*(imgsize[0]-1)/2],
-                       [0, voxsize, 0, -voxsize*(imgsize[1]-1)/2],
-                       [0, 0, voxsize, -voxsize*(imgsize[2]-1)/2],
-                       [0, 0, 0, 1]), dtype=np.float32)
+    vox2mm = np.array(
+        (
+            [voxsize, 0, 0, -voxsize * (imgsize[0] - 1) / 2],
+            [0, voxsize, 0, -voxsize * (imgsize[1] - 1) / 2],
+            [0, 0, voxsize, -voxsize * (imgsize[2] - 1) / 2],
+            [0, 0, 0, 1],
+        ),
+        dtype=np.float32,
+    )
 
-    G = np.meshgrid(np.arange(imgsize[0]), np.arange(imgsize[1]),
-                    np.arange(imgsize[2]), indexing='ij')
+    G = np.meshgrid(
+        np.arange(imgsize[0]),
+        np.arange(imgsize[1]),
+        np.arange(imgsize[2]),
+        indexing="ij",
+    )
 
-    xyz_mm=np.inner(vox2mm, np.vstack((G[0].flatten(),
-                                       G[1].flatten(),
-                                       G[2].flatten(),
-                                       np.ones_like(G[0].flatten()))).T
-                    )[0:3]
+    xyz_mm = np.inner(
+        vox2mm,
+        np.vstack(
+            (
+                G[0].flatten(),
+                G[1].flatten(),
+                G[2].flatten(),
+                np.ones_like(G[0].flatten()),
+            )
+        ).T,
+    )[0:3]
 
     R_sp = np.linalg.norm(xyz_mm, axis=0)
 
-    img=np.zeros_like(R_sp)
-    img[R_sp<radius_csf]=1
-    img[R_sp<radius_gm]=2
-    img[R_sp<radius_wm]=3
-    img=img.reshape(imgsize)
+    img = np.zeros_like(R_sp)
+    img[R_sp < radius_csf] = 1
+    img[R_sp < radius_gm] = 2
+    img[R_sp < radius_wm] = 3
+    img = img.reshape(imgsize)
 
     return img, vox2mm, radius_wm, radius_gm, radius_csf
 
@@ -72,38 +87,42 @@ class TestSegmentTriangleIntersect:
     def test_segment_triangle_intersect(self, sphere_surf):
         bar = sphere_surf.elements_baricenters()[:]
         normals = sphere_surf.triangle_normals()[:]
-        intersect, int_points = \
-            brain_surface.segment_triangle_intersect(
-                    sphere_surf.nodes[:], sphere_surf.elm[:, :3] - 1,
-                    bar - 1e-1 * normals,
-                    bar + 1e-1 * normals,
-                )
+        intersect, int_points = brain_surface.segment_triangle_intersect(
+            sphere_surf.nodes[:],
+            sphere_surf.elm[:, :3] - 1,
+            bar - 1e-1 * normals,
+            bar + 1e-1 * normals,
+        )
         assert np.all(intersect[:, 0] == intersect[:, 1])
         assert np.allclose(int_points, bar)
 
     def test_segment_triangle_no_intersect(self, sphere_surf):
         bar = sphere_surf.elements_baricenters()[:]
         normals = sphere_surf.triangle_normals()[:]
-        intersect, int_points = \
-            brain_surface.segment_triangle_intersect(
-                    sphere_surf.nodes[:], sphere_surf.elm[:, :3] - 1,
-                    bar + 1e-1 * normals,
-                    bar + 2e-1 * normals,
-                )
+        intersect, int_points = brain_surface.segment_triangle_intersect(
+            sphere_surf.nodes[:],
+            sphere_surf.elm[:, :3] - 1,
+            bar + 1e-1 * normals,
+            bar + 2e-1 * normals,
+        )
 
         assert len(intersect) == 0
 
 
 class TestCreateSurfaceMask:
-    @pytest.mark.parametrize('axis', ['z', 'y', 'x'])
+    @pytest.mark.parametrize("axis", ["z", "y", "x"])
     def test_rasterize_surface(self, axis, sphere_surf):
         vertices = sphere_surf.nodes[:]
         faces = sphere_surf.elm[:, :3] - 1
         affine = np.eye(4)
-        affine[:3, 3] = -99.9 # I need to have a broken number here because the mesh has
+        affine[
+            :3, 3
+        ] = -99.9  # I need to have a broken number here because the mesh has
         # nodes aligned with the x, y, and z axis
         shape = [200, 200, 200]
-        mask = brain_surface._rasterize_surface(vertices, faces, affine, shape, axis=axis)
+        mask = brain_surface._rasterize_surface(
+            vertices, faces, affine, shape, axis=axis
+        )
         assert np.all(mask[100, 100, 5:195])
         assert np.all(mask[100, 5:195, 100])
         assert np.all(mask[5:195, 100, 100])
@@ -111,14 +130,16 @@ class TestCreateSurfaceMask:
         assert not np.any(mask[100, :5, 100]) and not np.any(mask[100, 195:, 100])
         assert not np.any(mask[:5, 100, 100]) and not np.any(mask[195:, 100, 100])
 
-    @pytest.mark.parametrize('axis', ['z', 'y', 'x'])
+    @pytest.mark.parametrize("axis", ["z", "y", "x"])
     def test_rasterize_surface_concave(self, axis, sphere_2_surfs):
         vertices = sphere_2_surfs.nodes[:]
         faces = sphere_2_surfs.elm[:, :3] - 1
         affine = np.eye(4)
         affine[:3, 3] = -99.9
         shape = [200, 200, 200]
-        mask = brain_surface._rasterize_surface(vertices, faces, affine, shape, axis=axis)
+        mask = brain_surface._rasterize_surface(
+            vertices, faces, affine, shape, axis=axis
+        )
         assert np.all(mask[100, 100, 5:10]) and np.all(mask[100, 100, 190:195])
         assert np.all(mask[100, 5:10, 100]) and np.all(mask[100, 190:195, 100])
         assert np.all(mask[5:10, 100, 100]) and np.all(mask[190:195, 100, 100])
@@ -126,14 +147,16 @@ class TestCreateSurfaceMask:
         assert not np.any(mask[100, 10:190, 100])
         assert not np.any(mask[10:190, 100, 100])
 
-    @pytest.mark.parametrize('axis', ['z', 'y', 'x'])
+    @pytest.mark.parametrize("axis", ["z", "y", "x"])
     def test_rasterize_surface_aniso(self, axis, sphere_surf):
         vertices = sphere_surf.nodes[:]
         faces = sphere_surf.elm[:, :3] - 1
-        affine = np.diag([1., 1., 2., 1])
+        affine = np.diag([1.0, 1.0, 2.0, 1])
         affine[:3, 3] = -99.9
         shape = [200, 200, 100]
-        mask = brain_surface._rasterize_surface(vertices, faces, affine, shape, axis=axis)
+        mask = brain_surface._rasterize_surface(
+            vertices, faces, affine, shape, axis=axis
+        )
         assert np.all(mask[100, 100, 3:97])
         assert np.all(mask[100, 5:195, 50])
         assert np.all(mask[5:195, 100, 50])
@@ -141,15 +164,16 @@ class TestCreateSurfaceMask:
         assert not np.any(mask[100, :5, 50]) and not np.any(mask[100, 195:, 50])
         assert not np.any(mask[:5, 100, 50]) and not np.any(mask[195:, 100, 50])
 
-
-    @pytest.mark.parametrize('axis', ['z', 'y', 'x'])
+    @pytest.mark.parametrize("axis", ["z", "y", "x"])
     def test_rasterize_surface_slice(self, axis, sphere_surf):
         vertices = sphere_surf.nodes[:]
         faces = sphere_surf.elm[:, :3] - 1
         affine = np.eye(4)
         affine[:3, 3] = [-99.9, -99.9, 0.1]
         shape = [200, 200, 1]
-        mask = brain_surface._rasterize_surface(vertices, faces, affine, shape, axis=axis)
+        mask = brain_surface._rasterize_surface(
+            vertices, faces, affine, shape, axis=axis
+        )
         assert np.all(mask[100, 5:195, 0])
         assert np.all(mask[5:195, 100, 0])
         assert not np.any(mask[100, :5, 0]) and not np.any(mask[100, 195:, 0])
@@ -232,16 +256,20 @@ class TestSurfaceSubsampling:
         n = 10
         x = brain_surface.fibonacci_sphere_points(n)
         # Points obtained with the original implementation (epsilon = 0.36)
-        y = np.array([[ 0.37770515,  0.        ,  0.92592593],
-                      [-0.51158892, -0.46865735,  0.72016461],
-                      [ 0.07497179,  0.85426488,  0.51440329],
-                      [ 0.57873383, -0.7548558 ,  0.30864198],
-                      [-0.97948831,  0.17325769,  0.10288066],
-                      [ 0.83927808,  0.53388002, -0.10288066],
-                      [-0.24692998, -0.91856721, -0.30864198],
-                      [-0.39525008,  0.76102998, -0.51440329],
-                      [ 0.65170416, -0.23800131, -0.72016461],
-                      [-0.34913008, -0.14411582, -0.92592593]])
+        y = np.array(
+            [
+                [0.37770515, 0.0, 0.92592593],
+                [-0.51158892, -0.46865735, 0.72016461],
+                [0.07497179, 0.85426488, 0.51440329],
+                [0.57873383, -0.7548558, 0.30864198],
+                [-0.97948831, 0.17325769, 0.10288066],
+                [0.83927808, 0.53388002, -0.10288066],
+                [-0.24692998, -0.91856721, -0.30864198],
+                [-0.39525008, 0.76102998, -0.51440329],
+                [0.65170416, -0.23800131, -0.72016461],
+                [-0.34913008, -0.14411582, -0.92592593],
+            ]
+        )
         np.testing.assert_allclose(x, y)
 
     def test_ensure_orientation_consistency(self, sphere_surf):
@@ -270,12 +298,8 @@ class TestSurfaceSubsampling:
         np.testing.assert_allclose(sphere_n, sphere3_n)
 
     def test_swap_select_columns(self):
-        x = np.array([[1, 2, 3],
-                      [1, 2, 3],
-                      [1, 2, 3]])
-        y = np.array([[1, 3, 2],
-                      [1, 2, 3],
-                      [1, 3, 2]])
+        x = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
+        y = np.array([[1, 3, 2], [1, 2, 3], [1, 3, 2]])
         rows = [0, 2]
         cols = [1, 2]
         brain_surface.swap_select_columns(x, rows, cols)
@@ -301,25 +325,29 @@ class TestSurfaceSubsampling:
                 [6, 7, 9],
                 [6, 9, 8],
                 [8, 9, 3],
-                [8, 3, 2]
+                [8, 3, 2],
             ]
         )
         # target adjacency matrix (as originally computed by function)
         adj = np.array(
             [
-                [0., 0., 1., 0., 1., 0., 1., 0., 1., 0.],
-                [0., 0., 0., 1., 0., 1., 0., 1., 0., 1.],
-                [1., 0., 0., 1., 1., 1., 0., 0., 1., 0.],
-                [0., 1., 1., 0., 0., 1., 0., 0., 1., 1.],
-                [1., 0., 1., 0., 0., 1., 1., 1., 0., 0.],
-                [0., 1., 1., 1., 1., 0., 0., 1., 0., 0.],
-                [1., 0., 0., 0., 1., 0., 0., 1., 1., 1.],
-                [0., 1., 0., 0., 1., 1., 1., 0., 0., 1.],
-                [1., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
-                [0., 1., 0., 1., 0., 0., 1., 1., 1., 0.]
+                [0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+                [1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0],
+                [1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0],
+                [0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+                [0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0],
+                [1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+                [0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0],
             ]
         )
-        assert np.array_equal(adj, brain_surface.compute_adjacency_matrix(faces).todense())
+        assert np.array_equal(
+            adj, brain_surface.compute_adjacency_matrix(faces).todense()
+        )
         idx = np.arange(adj.shape[0])
         adj[idx, idx] = 1
-        assert np.array_equal(adj, brain_surface.compute_adjacency_matrix(faces, with_diag=True).todense())
+        assert np.array_equal(
+            adj, brain_surface.compute_adjacency_matrix(faces, with_diag=True).todense()
+        )
