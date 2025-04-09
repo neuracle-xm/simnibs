@@ -63,7 +63,7 @@ def create_scripts(dest_dir):
             with open(env_sitecustomize, 'r') as f:
                 env_sitecustomize_contents = f.read()
             # If it's alteady there, will not append the PATH
-            write_sitecustomize = not(simnibs_sitecustomize_contents in env_sitecustomize_contents)
+            write_sitecustomize = simnibs_sitecustomize_contents not in env_sitecustomize_contents
         if write_sitecustomize:
             with open(env_sitecustomize, 'a') as f:
                 f.write('\n')
@@ -445,15 +445,15 @@ def setup_shortcut_icons(scripts_dir, force=False, silent=False):
 def _create_shortcut(shortcut_name, target_path, comment='', icon=None, mime_type=None, arguments=None):
     if sys.platform == 'win32':
         with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ps1') as f:
-            f.write(f'$objShell = New-Object -ComObject ("WScript.Shell")\n')
+            f.write('$objShell = New-Object -ComObject ("WScript.Shell")\n')
             f.write(f'$objShortCut = $objShell.CreateShortcut("{shortcut_name}.lnk")\n')
             f.write(f'$objShortCut.TargetPath="{target_path}"\n')
-            f.write(f'$objShortCut.WorkingDirectory="%HOMEPATH%"\n')
+            f.write('$objShortCut.WorkingDirectory="%HOMEPATH%"\n')
             if icon:
                 f.write(f'$objShortCut.IconLocation="{icon}"\n')
             if arguments:
                 f.write(f'$objShortCut.Arguments="{arguments}"\n')
-            f.write(f'$objShortCut.Save()')
+            f.write('$objShortCut.Save()')
             temp_fn = f.name
         subprocess.run(f'powershell.exe -noprofile -executionpolicy bypass -file "{temp_fn}"', shell=True).check_returncode()
         os.remove(temp_fn)
@@ -741,7 +741,7 @@ try:
                 os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
         print(f'PyQt workaround: QT_QPA_PLATFORM_PLUGIN_PATH set to {os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"]}')
 except:
-    print(f'PyQt workaround failed')
+    print('PyQt workaround failed')
 try:
     from PyQt5 import QtCore, QtWidgets, QtGui
     GUI = True

@@ -4,7 +4,6 @@ import pytest
 from simnibs.utils.cond_utils import COND
 import os
 import numpy as np
-import pytest
 
 import simnibs.utils.cond_utils
 

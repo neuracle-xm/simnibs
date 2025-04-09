@@ -416,7 +416,7 @@ class TmsFlexOptimization:
             logger.log(26, f"Running optimization on new directory: {dir_name}")
             os.makedirs(dir_name)
 
-        if not cpus is None:
+        if cpus is not None:
             logger.info(f"Attempting to limit number of threads to {cpus}")
             from numba import set_num_threads
             set_num_threads(int(cpus))
@@ -570,7 +570,7 @@ class TmsFlexOptimization:
                 )
             roi_result_vis.write_gmsh_options()
 
-        e_field_log = f"Optimized mean E-field magnitude in ROI: {np.mean(optimized_e_mag)}{os.linesep}" if self.method == "emag" else f""
+        e_field_log = f"Optimized mean E-field magnitude in ROI: {np.mean(optimized_e_mag)}{os.linesep}" if self.method == "emag" else ""
         logger.log(26,
             (f"{os.linesep}===============RESULT SUMMARY==============={os.linesep}"
             f"Optimized coil path: {fn_optimized_coil}{os.linesep}"

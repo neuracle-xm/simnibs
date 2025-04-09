@@ -1104,7 +1104,7 @@ class TesFlexOptimization:
         self._set_logger()
         self._n_cpu = cpus
 
-        if not cpus is None:
+        if cpus is not None:
             from numba import set_num_threads
             set_num_threads(int(cpus))
             from numba import get_num_threads
