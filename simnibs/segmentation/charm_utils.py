@@ -414,8 +414,6 @@ def _clean_scalp(
 def _ensure_csf(label_img, tissues, upper_part, se, num_iter1=1, num_iter2=6):
     # Ensuring a CSF layer between GM and Skull and GM and Blood
     # Relabel regions in the expanded GM which are in skull or blood to CSF
-    logger.info("Ensure CSF")
-
     brain_gm = label_img == tissues["GM"]
     C_BONE = label_img == tissues["Compact_bone"]
     S_BONE = label_img == tissues["Spongy_bone"]
