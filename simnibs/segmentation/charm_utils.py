@@ -467,24 +467,32 @@ def _morphological_operations(label_img, upper_part, simnibs_tissues):
     unass = unass | (dil ^ bone)
     del bone, dil
 
+    logger.info("Cleaning tissues")
     _clean_veins(label_img, unass, simnibs_tissues, se, se_n)
     _clean_eyes(label_img, unass, simnibs_tissues, se, se_n)
     _clean_muscles(label_img, unass, simnibs_tissues, se)
     _clean_scalp(label_img, unass, skull_outer, simnibs_tissues, se, se_n)
 
+    logger.info("Labeling unassigned voxels")
     # Filling missing parts
-    # NOTE: the labeling is uint16, so I'll code the unassigned voxels with the max value
-    # which is 65535
-    label_unassign = 65535
+    # The labeling is uint16, so code the unassigned voxels with
+    #   (2**16 - 1) - 1 = 65534
+    label_unassign = 65534
     label_img[unass] = label_unassign
     # Add background to tissues
     simnibs_tissues["BG"] = 0
     label_img = label_unassigned_elements(
         label_img, label_unassign, list(simnibs_tissues.values()) + [label_unassign]
     )
-    _smoothfill(label_img, unass, simnibs_tissues)
 
+    # old way of labeling unassigned voxels. `label_unassigned_elements` is
+    # faster and tend to preserve smaller structures
+    # _smoothfill(label_img, unass, simnibs_tissues)
+
+    logger.info("Ensuring CSF between gray matter and skull/blood")
     _ensure_csf(label_img, simnibs_tissues, upper_part, se)
+
+    logger.info("Ensuring that the outer skull is compact bone")
     _ensure_skull(label_img, simnibs_tissues, se)
 
     return label_img
