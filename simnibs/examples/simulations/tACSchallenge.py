@@ -41,11 +41,11 @@ ConditionA.electrode[-1].centre = 'O2'
 
 # Define return electrodes
 CP5 = ConditionA.add_electrode()
-CP5.channelnr = 2;
-CP5.centre = 'CP5';
-CP5.shape = 'ellipse';
-CP5.dimensions = [50, 50];
-CP5.thickness = [1.5, 1.5];
+CP5.channelnr = 2
+CP5.centre = 'CP5'
+CP5.shape = 'ellipse'
+CP5.dimensions = [50, 50]
+CP5.thickness = [1.5, 1.5]
 
 ConditionA.electrode.append(deepcopy(CP5))
 ConditionA.electrode[-1].centre = 'CPz'
@@ -55,38 +55,38 @@ ConditionA.electrode[-1].centre = 'CP6'
 
 # Define retinal control electrodes
 Retcontr = ConditionA.add_electrode()
-Retcontr.channelnr = 3; # connect to the "pseudochannel"
-Retcontr.centre = [35.4, 106.0, -40.6]; # coordinates determined in simnibs_gui
-Retcontr.shape = 'ellipse';
-Retcontr.dimensions = [25, 25];
-Retcontr.thickness = [1.5, 1.5];
+Retcontr.channelnr = 3 # connect to the "pseudochannel"
+Retcontr.centre = [35.4, 106.0, -40.6] # coordinates determined in simnibs_gui
+Retcontr.shape = 'ellipse'
+Retcontr.dimensions = [25, 25]
+Retcontr.thickness = [1.5, 1.5]
 
 ConditionA.electrode.append(deepcopy(Retcontr))
-ConditionA.electrode[-1].centre = [-33.2, 108, -40.6]; # coordinates determined in simnibs_gui
+ConditionA.electrode[-1].centre = [-33.2, 108, -40.6] # coordinates determined in simnibs_gui
 
 
 # Define Condition B
 S.poslists.append(deepcopy(ConditionA))
 ConditionB=S.poslists[-1]
 
-ConditionB.electrode[0].channelnr = 3;
-ConditionB.electrode[1].channelnr = 3;
-ConditionB.electrode[2].channelnr = 3;
-ConditionB.electrode[6].channelnr = 1;
-ConditionB.electrode[7].channelnr = 1;
+ConditionB.electrode[0].channelnr = 3
+ConditionB.electrode[1].channelnr = 3
+ConditionB.electrode[2].channelnr = 3
+ConditionB.electrode[6].channelnr = 1
+ConditionB.electrode[7].channelnr = 1
 
 
 # Define Condition C
 S.poslists.append(deepcopy(ConditionA))
 ConditionC=S.poslists[-1]
 
-ConditionC.electrode[0].channelnr = 2;
-ConditionC.electrode[1].channelnr = 1;
-ConditionC.electrode[2].channelnr = 2;
-ConditionC.electrode[3].channelnr = 3;
-ConditionC.electrode[4].channelnr = 3;
-ConditionC.electrode[5].channelnr = 3;
-ConditionC.electrode[6].channelnr = 3;
-ConditionC.electrode[7].channelnr = 3;
+ConditionC.electrode[0].channelnr = 2
+ConditionC.electrode[1].channelnr = 1
+ConditionC.electrode[2].channelnr = 2
+ConditionC.electrode[3].channelnr = 3
+ConditionC.electrode[4].channelnr = 3
+ConditionC.electrode[5].channelnr = 3
+ConditionC.electrode[6].channelnr = 3
+ConditionC.electrode[7].channelnr = 3
 
 run_simnibs(S)

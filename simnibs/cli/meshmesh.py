@@ -89,7 +89,7 @@ use custom .ini-file to control tetrahedra sizes:
 
 def main():
     args = parseArguments(sys.argv[1:])
-    order_upsampling = 1;  # 0 [nearest neighbor] or 1 [linear]
+    order_upsampling = 1  # 0 [nearest neighbor] or 1 [linear]
 
     # setup logger
     if args.debug_path is not None:

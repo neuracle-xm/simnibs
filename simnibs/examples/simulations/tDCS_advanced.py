@@ -90,7 +90,7 @@ el3.vertices = [[ 0, 20],
                 [40, -40],
                 [20, 0],
                 [40, 40]]
-el3.thickness = [3, 1];
+el3.thickness = [3, 1]
 # add a 15 mm hole in the center:
 hole = el3.add_hole()
 hole.centre = 'Oz' 

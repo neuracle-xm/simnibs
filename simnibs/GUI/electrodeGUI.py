@@ -688,7 +688,7 @@ class GLElectrode(QtWidgets.QOpenGLWidget):
 
         GL.glEnd()
         if wireframe:
-            GL.glPolygonMode( GL.GL_FRONT_AND_BACK, GL.GL_FILL );
+            GL.glPolygonMode( GL.GL_FRONT_AND_BACK, GL.GL_FILL )
 
     def cylinder(self, center_x,center_y, center_z, x_axis, y_axis, size_z, color, wireframe) :
         Pi = 3.14159265358979323846
@@ -757,7 +757,7 @@ class GLElectrode(QtWidgets.QOpenGLWidget):
             GL.glEnd()
 
         if wireframe:
-            GL.glPolygonMode( GL.GL_FRONT_AND_BACK, GL.GL_FILL );
+            GL.glPolygonMode( GL.GL_FRONT_AND_BACK, GL.GL_FILL )
 
 
     def plane_xy (self, center_x,center_y, center_z, size_x, size_y,color) :

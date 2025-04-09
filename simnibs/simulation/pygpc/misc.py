@@ -92,10 +92,10 @@ def vchoosek(v,k):
             return []
     
     d  = nv - k
-    ny = d + 1;
+    ny = d + 1
     
     for i in range(2,k+1):
-        ny = ny + (1.0 * ny * d) / i;
+        ny = ny + (1.0 * ny * d) / i
     
     y = np.zeros([int(ny), int(k)])
     
@@ -109,7 +109,7 @@ def vchoosek(v,k):
             y[(a-1):(b), i-1] = v[0,Index[i-1]-1]
          
         y[(a-1):(b), k-1] = v[0,(Index[k-1]-1):(nv)]    # Write the K.th column
-        a = b + 1;                                      # Move the write pointer
+        a = b + 1                                      # Move the write pointer
          
         newLoop = np.sum(Index < Limit)
         if newLoop == 0:             # All columns are filled:

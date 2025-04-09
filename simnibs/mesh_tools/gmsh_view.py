@@ -322,11 +322,11 @@ class General(object):
         self.VectorType = 1
         self.SmallAxes = 1
         if add_logo:
-            self.BackgroundImageFileName = "\".lg.png\"";
-            self.BackgroundImageWidth = 160;
-            self.BackgroundImageHeight = 27;
-            self.BackgroundImagePositionX = -180;
-            self.BackgroundImagePositionY = 20;
+            self.BackgroundImageFileName = "\".lg.png\""
+            self.BackgroundImageWidth = 160
+            self.BackgroundImageHeight = 27
+            self.BackgroundImagePositionX = -180
+            self.BackgroundImagePositionY = 20
         self.__dict__.update(kwargs)
 
     def __str__(self):

@@ -510,7 +510,7 @@ class GLHeadModel(QtWidgets.QOpenGLWidget):
 
 
         self.qglColor(RED)
-        self.ellipse(intersect_point,normal, u,v,[6,6]);
+        self.ellipse(intersect_point,normal, u,v,[6,6])
 
 
         GL.glEndList()
