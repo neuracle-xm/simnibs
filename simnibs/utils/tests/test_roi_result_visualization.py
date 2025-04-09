@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 from simnibs.mesh_tools import gmsh_view, mesh_io
-from simnibs.simulation import sim_struct
 from simnibs.utils.region_of_interest import RegionOfInterest
 from simnibs.utils.roi_result_visualization import RoiResultVisualization
 

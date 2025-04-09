@@ -6,7 +6,6 @@
 '''
 
 import re
-import struct
 import sys
 import glob
 import os

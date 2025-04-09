@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 
 from simnibs.simulation import analytical_solutions
-import scipy.special
 
 
 @pytest.fixture(scope='module')

@@ -9,7 +9,6 @@ import scipy.io
 import numpy as np
 import nibabel
 
-import simnibs.utils.cond_utils
 
 from simnibs import SIMNIBSDIR
 from simnibs.simulation import sim_struct

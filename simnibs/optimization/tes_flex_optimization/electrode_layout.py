@@ -6,9 +6,6 @@ import os
 from simnibs.mesh_tools.mesh_io import make_surface_mesh
 from .current_estimator import CurrentEstimator
 from simnibs.simulation.sim_struct import SESSION
-from .ellipsoid import subject2ellipsoid, ellipsoid2subject
-from .ellipsoid import Ellipsoid
-from simnibs.utils.file_finder import Templates
 from simnibs.utils.transformations import (
     subject2mni_coords,
     create_new_connectivity_list_point_mask,

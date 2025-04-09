@@ -1,6 +1,4 @@
 import os
-import pytest
-import simnibs
 import numpy as np
 from simnibs.mesh_tools import mesh_io
 from simnibs import SIMNIBSDIR

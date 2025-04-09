@@ -1,7 +1,5 @@
 import os
-import pytest
 import scipy
-import simnibs
 import numpy as np
 
 from simnibs.optimization.tes_flex_optimization.electrode_layout import CircularArray, ElectrodeArray, ElectrodeArrayPair

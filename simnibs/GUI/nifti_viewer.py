@@ -366,7 +366,6 @@ class NiftiViewer(object):
             ax.figure.canvas.blit(ax.bbox)
 
 def check_segmentation(fn_subject):
-    from scipy import ndimage
     import matplotlib.pylab as pl
     from matplotlib.colors import ListedColormap
     files = simnibs.SubjectFiles(fn_subject + '.msh')

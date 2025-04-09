@@ -1,5 +1,4 @@
 import json
-import os
 from typing import Any
 
 import numpy as np
@@ -21,7 +20,6 @@ from simnibs.simulation.tms_coil.tms_coil_model import TmsCoilModel
 from simnibs.simulation.tms_coil.tms_stimulator import TmsStimulator, TmsWaveform
 from simnibs.utils import file_finder
 
-from simnibs import SIMNIBSDIR
 
 @pytest.fixture(scope="module")
 def minimal_tcd_coil_dict() -> dict[str, Any]:

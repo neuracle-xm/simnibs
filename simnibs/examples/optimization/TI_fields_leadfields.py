@@ -5,7 +5,6 @@ Copyright (c) 2022 SimNIBS developers. Licensed under the GPL v3.
 """
 
 import copy
-import numpy as np
 
 from simnibs import mesh_io
 from simnibs.utils import TI_utils as TI

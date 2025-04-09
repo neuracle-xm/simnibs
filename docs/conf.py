@@ -1,4 +1,3 @@
-import sys
 from importlib.metadata import version as get_version
 
 # -*- coding: utf-8 -*-
