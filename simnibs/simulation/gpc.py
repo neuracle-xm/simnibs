@@ -120,7 +120,7 @@ class gPC_regression(pygpc.RegularizedRegression):
     coords_norm: np.ndarray
         List of sampled points in normalized space
     sim_type: {'TMS', 'TCS'}
-        Type of siulation 
+        Type of siulation
     data_file: str, optional
         Path to file with raw data
     '''
@@ -343,7 +343,7 @@ class gPC_regression(pygpc.RegularizedRegression):
             if 'gpc_object' in f.keys():
                 del f['gpc_object']
             f.create_dataset('gpc_object/random_vars',
-                             data=np.array(self.random_vars, dtype=np.string_))
+                             data=np.array(self.random_vars, dtype=np.bytes_))
             f.create_dataset('gpc_object/pdftype',
                              data=np.array(self.pdftype, dtype='S10'))
             f.create_dataset('gpc_object/pdfshape',
@@ -476,7 +476,7 @@ def prep_gpc(simlist):
             parameters.append(c.distribution_parameters)
 
     if len(random_vars) == 0:
-        raise ValueError('No random variables found for simulation') 
+        raise ValueError('No random variables found for simulation')
 
     # assign variables in a way gpc understands
     limits = [[], []]
@@ -730,7 +730,7 @@ class gPCSampler(object):
         return cls(mesh, poslist, fn_hdf5, roi)
 
     def record_data_matrix(self, data, name, group):
-        ''' Appends or create data to the HDF5 file 
+        ''' Appends or create data to the HDF5 file
 
         Parameters:
         -------------
@@ -942,7 +942,7 @@ class TMSgPCSampler(gPCSampler):
         with h5py.File(self.fn_hdf5, 'a') as f:
             f.create_dataset('matsimnibs', data=self.matsimnibs)
             f.create_dataset('didt', data=np.array(self.didt, dtype=float))
-            f.create_dataset('fnamecoil', data=np.array(self.fnamecoil, dtype=np.string_))
+            f.create_dataset('fnamecoil', data=np.array(self.fnamecoil, dtype=np.bytes_))
 
     @classmethod
     def load_hdf5(cls, fn_hdf5):
@@ -971,7 +971,7 @@ class TMSgPCSampler(gPCSampler):
                         stimulator.di_dt = didt
                 else:
                     for stimulator, stimulator_didt in zip(tms_coil.get_elements_grouped_by_stimulators().keys(), didt):
-                        stimulator.di_dt = stimulator_didt 
+                        stimulator.di_dt = stimulator_didt
                 dAdt = tms_coil.get_da_dt(self.mesh, self.matsimnibs)
                 if isinstance(dAdt, mesh_io.NodeData):
                     dAdt = dAdt.node_data2elm_data()
