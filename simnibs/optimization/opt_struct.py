@@ -18,3 +18,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from simnibs.optimization.tms_flex_optimization import TmsFlexOptimization # noqa: F401
+from simnibs.optimization.tms_optimization import TMSoptimize # noqa: F401
+from simnibs.optimization.tdcs_optimization import TDCSoptimize # noqa: F401
+from simnibs.optimization.tdcs_optimization import TDCSDistributedOptimize # noqa: F401
+from simnibs.optimization.tes_flex_optimization.tes_flex_optimization import TesFlexOptimization # noqa: F401
