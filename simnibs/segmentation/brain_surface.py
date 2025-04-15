@@ -150,14 +150,14 @@ def spherical_registration_cat(m2m, hemi):
     cmd = f"{cat_surf2sphere} {white} {sphere} 10"
     spawn_process(cmd.split())
     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-    print(f"Time for sphere generation ({hemi})      : {time_elapsed}")
+    logger.info(f"Time for sphere generation ({hemi})      : {time_elapsed}")
 
     # registration to fsaverage (sphere.reg)
     s = time.perf_counter()
     cmd = f"{cat_warpsurf} -steps 2 -avg -i {white} -is {sphere} -t {fsavg_white} -ts {fsavg_sphere} -ws {sphere_reg}"
     spawn_process(cmd.split())
     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-    print(f"Time for spherical registration ({hemi}) : {time_elapsed}")
+    logger.info(f"Time for spherical registration ({hemi}) : {time_elapsed}")
 
 
 def smooth_vertices(
