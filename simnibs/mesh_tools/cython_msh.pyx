@@ -412,15 +412,15 @@ def gauss_smooth(
 @cython.wraparound(False)
 @cython.cdivision(True)
 def gauss_smooth_simple(
-    unsigned long[::1] surf_nodes,
+    unsigned int [::1] surf_nodes,
     double[:, ::1] nodes_pos,
-    unsigned long[::1] adj_indices,
-    unsigned long[::1] adj_indptr,
+    unsigned int [::1] adj_indices,
+    unsigned int [::1] adj_indptr,
     float factor
     ):
     ''' Gaussian smoothing in-place
     '''
-    cdef unsigned long n
+    cdef unsigned int n
     cdef double[3] bar
     cdef double[:, ::1] pos_before
     cdef Py_ssize_t i, j, k

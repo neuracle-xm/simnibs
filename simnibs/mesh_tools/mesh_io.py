@@ -3274,18 +3274,18 @@ class Msh:
         for i in range(n_steps):
             nc_before = nodes_coords.copy()
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint),
+                surf_nodes.astype(np.uint32),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint),
-                np.ascontiguousarray(adj_tr.indptr, np.uint),
+                np.ascontiguousarray(adj_tr.indices, np.uint32),
+                np.ascontiguousarray(adj_tr.indptr, np.uint32),
                 float(step_size),
             )
             # Taubin step
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint),
+                surf_nodes.astype(np.uint32),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint),
-                np.ascontiguousarray(adj_tr.indptr, np.uint),
+                np.ascontiguousarray(adj_tr.indices, np.uint32),
+                np.ascontiguousarray(adj_tr.indptr, np.uint32),
                 -1.05 * float(step_size),
             )
             # revert where gamma exceeded max_gamma
@@ -3357,18 +3357,18 @@ class Msh:
         nodes_coords = np.ascontiguousarray(self.nodes.node_coord, float)
         for i in range(n_steps):
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint),
+                surf_nodes.astype(np.uint32),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint),
-                np.ascontiguousarray(adj_tr.indptr, np.uint),
+                np.ascontiguousarray(adj_tr.indices, np.uint32),
+                np.ascontiguousarray(adj_tr.indptr, np.uint32),
                 float(step_size),
             )
             # Taubin step
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint),
+                surf_nodes.astype(np.uint32),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint),
-                np.ascontiguousarray(adj_tr.indptr, np.uint),
+                np.ascontiguousarray(adj_tr.indices, np.uint32),
+                np.ascontiguousarray(adj_tr.indptr, np.uint32),
                 -1.05 * float(step_size),
             )
 
