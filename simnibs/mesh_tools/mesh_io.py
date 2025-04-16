@@ -19,8 +19,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import division
-from __future__ import print_function
 import tempfile
 import os
 import struct
@@ -41,7 +39,6 @@ import scipy.spatial
 import scipy.ndimage
 import scipy.sparse
 import scipy.sparse.csgraph
-import scipy.interpolate
 import nibabel
 import h5py
 
@@ -3274,18 +3271,18 @@ class Msh:
         for i in range(n_steps):
             nc_before = nodes_coords.copy()
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint32),
+                surf_nodes.astype(np.uint64),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint32),
-                np.ascontiguousarray(adj_tr.indptr, np.uint32),
+                np.ascontiguousarray(adj_tr.indices, np.uint64),
+                np.ascontiguousarray(adj_tr.indptr, np.uint64),
                 float(step_size),
             )
             # Taubin step
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint32),
+                surf_nodes.astype(np.uint64),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint32),
-                np.ascontiguousarray(adj_tr.indptr, np.uint32),
+                np.ascontiguousarray(adj_tr.indices, np.uint64),
+                np.ascontiguousarray(adj_tr.indptr, np.uint64),
                 -1.05 * float(step_size),
             )
             # revert where gamma exceeded max_gamma
@@ -3357,18 +3354,18 @@ class Msh:
         nodes_coords = np.ascontiguousarray(self.nodes.node_coord, float)
         for i in range(n_steps):
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint32),
+                surf_nodes.astype(np.uint64),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint32),
-                np.ascontiguousarray(adj_tr.indptr, np.uint32),
+                np.ascontiguousarray(adj_tr.indices, np.uint64),
+                np.ascontiguousarray(adj_tr.indptr, np.uint64),
                 float(step_size),
             )
             # Taubin step
             cython_msh.gauss_smooth_simple(
-                surf_nodes.astype(np.uint32),
+                surf_nodes.astype(np.uint64),
                 nodes_coords,
-                np.ascontiguousarray(adj_tr.indices, np.uint32),
-                np.ascontiguousarray(adj_tr.indptr, np.uint32),
+                np.ascontiguousarray(adj_tr.indices, np.uint64),
+                np.ascontiguousarray(adj_tr.indptr, np.uint64),
                 -1.05 * float(step_size),
             )
 

@@ -1,31 +1,23 @@
-# cython: language_level=2
-
-from __future__ import division
 import numpy as np
 import cython
-import scipy
 cimport numpy as np
-from libcpp cimport bool
-from libc.math cimport abs
-from libc.math cimport sqrt
-from libc.stdint cimport uint16_t
-from libc.stdint cimport uint8_t
+from libc.stdint cimport uint8_t, uint16_t, int64_t, uint64_t
 
 cdef inline int int_max(int a, int b): return a if a >= b else b
 cdef inline int int_min(int a, int b): return a if a <= b else b
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def interp_grid(np.ndarray[long int, ndim=1] n_voxels,
+def interp_grid(np.ndarray[int64_t, ndim=1] n_voxels,
                 np.ndarray[double, ndim=2] field,
                 np.ndarray[double, ndim=2] nd,
-                np.ndarray[long int, ndim=2] tetrahedra):
+                np.ndarray[int64_t, ndim=2] tetrahedra):
     # image
     cdef np.ndarray[double, ndim=4] image = np.zeros((n_voxels[0], n_voxels[1],
                                                       n_voxels[2], field.shape[1]), np.double)
 
-    cdef long int nr_components = field.shape[1]
-    cdef long int node_data = field.shape[0] == nd.shape[0]
+    cdef int64_t nr_components = field.shape[1]
+    cdef int64_t node_data = field.shape[0] == nd.shape[0]
     ## Create bounding box with each tetrahedra
     cdef np.ndarray[double, ndim=3] th_coords = nd[tetrahedra]
 
@@ -33,13 +25,13 @@ def interp_grid(np.ndarray[long int, ndim=1] n_voxels,
             np.linalg.inv(
                 np.transpose(th_coords[:, :3, :3] - th_coords[:, 3, None, :], (0, 2, 1)))
 
-    cdef np.ndarray[long int, ndim=2] th_boxes_min = np.rint(
+    cdef np.ndarray[int64_t, ndim=2] th_boxes_min = np.rint(
         np.min(th_coords, axis=1)).astype(int)
 
-    cdef np.ndarray[long int, ndim=2] th_boxes_max = np.rint(
+    cdef np.ndarray[int64_t, ndim=2] th_boxes_max = np.rint(
         np.max(th_coords, axis=1)).astype(int)
 
-    cdef np.ndarray[long int, ndim=1] in_roi = np.where(
+    cdef np.ndarray[int64_t, ndim=1] in_roi = np.where(
         np.all((th_boxes_min <= n_voxels) * (th_boxes_max >= 0), axis=1))[0].astype(int)
 
     th_boxes_max = np.minimum(th_boxes_max, np.array(n_voxels) - 1)
@@ -89,10 +81,10 @@ def interp_grid(np.ndarray[long int, ndim=1] n_voxels,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def interp_grid_nodedata_max(np.ndarray[long int, ndim=1] n_voxels,
+def interp_grid_nodedata_max(np.ndarray[int64_t, ndim=1] n_voxels,
                 np.ndarray[float, ndim=2] field,
                 np.ndarray[double, ndim=2] nd,
-                np.ndarray[long int, ndim=2] tetrahedra,
+                np.ndarray[int64_t, ndim=2] tetrahedra,
                 compartments,
                 np.ndarray[uint16_t, ndim=3] labelimage,
                 np.ndarray[float, ndim=3] maximage):
@@ -101,9 +93,9 @@ def interp_grid_nodedata_max(np.ndarray[long int, ndim=1] n_voxels,
     cdef uint16_t[:] comp = np.asarray([c for ci in compartments for c in ci],dtype=np.uint16)
     cdef uint16_t[:] comp_k = np.asarray([q for q,ci in enumerate(compartments) for c in ci],dtype=np.uint16)
     cdef uint8_t[:] c_last = np.asarray([q==len(ci)-1 for ci in compartments for q,c in enumerate(ci)])
-    cdef long int n_comp = len(comp)
+    cdef int64_t n_comp = len(comp)
 
-    cdef long int node_data = field.shape[0] == nd.shape[0]
+    cdef int64_t node_data = field.shape[0] == nd.shape[0]
     ## Create bounding box with each tetrahedra
     cdef np.ndarray[double, ndim=3] th_coords = nd[tetrahedra]
 
@@ -112,10 +104,10 @@ def interp_grid_nodedata_max(np.ndarray[long int, ndim=1] n_voxels,
                 th_coords[:, :3, :3] - th_coords[:, 3, None, :], (0, 2, 1))
                 )
 
-    cdef np.ndarray[long int, ndim=2] th_boxes_min = np.rint(
+    cdef np.ndarray[int64_t, ndim=2] th_boxes_min = np.rint(
         np.min(th_coords, axis=1)).astype(int)
 
-    cdef np.ndarray[long int, ndim=2] th_boxes_max = np.rint(
+    cdef np.ndarray[int64_t, ndim=2] th_boxes_max = np.rint(
         np.max(th_coords, axis=1)).astype(int)
 
     cdef int[:] in_roi = np.where(
@@ -131,7 +123,7 @@ def interp_grid_nodedata_max(np.ndarray[long int, ndim=1] n_voxels,
     cdef double eps = 1e-5
     cdef double current_field = 0.0
 
-    cdef long int n_in_roi = len(in_roi)
+    cdef int64_t n_in_roi = len(in_roi)
 
     with nogil:
         for jj in range(n_in_roi):
@@ -183,19 +175,19 @@ def interp_grid_nodedata_max(np.ndarray[long int, ndim=1] n_voxels,
 @cython.wraparound(False)
 def find_tetrahedron_with_points(np.ndarray[double, ndim=2] points,
                                  np.ndarray[double, ndim=3] th_nodes,
-                                 np.ndarray[long int, ndim=1] starting_th,
-                                 np.ndarray[long int, ndim=2] th_faces,
-                                 np.ndarray[long int, ndim=2] adjacency_list):
+                                 np.ndarray[int64_t, ndim=1] starting_th,
+                                 np.ndarray[int64_t, ndim=2] th_faces,
+                                 np.ndarray[int64_t, ndim=2] adjacency_list):
 
-    cdef np.ndarray[long int, ndim=2] face_points = np.array(
+    cdef np.ndarray[int64_t, ndim=2] face_points = np.array(
         [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]], int)
-    cdef np.ndarray[long int, ndim=1] th_with_points = -np.ones(points.shape[0],
+    cdef np.ndarray[int64_t, ndim=1] th_with_points = -np.ones(points.shape[0],
                                                                 dtype=int)
     # We can now start the walking algorithm
-    cdef np.ndarray[long int, ndim=1] face_order = np.arange(4, dtype=int)
+    cdef np.ndarray[int64_t, ndim=1] face_order = np.arange(4, dtype=int)
     cdef np.ndarray[double, ndim=1] p
-    cdef long int previous_t, adjacent, nr_cycles
-    cdef unsigned int end, outside, t, j, face
+    cdef int64_t previous_t, adjacent, nr_cycles
+    cdef uint64_t end, outside, t, j, face
     cdef int pt = len(th_faces) + 1
 
     for i, p, t in zip(range(points.shape[0]), points, starting_th):
@@ -249,7 +241,7 @@ def find_tetrahedron_with_points(np.ndarray[double, ndim=2] points,
 @cython.wraparound(False)
 def orientation(np.ndarray[double, ndim=1] p, int th, int face,
                 np.ndarray[double, ndim=3] th_nodes,
-                np.ndarray[long int, ndim=2] face_points):
+                np.ndarray[int64_t, ndim=2] face_points):
     cdef np.ndarray[double, ndim=2] d = np.empty((3, 3), dtype=float)
     for i in range(3):
         for j in range(3):
@@ -267,7 +259,7 @@ def orientation(np.ndarray[double, ndim=1] p, int th, int face,
 @cython.wraparound(False)
 cdef double orientation(double[:] p,
                             double[:, :] th_nodes,
-                            long int[:] face_points):
+                            int64_t[:] face_points):
     #cdef np.ndarray[double, ndim=2] d = np.empty((3, 3), dtype=float)
     cdef double[3][3] d
     for i in range(3):
@@ -412,15 +404,15 @@ def gauss_smooth(
 @cython.wraparound(False)
 @cython.cdivision(True)
 def gauss_smooth_simple(
-    unsigned int [::1] surf_nodes,
+    uint64_t [::1] surf_nodes,
     double[:, ::1] nodes_pos,
-    unsigned int [::1] adj_indices,
-    unsigned int [::1] adj_indptr,
+    uint64_t [::1] adj_indices,
+    uint64_t [::1] adj_indptr,
     float factor
     ):
     ''' Gaussian smoothing in-place
     '''
-    cdef unsigned int n
+    cdef uint64_t n
     cdef double[3] bar
     cdef double[:, ::1] pos_before
     cdef Py_ssize_t i, j, k
