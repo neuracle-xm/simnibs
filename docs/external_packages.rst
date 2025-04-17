@@ -9,6 +9,8 @@ These open-source software packages and workflows build upon SimNIBS and might b
 
 **BabelBrain** (`website <https://github.com/ProteusMRIgHIFU/BabelBrain>`_, `reference <https://ieeexplore.ieee.org/document/10121198>`_) is a software for the simulation of transcranial ultrasound stimulation and uses SimNIBS for the `creation of head models <https://proteusmrighifu.github.io/BabelBrain/pipeline/Preliminary_steps.html>`_ .
 
+**BOONStim** (`website <https://github.com/TIGRLab/BOONStim>`_, `reference <https://doi.org/10.1016/j.brs.2025.01.020>`_) is an automated pipeline for individualized TMS targeting that uses SimNIBS for field calculations.
+
 **BrainStorm** (`website <https://neuroimage.usc.edu/brainstorm>`_, `reference <https://doi.org/10.1155/2011/879716>`_) is a package for the analysis of brain signal recordings and uses SimNIBS for the `creation of FEM head meshes <https://neuroimage.usc.edu/brainstorm/Tutorials/FemMesh>`_ .
 
 **Metamodeling** (`website <https://github.com/Miles2708/Metamodeling_WM>`_, `reference <https://www.sciencedirect.com/science/article/pii/S0149763421003602?via%3Dihub>`_) introduces a new way to do meta-analyses of brain stimulation effects
