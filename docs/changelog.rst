@@ -2,6 +2,15 @@
 
 Changelog
 ===========
+4.6.0 
+------
+  * Improved segmentation performance of :ref:`charm <head_modeling_tutorial>`, based on a :ref:`new probabilistic atlas <publications>`, in particular when supplying only a T1-weighted image. NOTE:  The command line option  --useatlasv1_0 switches back to the OLD atlas.
+  * More accurate reconstructions of the pial and white matter surfaces by charm, using a :ref:`new DL approach <publications>`.
+  * Update to numpy 2.0.
+	
+NOTES & Known issues: Same as for version 4.5.0
+
+
 4.5.0 
 ------
   * New optimization method TMS that also supports bent and flexible coils, thereby systematically avoiding intersections of the coil with the head. 

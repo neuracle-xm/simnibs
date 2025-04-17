@@ -3,7 +3,7 @@ import numpy as np
 cimport numpy as np
 
 
-cdef extern from "sanlm_float.c":
+cdef extern from "_sanlm_source.c":
     void anlm(float* ima, int v, int f, int use_rician, const int* dims)
 
 

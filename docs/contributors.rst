@@ -15,6 +15,7 @@ Current Contributors
 
 * Oula Puonti
    * Debugging and maintenance across the complete code.
+   * Implementation of new probablistic atlas (4.6)
    * Main author of :ref:`charm_docs` and of simnibs 4.0 in general (4.0)
    * New MNI head mesh (2.1)
 
@@ -32,6 +33,8 @@ Current Contributors
    * Pre-calculated A-fields for TMS in the pipeline using nifti volume files (2.0)
 
 * Jesper D. Nielsen
+   * Debugging and maintenance across the complete code.
+   * Main author of the DL-based brain surface reconstruction (4.6)
    * Update of installation procedure (4.5)
    * Debugging and deprecation removal (4.5)
    * Update to *charm* to optionally use FreeSurfer surfaces (4.1)
@@ -39,6 +42,18 @@ Current Contributors
    * Contributions to the segmentation functions in :ref:`charm_docs` (4.0)
    * Main author of the *headreco* pipeline, now discontinued (2.1)
 
+* Merle Diedrichsen
+   * Implementation of new probablistic atlas (4.6)
+   * Update of electrode meshing to improve tetrahedral quality at the electrode edges (4.1)
+
+* Torge H. Worbs
+   * Debugging and maintenance across the complete code.
+   * Implementation of the tcd format and flexible TMS optimization (4.5)
+   * Coil models for Brainsway H1, H4 and H7, and of MagVenture MST Twin coil (4.5)
+   * Region-of-interest class (4.5)
+   * Help with the flexible TES optimization (4.5)
+   * Integration of mmg to improve tetrahedral mesh quality (4.1)
+   
 * Konstantin Weise
    * Implementation of flexible TES optimization (4.5)
    * Update of GPC code (4.5)
@@ -46,44 +61,32 @@ Current Contributors
    * First version of the TMS optimization (3.1)
    * UQ functionality (3.0)
 
+* Bianka Rumi
+   * Coil models for Brainsway H1, H4 and H7 (4.5)
+   * Testing and debugging of the flexible TMS optimization (4.5)
+   
 * Thomas Knoesche
    * Help with the flexible TES optimization (4.5)
    * Help with the UQ functionality (3.0)
 
-* Ole Numssen
-   * I/O functions for Localite and Brainsight (4.0)
-   * First version of the TMS optimization (3.1)
-   
-* Torge H. Worbs
-   * Implementation of the tcd format and flexible TMS optimization (4.5)
-   * Coil models for Brainsway H1, H4 and H7, and of MagVenture MST Twin coil (4.5)
-   * Region-of-interest class (4.5)
-   * Help with the flexible TES optimization (4.5)
-   * Integration of mmg to improve tetrahedral mesh quality (4.1)
-
-* Bianka Rumi
-   * Coil models for Brainsway H1, H4 and H7 (4.5)
-   * Testing and debugging of the flexible TMS optimization (4.5)
-
-* Merle Diedrichsen
-   * Update of electrode meshing to improve tetrahedral quality at the electrode edges (4.1)
-
 * Sybren Van Hoornweder
-   * Main contributor to the Ernie Extended dataset
+   * Main contributor to the Ernie Extended dataset (4.5)
 
 * Kathleen E. Mantell
-   * Main contributor to the NHP dataset
+   * Main contributor to the NHP dataset (4.5)
 
 * Alex Opitz
    * Implementation of first diffusion-to-conductivity mapping approach
    * Co-contributor to many other parts in SimNIBS 1.0
    * Testing and validation of the new FEM calculations for tDCS in SimNIBS 2.0
-   * Contribution to the NHP dataset
-
+   * Contribution to the NHP dataset (4.5)
 
 Former Contributors
 ---------------------
-
+* Ole Numssen
+   * I/O functions for Localite and Brainsight (4.0)
+   * First version of the TMS optimization (3.1)
+   
 * Maria Drakaki
    * Main contributor to the new TMS coil models (4.0)
 

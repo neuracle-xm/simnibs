@@ -70,8 +70,8 @@ if sys.platform == 'win32':
         ('CGAL_LINKED_WITH_TBB', None),
     ]
 
-    # CAT
-    cat_compile_args = None
+    # sanlm filter
+    sanlm_compile_args = None
 
 elif sys.platform == 'linux':
     # CGAL
@@ -95,8 +95,8 @@ elif sys.platform == 'linux':
         ('NOMINMAX', None),
     ]
 
-    # CAT
-    cat_compile_args = [
+    # sanlm filter
+    sanlm_compile_args = [
       '-std=gnu99',
     ]
 
@@ -116,8 +116,8 @@ elif sys.platform == 'darwin':
     cgal_mesh_macros += [('NOMINMAX', None)]
     cgal_link_args = ['-stdlib=libc++']
 
-    # CAT
-    cat_compile_args = None
+    # sanlm filter
+    sanlm_compile_args = None
 
 else:
     raise OSError('OS not supported!')
@@ -132,11 +132,11 @@ marching_cubes_lewiner_cy = Extension(
     ["simnibs/segmentation/_marching_cubes_lewiner_cy.pyx"],
     include_dirs=[np.get_include()]
 )
-cat_c_utils = Extension(
-    'simnibs.segmentation._cat_c_utils',
-    ["simnibs/segmentation/_cat_c_utils.pyx"],
-    include_dirs=[np.get_include(), 'simnibs/segmentation/cat_c_utils'],
-    extra_compile_args=cat_compile_args
+sanlm = Extension(
+    'simnibs.segmentation._sanlm',
+    ["simnibs/segmentation/_sanlm.pyx"],
+    include_dirs=[np.get_include(), 'simnibs/segmentation'],
+    extra_compile_args=sanlm_compile_args
 )
 thickness = Extension(
     'simnibs.segmentation._thickness',
@@ -189,7 +189,7 @@ cgal_misc = Extension(
 extensions = [
     cython_msh,
     marching_cubes_lewiner_cy,
-    cat_c_utils,
+    sanlm,
     thickness,
     create_mesh_surf,
     create_mesh_vol,

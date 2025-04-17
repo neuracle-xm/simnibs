@@ -4,6 +4,17 @@ Publications
 =============
 The main publications documenting SimNIBS development are
 
+Version 4.6
+-----------
+
+Improved segmentation
+''''''''''''''''''''''''''''''''
+* `Diedrichsen M, Merhout J, Nielsen JD, Greve DN, Thielscher A, Puonti O, Modeling subcutaneous fat improves skull segmentation for individualized volume conductor head models, IEEE EMBS 2025, Copenhagen, Denmark <https://hmpg.net/>`_ 
+
+Improved pial and white matter surface reconstruction
+''''''''''''''''''''''''''''''''
+* `Nielsen JD et al, End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://hmpg.net/>`_
+
 Version 4.5
 -----------
 

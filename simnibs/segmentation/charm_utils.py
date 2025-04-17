@@ -21,7 +21,7 @@ from . import simnibs_segmentation_utils
 from .samseg_whole_head import SamsegWholeHead
 from .affine_whole_head import AffineWholeHead, initializationOptionsWholeHead
 from ._thickness import _calc_thickness
-from ._cat_c_utils import sanlm
+from ._sanlm import sanlm
 from .brain_surface import mask_from_surface
 from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.transformations import resample_vol, volumetric_affine

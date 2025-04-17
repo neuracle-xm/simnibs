@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from simnibs.segmentation import _cat_c_utils
+from simnibs.segmentation._sanlm import sanlm
 
 
 @pytest.fixture
@@ -15,5 +15,5 @@ class TestSanlm:
     def test_cube(self, cube_image):
         img = cube_image
         noisy = cube_image + 0.1 * np.random.normal(size=cube_image.shape)
-        filtered = _cat_c_utils.sanlm(noisy, 3, 1)
+        filtered = sanlm(noisy, 3, 1)
         assert np.linalg.norm(filtered - img) < np.linalg.norm(noisy - img)

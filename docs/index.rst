@@ -2,11 +2,11 @@
    sphinx-quickstart on Wed Aug 22 14:44:31 2018.
 
 =============
- SimNIBS 4.5
+ SimNIBS 4.6
 =============
 
 
-**SimNIBS v4.5** is an open source software package for the Simulation of Non-invasive Brain Stimulation. It allows for realistic calculations of the electric field induced by transcranial magnetic stimulation (TMS) and transcranial electric stimulation (TES).
+**SimNIBS v4.6** is an open source software package for the Simulation of Non-invasive Brain Stimulation. It allows for realistic calculations of the electric field induced by transcranial magnetic stimulation (TMS) and transcranial electric stimulation (TES).
 
 A basic SimNIBS workflow consists of three main parts:
 
@@ -136,7 +136,11 @@ It builds upon 3rd party open-source and free code and binaries from :ref:`sever
  News
 ======
 
-**Version 4.5.0** includes:
+**Version 4.6.0**: 
+	* Improved segmentation performance of :ref:`charm <head_modeling_tutorial>`, based on a :ref:`new probabilistic atlas <publications>`, in particular when supplying only a T1-weighted image.
+	* More accurate reconstructions of the pial and white matter surfaces by charm, using a :ref:`new DL approach <publications>`. 
+	
+**Version 4.5.0**:
 
 * Exciting new optimization methods for :ref:`TMS <tms_flex_opt>`  and :ref:`TES <tes_flex_opt>`.
 	* :ref:`Optimization of TMS coil positions also for bent and flexible coils <tms_flex_opt>`, thereby systematically avoiding intersections of the coil with the head.
