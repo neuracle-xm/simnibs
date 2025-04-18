@@ -75,7 +75,7 @@ def _registration_overlay(T2):
     # and then multiply by three to map the max (0.3) to near 1
     d = 3 * (d - 0.7)
     # Mask out everything below zero
-    d[d < 0] = np.NAN
+    d[d < 0] = np.nan
 
     return nib.Nifti1Image(np.squeeze(d), T2_data.affine)
 

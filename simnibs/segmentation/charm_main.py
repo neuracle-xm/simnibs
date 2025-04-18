@@ -483,7 +483,9 @@ def run(
             debug_path=debug_path,
             debug=debug,
         )
-
+        logger.info("Relabeling internal air boundaries")
+        final_mesh = final_mesh.relabel_internal_air()
+        
         logger.info("Writing mesh")
         write_msh(final_mesh, sub_files.fnamehead)
         v = final_mesh.view(cond_list=cond_utils.standard_cond(), add_logo=True)

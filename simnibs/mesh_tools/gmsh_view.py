@@ -6,7 +6,7 @@ import numpy as np
 import shutil
 
 from simnibs.utils.file_finder import path2bin, Templates
-
+from simnibs.utils.mesh_element_properties import ElementTags
 
 class Visualization:
     """Defines a visualization for a 3D mesh
@@ -432,6 +432,9 @@ class Color(object):
         self.Eight = [255, 138, 57]
         self.Nine = [0, 65, 142]
         self.Ten = [0, 118, 14]
+        self.Eleven = [85, 170, 0]
+        self.Twelve = [193, 161, 161]
+        self.Nineteen = [221, 141, 135]
         self.__dict__.update(kwargs)
 
     def __str__(self):
@@ -574,8 +577,10 @@ class PhysicalNames(object):
             for i in tri_tags:
                 if i < 100 and (cond_names[i - 1] is not None):
                     self.PhysicalSurfaces[i] = " " + cond_names[i - 1]
-                if i > 1000 and i < 1100 and (cond_names[i - 1001] is not None):
+                if i > 1000 and i < 1099 and (cond_names[i - 1001] is not None):
                     self.PhysicalSurfaces[i] = " " + cond_names[i - 1001]
+                if i == ElementTags.INTERNAL_AIR_TH_SURFACE:
+                    self.PhysicalSurfaces[i] = " Internal_air_surface"
                 if i > 1100 and i < 1500:
                     self.PhysicalSurfaces[i] = str(i - 1100) + " top"
                 if i > 1500 and i < 2000:

@@ -2615,7 +2615,7 @@ class Msh:
         return any_intersections
 
     def partition_skin_surface(
-        self, assume_single_outside_component=True, tol: float = 1e-3
+        self, label_skin=ElementTags.SCALP_TH_SURFACE, assume_single_outside_component=True, tol: float = 1e-3
     ):
         """Return indices of vertices and faces estimated to be on the inner
         and outer skin surface (the inner part would be those inside nasal
@@ -2633,6 +2633,8 @@ class Msh:
 
         PARAMETERS
         ----------
+        label_skin : int, optional, default: ElementTags.SCALP_TH_SURFACE
+            Label of skin surface (e.g. 1005)
         tol : float
             Tolerance for avoiding self-intersections.
         assume_single_outside_components: bool
@@ -2653,8 +2655,8 @@ class Msh:
             Indices (one-based!) of outer skin faces.
         """
         assert tol > 0
-
-        f_orig_id = self.elm.elm_number[self.elm.tag1 == ElementTags.SCALP_TH_SURFACE]
+        
+        f_orig_id = self.elm.elm_number[self.elm.tag1 == label_skin]
         faces = self.elm[f_orig_id, :3]
         verts = np.unique(faces)
         m = Msh(Nodes(self.nodes.node_coord), Elements(faces))
@@ -2695,7 +2697,10 @@ class Msh:
         # the indices are into self
         return v_in, v_out, f_in, f_out
 
-    def relabel_internal_air(self, label_skin=None, label_new=1099):
+    def relabel_internal_air(self,
+                             label_skin=ElementTags.SCALP_TH_SURFACE,
+                             label_new=ElementTags.INTERNAL_AIR_TH_SURFACE
+                             ):
         """
         Relabels skin in internal air cavities to something else;
         relevant for charm meshes and TES optimization to determine valid skin region.
@@ -2704,7 +2709,7 @@ class Msh:
         ----------
         label_skin : int, optional, default: ElementTags.SCALP_TH_SURFACE
             Label of skin surface (e.g. 1005) with internal air.
-        label_new : int, optional, default: 1009
+        label_new : int, optional, default: ElementTags.INTERNAL_AIR_TH_SURFACE
             Label of internal skin surface.
 
         RETURNS
@@ -2713,11 +2718,8 @@ class Msh:
             New Msh object with relabeled internal air.
         """
 
-        if label_skin is None:
-            label_skin = ElementTags.SCALP_TH_SURFACE
-
         m = copy.copy(self)
-        _, _, f_in, _ = self.partition_skin_surface()  # internal air triangles
+        _, _, f_in, _ = self.partition_skin_surface(label_skin)  # internal air triangles
         m.elm.tag1[f_in - 1] = label_new
         m.elm.tag2[:] = m.elm.tag1
         return m
