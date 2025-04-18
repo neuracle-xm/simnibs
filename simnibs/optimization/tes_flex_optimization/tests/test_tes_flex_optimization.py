@@ -22,6 +22,7 @@ from simnibs.optimization.tes_flex_optimization.electrode_layout import (
 from simnibs.optimization.tes_flex_optimization.ellipsoid import Ellipsoid
 from simnibs.utils.file_finder import Templates
 from simnibs.utils.region_of_interest import RegionOfInterest
+from simnibs.utils.mesh_element_properties import ElementTags
 
 
 class TestToFromDict:
@@ -350,7 +351,10 @@ class TestToFromDict:
         mesh = read_msh(os.path.join(example_dataset, "m2m_ernie", "ernie.msh"))
 
         # relabel internal air
-        mesh_relabel = mesh.relabel_internal_air()
+        if not np.any(mesh.elm.tag1 == ElementTags.INTERNAL_AIR_TH_SURFACE):
+            mesh_relabel = mesh.relabel_internal_air()
+        else:
+            mesh_relabel = mesh
 
         # make final skin surface including some additional distance
         skin_surface = valid_skin_region(

@@ -268,8 +268,11 @@ class TesFlexOptimization:
         self._mesh_nodes_areas = self._mesh.nodes_areas()
 
         # relabel internal air
-        self._mesh_relabel = self._mesh.relabel_internal_air()
-
+        if not np.any(self._mesh.elm.tag1 == ElementTags.INTERNAL_AIR_TH_SURFACE):
+            self._mesh_relabel = self._mesh.relabel_internal_air()
+        else:
+            self._mesh_relabel = self._mesh
+        
         # make final skin surface including some additional distance
         self._skin_surface = valid_skin_region(
             self._mesh_relabel.crop_mesh(tags=1005),
