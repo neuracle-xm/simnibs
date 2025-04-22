@@ -191,7 +191,10 @@ class SESSION(object):
 
         if not self.tissues_in_niftis:
             self.tissues_in_niftis = [2]
-
+            
+        if type(self.tissues_in_niftis) == int:
+            self.tissues_in_niftis = [self.tissues_in_niftis]
+        
         self.pathfem = os.path.abspath(os.path.expanduser(self.pathfem))
         logger.info(f"Head Mesh:          {self.fnamehead}")
         logger.info(f"Subject Path:       {self.subpath}")
@@ -314,11 +317,11 @@ class SESSION(object):
                         open_in_gmsh=self.open_in_gmsh,
                         f_geo=f_geo,
                     )
-
+        
         keep_tissues = None
         if type(self.tissues_in_niftis) == list:
             keep_tissues = self.tissues_in_niftis
-
+        
         if self.map_to_vol:
             logger.info("Mapping to volume")
             out_folder = os.path.join(dir_name, "subject_volumes")
