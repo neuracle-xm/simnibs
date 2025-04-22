@@ -1,7 +1,6 @@
 import sys
 import argparse
 
-from simnibs.GUI.surface import Surface
 from simnibs.mesh_tools import eeg_positions, mesh_io
 from simnibs.utils.csv_reader import read_csv_positions
 from simnibs import __version__
@@ -83,10 +82,10 @@ def main():
     print("Iz:", args.Iz)
     print("LPA:", args.LPA)
     print("RPA:", args.RPA)
-    surf = Surface(mesh, [5, 1005])
-    eeg = eeg_positions.FindPositions(args.Nz, args.Iz, args.LPA, args.RPA, surf)
+    if args.NE_cap:
+        print("applying Neuroelectrics cap layout")
     eeg = eeg_positions.FindPositions(
-        args.Nz, args.Iz, args.LPA, args.RPA, surf, args.NE_cap
+        args.Nz, args.Iz, args.LPA, args.RPA, mesh, args.NE_cap
     )
     print("Printing positions to file", args.o + ".csv")
     eeg.print2csv(args.o + ".csv")

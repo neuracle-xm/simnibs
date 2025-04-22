@@ -21,9 +21,233 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import math
-import numpy
-
+import gc
+import numpy as np
 import csv  # csv is in the standard library
+
+from simnibs.utils.mesh_element_properties import ElementTags
+
+class Surface:
+    def __init__(self, mesh, labels):
+        """
+        Class for working with mesh surfaces
+
+        Parameters:
+        ----------------
+        mesh - gmsh mesh structure
+        labels - mesh labels with the surfaces of interest
+
+        Notes:
+        -------------------
+
+        """
+
+        # @var nodes
+        # the nodes in the surface
+        self.nodes = []
+
+        # @var tr_nodes
+        # The nodes in each triangle
+        self.tr_nodes = []
+
+        # @var tr_normals
+        # the triangle normals
+        self.tr_normals = []
+
+        # @var tr_areas
+        # Triangle areas
+        self.tr_areas = []
+
+        # @var tr_centers
+        # The baricenter of each triangle
+        self.tr_centers = []
+
+        # @var node_normals
+        # normal of a node. defined as the average of the average of the normals
+        # that contain such node
+        self.nodes_normals = []
+
+        self.nodes_areas = []
+
+        # @var values
+        # field values
+        self.values = []
+
+        # @var surf2msh_triangles
+        # list of mesh indices for surface triangles
+        self.surf2msh_triangles = []
+
+        # @var surf2msh_nodes
+        # list of inidices for nodes
+        self.surf2msh_nodes = []
+
+        # nodes os a new array, of numpy arrays
+        # it's filled up in the order the nodes appear in the mesh triangles
+        # The nodes_dict makes the link between the gmsh numbering and the new
+        # numbering
+        nodes_dict = np.zeros(mesh.nodes.nr + 1, dtype="int")
+
+        # Sees if labels is an array or just a number, it must be an array
+        try:
+            _ = labels[0]
+        except TypeError:
+            labels = [labels]
+
+        # We need to create a dictionary, linking the "new node numbers" to the
+        # old ones
+        label_triangles = []
+        self.surf2msh_triangles = np.empty(0, dtype="int")
+
+        for label in labels:
+            label_triangles.append(
+                np.where(
+                    np.logical_and(mesh.elm.elm_type == 2, mesh.elm.tag1 == label)
+                )[0]
+            )
+
+        if len(label_triangles) == 0:
+            raise ValueError("No triangles with tags: " + str(labels) + " found")
+
+        for ii in range(len(labels)):
+            self.surf2msh_triangles = np.union1d(
+                self.surf2msh_triangles, label_triangles[ii]
+            )
+
+        # Creates a unique list of all triangle nodes.
+        self.surf2msh_nodes = np.unique(
+            mesh.elm.node_number_list[self.surf2msh_triangles, :3].reshape(-1)
+        )
+
+        nr_unique = np.size(self.surf2msh_nodes)
+        np_range = np.array(range(nr_unique), dtype="int")
+        # nodes_dict[old_index] = new_index
+        nodes_dict[self.surf2msh_nodes] = np_range
+
+        # Gets the new node numbers
+        self.tr_nodes = nodes_dict[
+            mesh.elm.node_number_list[self.surf2msh_triangles, :3]
+        ]
+
+        # and the positions in appropriate order
+        self.nodes = mesh.nodes.node_coord[self.surf2msh_nodes - 1]
+        self.nodes_normals = np.zeros([np.size(self.surf2msh_nodes), 3], dtype="float")
+
+        self.nodes_areas = np.zeros(
+            [
+                np.size(self.surf2msh_nodes),
+            ],
+            dtype="float",
+        )
+
+        # positions of each triangle's node
+        tr_pos = self.nodes[self.tr_nodes]
+
+        # triangles normals and areas
+        self.tr_normals = np.cross(
+            tr_pos[:, 1] - tr_pos[:, 0], tr_pos[:, 2] - tr_pos[:, 0]
+        )
+        self.tr_areas = 0.5 * np.linalg.norm(self.tr_normals, axis=1)
+        self.tr_normals /= 2 * self.tr_areas[:, np.newaxis]
+
+        # defining the normal of a node as being the average of the normals of
+        # surrounding triangles
+        for ii in range(len(self.surf2msh_triangles)):
+            self.nodes_normals[self.tr_nodes[ii]] += self.tr_normals[ii][np.newaxis, :]
+            self.nodes_areas[self.tr_nodes[ii]] += 1.0 / 3.0 * self.tr_areas[ii]
+
+        self.nodes_normals /= np.linalg.norm(self.nodes_normals, axis=1)[:, np.newaxis]
+
+        # out if the normals point inside or outside, calculates the center of
+        # the mesh
+        self.center = self.nodes.sum(axis=0) / self.nodes.shape[0]
+        node2center = np.subtract(self.nodes, self.center)
+        dotProducts = np.sum(node2center * self.nodes_normals, 1)
+        # if the sum of the dot product is smaller than 0, the normals point
+        # inwards. correct that
+        if np.sum(dotProducts) < 0:
+            self.nodes_normals *= -1
+            self.tr_normals *= -1
+
+        self.tr_centers = np.sum(self.nodes[self.tr_nodes], 1) / 3
+
+        mesh = None
+        gc.collect()
+
+    def interceptRay(self, Near, Far, return_index=False):
+        # Find point in surface in the near-far line thats nearest to the "near point"
+        # based on http://geomalgorithms.com/a06-_intersect-2.html
+        delta = 1e-9
+        P1 = np.array(Near, float)
+        P0 = np.array(Far, float)
+        intersect_point = None
+        intersect_normal = None
+        triangle_index = None
+        # necessary when dealing with concave surfaces (like GM surface)
+
+        V0 = self.nodes[self.tr_nodes[:, 0]]
+        V1 = self.nodes[self.tr_nodes[:, 1]]
+        V2 = self.nodes[self.tr_nodes[:, 2]]
+        perp_project = np.sum(self.tr_normals * (P1 - P0)[None, :], axis=1)
+        r = np.sum(self.tr_normals * np.subtract(V0, P0), 1)
+        r = np.divide(r, perp_project)
+        Pr = P0 + (P1 - P0) * r[:, np.newaxis]
+        w = Pr - V0
+        u = V1 - V0
+        v = V2 - V0
+        len2u = np.sum(u * u, 1)
+        len2v = np.sum(v * v, 1)
+        UdotV = np.sum(u * v, 1)
+        WdotV = np.sum(w * v, 1)
+        WdotU = np.sum(w * u, 1)
+        denominator = (UdotV) ** 2 - (len2u) * (len2v)
+        s = (UdotV * WdotV - len2v * WdotU) / denominator
+        t = (UdotV * WdotU - len2u * WdotV) / denominator
+
+        triangles = np.arange(len(self.tr_nodes), dtype="int")
+        candidates = triangles[
+            (perp_project > delta)
+            * (s > -delta)
+            * (t > -delta)
+            * (s + t < 1 + delta)
+            * (r > delta)
+            * (r < 1 + delta)
+        ]
+
+        if len(candidates) == 0:
+            if return_index:
+                return None, None, None
+            else:
+                return None, None
+
+        else:
+            # most of the time, there will only be one candidate
+            triangle_index = candidates[np.argmax(r[candidates])]
+            intersect_point = (
+                V0[triangle_index, :]
+                + s[triangle_index] * u[triangle_index, :]
+                + t[triangle_index] * v[triangle_index, :]
+            )
+            intersect_normal = self.tr_normals[triangle_index]
+            if return_index:
+                return triangle_index, intersect_point, intersect_normal
+            else:
+                return intersect_point, intersect_normal
+
+    def projectPoint(self, point, reference=None, smooth=False):
+        f = 1.0
+        point_proj = None
+        normal = None
+        if reference is None:
+            node_index = np.argmin(np.linalg.norm(point - self.nodes, axis=1))
+            point_proj = self.nodes[node_index]
+            normal = self.nodes_normals[node_index]
+        while point_proj is None and f < 10:
+            P1 = reference + f * (point - reference)
+            P0 = reference
+            triangle_index, point_proj, normal = self.interceptRay(P1, P0, True)
+            f += 0.2
+
+        return point_proj, normal
 
 
 class EEG:
@@ -121,10 +345,10 @@ class Arch:
     # finds the coordinate that's a given fraction of the arch
     def findFraction(self, fraction):
         angle = self.begin_angle + fraction * (self.end_angle - self.begin_angle)
-        coor_circle = numpy.array(
+        coor_circle = np.array(
             [self.R * math.cos(angle), self.R * math.sin(angle), 0.0], "float"
         )
-        inv_transf = numpy.transpose(self.transf_matrix)
+        inv_transf = np.transpose(self.transf_matrix)
         coor_transformed = coor_circle.dot(inv_transf)
         coor_transformed = coor_transformed + self.C
         return coor_transformed
@@ -135,7 +359,7 @@ class Arch:
 
 
 # Find positions, according toi
-def FindPositions(Nazion, Inion, LPA, RPA, surface, NE_cap=False):
+def FindPositions(Nazion, Inion, LPA, RPA, mesh, NE_cap=False):
     """Find the EEG positions based in the fiducials
 
     Parameters
@@ -148,8 +372,8 @@ def FindPositions(Nazion, Inion, LPA, RPA, surface, NE_cap=False):
         Position of left preauricular point
     RPA: 3x1 ndarray
         Position of right preauricular point
-    surface: simnibs.msh.surface.Surface
-        Surface structure containing the skin triangles
+    mesh: simnibs head mesh
+        simnibs head mesh
     NE_cap: bool (optional)
         Wether to use the NeuroElectrics cap
 
@@ -158,12 +382,14 @@ def FindPositions(Nazion, Inion, LPA, RPA, surface, NE_cap=False):
     eeg: EEG
         EEG structure with the electrode positions
     """
-    # eeg = EEG_TenTen()
-    eeg = EEG(surface)
-    eeg.pos["Nz"] = numpy.array(Nazion, "float")
-    eeg.pos["Iz"] = numpy.array(Inion, "float")
-    eeg.pos["LPA"] = numpy.array(LPA, "float")
-    eeg.pos["RPA"] = numpy.array(RPA, "float")
+    
+    surf = Surface(mesh, [ElementTags.SCALP_TH_SURFACE])
+    
+    eeg = EEG(surf)
+    eeg.pos["Nz"] = np.array(Nazion, "float")
+    eeg.pos["Iz"] = np.array(Inion, "float")
+    eeg.pos["LPA"] = np.array(LPA, "float")
+    eeg.pos["RPA"] = np.array(RPA, "float")
 
     findCz(eeg)
     if NE_cap:
@@ -184,7 +410,7 @@ def avgSideSize(surface):
     nr_triangles = 0.0
     for tr in surface.triangles:
         side = tr.V1 - tr.V0
-        avg_side += numpy.linalg.norm(side)
+        avg_side += np.linalg.norm(side)
 
         nr_triangles += 1
 
@@ -199,26 +425,26 @@ def traceArch2(Begin_Point, End_Point, Mid_Point):
     # define plane with the 3 points
     u = Begin_Point - End_Point
     v = Mid_Point - End_Point
-    if numpy.linalg.norm(u) < 1e-7 or numpy.linalg.norm(v) < 1e-7:
+    if np.linalg.norm(u) < 1e-7 or np.linalg.norm(v) < 1e-7:
         raise ValueError("Invalid Points!")
-    u /= numpy.linalg.norm(u)
-    v /= numpy.linalg.norm(v)
+    u /= np.linalg.norm(u)
+    v /= np.linalg.norm(v)
     # orthogonalize
     # if the vectors are paralell
     if u.dot(v) > 0.9999:
         v = v - u.dot(v) * u
-        v /= numpy.linalg.norm(v)
+        v /= np.linalg.norm(v)
         raise ValueError("Orthogonalization Error!!\n")
 
     v = v - u.dot(v) * u
-    v /= numpy.linalg.norm(v)
-    normal = numpy.cross(u, v)
+    v /= np.linalg.norm(v)
+    normal = np.cross(u, v)
 
     # transform the 3 points in the new coordinase system:
-    transformation = numpy.transpose(numpy.array([u, v, normal]))
-    inv_transfo = numpy.array([u, v, normal])
+    transformation = np.transpose(np.array([u, v, normal]))
+    inv_transfo = np.array([u, v, normal])
 
-    P1 = numpy.array([0.0, 0.0, 0.0], "float")
+    P1 = np.array([0.0, 0.0, 0.0], "float")
     P2 = Begin_Point - End_Point
     P2 = P2.dot(transformation)
     P3 = Mid_Point - End_Point
@@ -232,22 +458,22 @@ def traceArch2(Begin_Point, End_Point, Mid_Point):
     D[1] = P2.dot(P2)
     D[2] = P3.dot(P3)
 
-    A = numpy.array([[P1[0], P1[1], 1], [P2[0], P2[1], 1], [P3[0], P3[1], 1]])
-    B = numpy.array([[D[0], P1[1], 1], [D[1], P2[1], 1], [D[2], P3[1], 1]])
-    E = numpy.array([[D[0], P1[0], 1], [D[1], P2[0], 1], [D[2], P3[0], 1]])
-    F = numpy.array([[D[0], P1[0], P1[1]], [D[1], P2[0], P2[1]], [D[2], P3[0], P3[1]]])
+    A = np.array([[P1[0], P1[1], 1], [P2[0], P2[1], 1], [P3[0], P3[1], 1]])
+    B = np.array([[D[0], P1[1], 1], [D[1], P2[1], 1], [D[2], P3[1], 1]])
+    E = np.array([[D[0], P1[0], 1], [D[1], P2[0], 1], [D[2], P3[0], 1]])
+    F = np.array([[D[0], P1[0], P1[1]], [D[1], P2[0], P2[1]], [D[2], P3[0], P3[1]]])
 
-    a = numpy.linalg.det(A)
-    b = -numpy.linalg.det(B)
-    e = numpy.linalg.det(E)
-    f = -numpy.linalg.det(F)
+    a = np.linalg.det(A)
+    b = -np.linalg.det(B)
+    e = np.linalg.det(E)
+    f = -np.linalg.det(F)
 
     if abs(a) < 1e-7:
         print("Fit failed!")
         return None
 
     R = math.sqrt((b * b + e * e) / (4 * a * a) - f / a)
-    Center = numpy.array([-b / (2 * a), -e / (2 * a), 0.0])
+    Center = np.array([-b / (2 * a), -e / (2 * a), 0.0])
     Center = Center.dot(inv_transfo) + End_Point
 
     arch = Arch(R, Center, Begin_Point, End_Point, transformation)
@@ -262,13 +488,13 @@ def findCz(eeg):
     central_point = (
         eeg.pos["LPA"] + eeg.pos["RPA"] + eeg.pos["Nz"] + eeg.pos["Iz"]
     ) * 0.25
-    direction = numpy.cross(
+    direction = np.cross(
         eeg.pos["LPA"] - eeg.pos["RPA"], eeg.pos["Iz"] - eeg.pos["Nz"]
     )
-    direction /= numpy.linalg.norm(direction)
+    direction /= np.linalg.norm(direction)
     # Iz-Nz is just a size estimate
     out_point = (
-        numpy.linalg.norm(eeg.pos["Iz"] - eeg.pos["Nz"]) * direction + central_point
+        np.linalg.norm(eeg.pos["Iz"] - eeg.pos["Nz"]) * direction + central_point
     )
     eeg.pos["Cz"], tmp = eeg.surface.projectPoint(out_point, central_point)
 
@@ -283,7 +509,7 @@ def findCz(eeg):
         ArchLPA_RPA = traceArch2(eeg.pos["LPA"], eeg.pos["RPA"], eeg.pos["Cz"])
         eeg.pos["Cz"] = ArchLPA_RPA.findFraction(0.5)
         iterations += 1
-        Cz_distance = numpy.linalg.norm(eeg.pos["Cz"] - Cz_Old)
+        Cz_distance = np.linalg.norm(eeg.pos["Cz"] - Cz_Old)
 
         if Cz_distance < 0.1 or iterations == 20:
             break
