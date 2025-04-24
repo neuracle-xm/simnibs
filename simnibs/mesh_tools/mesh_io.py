@@ -30,7 +30,6 @@ import hashlib
 import subprocess
 import threading
 from itertools import combinations
-from typing import Union
 from functools import partial
 
 import numpy as np
@@ -50,7 +49,7 @@ from simnibs.utils.transformations import nifti_transform
 from . import gmsh_view
 from simnibs.utils.file_finder import (
     HEMISPHERES,
-    get_reference_surf,
+    get_fsaverage_template,
     path2bin,
     SubjectFiles,
     FreeSurferSubject,
@@ -7480,18 +7479,19 @@ class _GetitemTester:
 
 
 def load_subject_surfaces(
-    sub_files: SubjectFiles, surface: str, subsampling: Union[int, None] = None
-):
-    """Load subject-specific surfaces.
+    sub_files: SubjectFiles, surface: str, subsampling: int | None = None
+) -> dict[str, Msh]:
+    """Load surfaces for a given subject.
 
     PARARMETERS
     -----------
     sub_files : simnibs.utils.file_finder.SubjectFiles
         SubjectFiles object.
-    surf : str
-        The surface type to load (e.g., 'central').
+    surface : str
+        The surface to load (e.g., central).
     subsampling : int | None
-        The subsampling to load (default = None).
+        The subsampled surface to load. If None, load from the full resolution
+        (original) surface (default = None).
     """
     # When a leadfield simulation is run, the hemisphere surfaces are appended
     # according to the order in SubjectFiles.hemispheres, hence we load them in
@@ -7503,21 +7503,52 @@ def load_subject_surfaces(
 
 
 def load_subject_morph_data(
-    sub_files: SubjectFiles,
+    m2m: SubjectFiles,
     data: str,
-    subsampling: Union[int, None] = None,
-):
+    subsampling: int | None = None,
+) -> dict:
+    """Load morphometry data (e.g., curv, thickness) for a subject.
+
+    Parameters
+    ----------
+    m2m : SubjectFiles
+        SubjectFiles object for the subject of interest.
+    data : str
+        The morphometric data to load (e.g., thickness).
+    subsampling : int | None, optional
+        Load data from a subsampled surface. If None, load from the full
+        resolution (original) surface (default = None).
+
+    Returns
+    -------
+    morph_data: dict
+        Dictionary with the morph data for left and right hemispheres.
+    """
     return {
-        h: nibabel.freesurfer.read_morph_data(
-            sub_files.get_morph_data(h, data, subsampling)
-        )
-        for h in sub_files.hemispheres
+        h: nibabel.freesurfer.read_morph_data(m2m.get_morph_data(h, data, subsampling))
+        for h in m2m.hemispheres
     }
 
 
-def load_reference_surfaces(surface: str, resolution: Union[int, None] = None):
+def load_fsaverage_template(surface: str, resolution: int | None = None) -> dict:
+    """Load both hemispheres of the requested fsaverage template surfaces
+    included in simnibs.
+
+    Parameters
+    ----------
+    surface : str
+        Surface type (e.g., central, sphere, or inflated).
+    resolution : int | None, optional
+        Resolution of the fsaverage template. Available resolutions are 5, 6,
+        and 7 (None).
+
+    Returns
+    -------
+    surfaces: dict
+        Dictionary containing the surfaces for left and right hemispheres.
+    """
     return {
-        h: read_gifti_surface(get_reference_surf(h, surface, resolution))
+        h: read_gifti_surface(get_fsaverage_template(h, surface, resolution))
         for h in HEMISPHERES
     }
 
@@ -7541,6 +7572,7 @@ def load_freesurfer_surfaces(
     Returns
     -------
     surfaces : dict
+        Dictionary containing the surfaces for left and right hemispheres.
     """
     assert coord in {"ras", "surface ras"}
 

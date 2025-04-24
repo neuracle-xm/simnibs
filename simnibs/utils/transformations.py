@@ -36,7 +36,7 @@ from typing import Union
 
 from simnibs.utils.mesh_element_properties import ElementTags
 from simnibs.utils.simnibs_logger import logger
-from simnibs.utils.file_finder import templates, SubjectFiles, get_reference_surf
+from simnibs.utils.file_finder import templates, SubjectFiles, get_fsaverage_template
 from simnibs.utils.csv_reader import write_csv_positions, read_csv_positions
 
 __all__ = [
@@ -1898,7 +1898,7 @@ def make_cross_subject_morph(
 
     """
     from simnibs.mesh_tools.mesh_io import (
-        load_reference_surfaces,
+        load_fsaverage_template,
         load_subject_surfaces,
     )
 
@@ -1908,7 +1908,7 @@ def make_cross_subject_morph(
         (subject_from, subject_to), (subsampling_from, subsampling_to)
     ):
         if subject == "fsaverage":
-            surfaces = load_reference_surfaces("sphere", subsampling)
+            surfaces = load_fsaverage_template("sphere", subsampling)
         else:
             subject_files = (
                 subject
@@ -2010,8 +2010,8 @@ def middle_gm_interpolation(
     middle_surf = mesh_io.load_subject_surfaces(subject_files, "central")
     reg_surf = mesh_io.load_subject_surfaces(subject_files, "sphere.reg")
 
-    ref_surf = mesh_io.load_reference_surfaces("sphere")
-    avg_surf = mesh_io.load_reference_surfaces("central")
+    ref_surf = mesh_io.load_fsaverage_template("sphere")
+    avg_surf = mesh_io.load_fsaverage_template("central")
 
     for hemi in subject_files.hemispheres:
         mesh_io.write_freesurfer_surface(
@@ -2184,7 +2184,7 @@ def subject_atlas(atlas_name, m2m_dir, hemi="both"):
         )
         labels, _, names = nib.freesurfer.io.read_annot(fn_atlas)
         morph = SurfaceMorph(
-            read_gifti_surface(get_reference_surf(hemi, "sphere")),
+            read_gifti_surface(get_fsaverage_template(hemi, "sphere")),
             read_gifti_surface(subject_files.surfaces["sphere.reg"][hemi]),
             method="nearest",  # we are interpolating labels
         )

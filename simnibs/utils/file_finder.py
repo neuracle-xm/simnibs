@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from pathlib import Path
-from typing import Union
 import sys
 import os
 import re
@@ -30,7 +29,7 @@ from simnibs import SIMNIBSDIR
 __all__ = [
     "templates",
     "get_atlas",
-    "get_reference_surf",
+    "get_fsaverage_template",
     "SubjectFiles",
     "coil_models",
 ]
@@ -212,18 +211,21 @@ def get_atlas(atlas_name, hemi="both"):
         raise ValueError("Invalid hemisphere name")
 
 
-def get_reference_surf(region, surf_type, resolution: Union[None, int] = None):
-    """Gets the file name of a reference surface
+def get_fsaverage_template(region: str, surface: str, resolution: None | int = None):
+    """Construct the filename of one of the fsaverage template surfaces
+    included in simnibs.
 
     Parameters
-    -----------
+    ----------
     region: str
         Name of the region of interest. Valid regions are `lh` and `rh`.
-    surf_type: str
-        Surface type. 'central', 'sphere', 'inflated' Default: central
+    surface_type: str
+        Surface type (e.g., central, sphere, or inflated).
+    resolution: None | int
+        Available resolutions are 5, 6, and 7 (None).
 
     Returns
-    --------
+    -------
     fn_surf: str
         Name of surface file
 
@@ -237,12 +239,12 @@ def get_reference_surf(region, surf_type, resolution: Union[None, int] = None):
     ), f"{resolution} is not a valid fsaverage resolution; please choose one of {fs_resolutions}"
     fn_surf = os.path.join(
         getattr(templates, f"freesurfer_templates{fs_res_mapper[resolution]}"),
-        f"{region}.{surf_type}.gii",
+        f"{region}.{surface}.gii",
     )
     if os.path.isfile(fn_surf):
         return fn_surf
     else:
-        raise FileNotFoundError("Could not find reference surface")
+        raise FileNotFoundError("Could not find fsaverage surface")
 
 
 class SubjectFiles:
@@ -317,7 +319,7 @@ class SubjectFiles:
         corresponding surface file.
 
     morph_data: dict
-        Dictionary of 'standard' morphometry data which os present after
+        Dictionary of 'standard' morphometry data which is present after
         running CHARM. Each entry is a dict with hemispheres as keys pointing
         to the corresponding morph file.
 
@@ -559,7 +561,7 @@ class SubjectFiles:
         return Path(self.surface_folder) / subsampling / f"{hemi}.{data}"
 
     @staticmethod
-    def _parse_subsampling(subsampling: Union[None, int]) -> str:
+    def _parse_subsampling(subsampling: None | int) -> str:
         return str(subsampling) if subsampling else ""
 
 

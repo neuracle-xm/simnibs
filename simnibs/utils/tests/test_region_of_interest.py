@@ -471,7 +471,7 @@ class TestFsAvrMaskToSub:
         subject_files = SubjectFiles(subpath=m2m_path)
 
         sphere: Msh = mesh_io.read_gifti_surface(
-            file_finder.get_reference_surf("lh", "sphere")
+            file_finder.get_fsaverage_template("lh", "sphere")
         )
 
         # 163842 nodes in fs avr per hemi
@@ -532,11 +532,11 @@ class TestApplySurfaceMask:
         subject_files = SubjectFiles(subpath=m2m_path)
 
         ref_sphere_surface_lh: Msh = mesh_io.read_gifti_surface(
-            file_finder.get_reference_surf("lh", "sphere")
+            file_finder.get_fsaverage_template("lh", "sphere")
         )
 
         ref_sphere_surface_rh: Msh = mesh_io.read_gifti_surface(
-            file_finder.get_reference_surf("rh", "sphere")
+            file_finder.get_fsaverage_template("rh", "sphere")
         )
 
         central_lh = mesh_io.read_gifti_surface(
