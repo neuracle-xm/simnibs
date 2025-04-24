@@ -115,7 +115,7 @@ use_fat_atlas = CommandLineArgument(
     dict(
         action="store_true",
         default=False,
-        help="""use the extended atlas including subcutaneous fat""",
+        help="""use the orginal atlas (was standard up to version 4.5)""",
     ),
 )
 no_neck = CommandLineArgument(

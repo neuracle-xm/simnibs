@@ -37,7 +37,7 @@ class RegionOfInterest:
     mask_value: int | list[int] | None
         The values that are considered as the mask in the mask files, default 1 (example: 1 | [1, 2])
     mask_operator: str | list[str] | None
-        The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "union"
+        The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "intersection"
 
     roi_sphere_center: list[float] | list[list[float]] | None
         Sphere center coordinates for spherical masks in mm (example: [0,0,0] | [[1,2,3], [4,5,6]])
@@ -47,7 +47,7 @@ class RegionOfInterest:
         The space the center coordinates of the spheres are defined in {"subject", "mni"}
 
     roi_sphere_operator: str | list[str] | None
-        The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "union"
+        The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "intersection"
 
     nodes: list[list[float]] | None
         Only for method = "custom" -> a custom list of node coordinates (example: [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]])
@@ -85,7 +85,7 @@ class RegionOfInterest:
     mask_value: int | list[int] | None
     """ The values that are considered as the mask in the mask files, default 1 (example: 1 | [1, 2])"""
     mask_operator: str | list[str] | None
-    """The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "union" """
+    """The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "intersection" """
 
     roi_sphere_center: list[float] | list[list[float]] | None
     """ Sphere center coordinates for spherical masks in mm (example: [0,0,0] | [[1,2,3], [4,5,6]]) """
@@ -95,7 +95,7 @@ class RegionOfInterest:
     """ The space the center coordinates of the spheres are defined in {"subject", "mni"} """
 
     roi_sphere_operator: str | list[str] | None
-    """The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "union" """
+    """The operator to combine the mask with the ROI {"union", "intersection", "difference"}, default "intersection" """
 
     nodes: list[list[float]] | None
     """ Only for method = "custom" -> a custom list of node coordinates (example: [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]])"""
@@ -627,7 +627,7 @@ class RegionOfInterest:
         mask_value : int | list[int] | None, optional {.label, .annot, curv, nifti}
             The value that in the mask file that describes the mask, by default None
         mask_operator : str | list[str] | None, optional {"union", "intersection", "difference"}
-            The operator to be used, by default "union"
+            The operator to be used, by default "intersection"
             union: current_mask or surface_mask
             intersection: current_mask and surface_mask
             difference: current_mask and not surface_mask
@@ -786,7 +786,7 @@ class RegionOfInterest:
         mask_value : int | list[int] | None, optional
             The value in the Nifti image that describes the mask, by default 1
         mask_operator : str | list[str] | None, optional {"union", "intersection", "difference"}
-            The operator to be used, by default "union"
+            The operator to be used, by default "intersection"
             union: current_mask or volume_mask
             intersection: current_mask and volume_mask
             difference: current_mask and not volume_mask
@@ -881,7 +881,7 @@ class RegionOfInterest:
         surface_inclusion_radius : float | None
             The radius from each node of the surface roi in which the volume is included.
         surface_roi_operator : str | None, optional {"union", "intersection", "difference"}
-            The operator to be used, by default "union"
+            The operator to be used, by default "intersection"
             union: current_mask or surface_roi_mask
             intersection: current_mask and surface_roi_mask
             difference: current_mask and not surface_roi_mask
@@ -929,7 +929,7 @@ class RegionOfInterest:
         roi_sphere_center_space : str | list[str] | None, optional {"subject", "mni"}
             The space the sphere centers are defined in, by default None
         roi_sphere_operator : str | list[str] | None, optional {"union", "intersection", "difference"}
-            The operator to be used, by default "union"
+            The operator to be used, by default "intersection"
             union: current_mask or sphere_mask
             intersection: current_mask and sphere_mask
             difference: current_mask and not sphere_mask
@@ -1048,7 +1048,7 @@ class RegionOfInterest:
         tissues : int | list[int] | ElementTags | list[ElementTags] | None
             The tissues that are supposed to be masked, by default GM
         tissue_mask_operator : str | None, optional {"union", "intersection", "difference"}
-            The operator to be used, by default "union"
+            The operator to be used, by default "intersection"
             union: current_mask or tissue_mask
             intersection: current_mask and tissue_mask
             difference: current_mask and not tissue_mask
@@ -1103,7 +1103,7 @@ class RegionOfInterest:
         element_types : int | list[int] | None
             The element types that are supposed to be masked
         element_type_mask_operator : str | None, optional {"union", "intersection", "difference"}
-            The operator to be used, by default "union"
+            The operator to be used, by default "intersection"
             union: current_mask or element_type_mask
             intersection: current_mask and element_type_mask
             difference: current_mask and not element_type_mask
