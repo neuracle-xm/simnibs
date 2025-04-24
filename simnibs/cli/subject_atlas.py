@@ -28,7 +28,7 @@ import nibabel
 from simnibs.utils.transformations import SurfaceMorph
 import simnibs.utils.file_finder as file_finder
 from simnibs.utils.simnibs_logger import logger
-from simnibs.mesh_tools.mesh_io import load_subject_surfaces, load_reference_surfaces
+from simnibs.mesh_tools.mesh_io import load_subject_surfaces, load_fsaverage_template
 from simnibs import __version__
 import textwrap
 
@@ -101,7 +101,7 @@ def main():
     os.makedirs(args.out_folder, exist_ok=True)
 
     sub_surf = load_subject_surfaces(subject_files, "sphere.reg")
-    ref_surf = load_reference_surfaces("sphere")
+    ref_surf = load_fsaverage_template("sphere")
 
     for hemi in ["lh", "rh"]:
         # I have a parallel implementation here

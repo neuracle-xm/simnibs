@@ -1306,7 +1306,7 @@ def fs_avr_mask_to_sub(
         The index mask in subject space
     """
     sphere_surface: Msh = mesh_io.read_gifti_surface(
-        file_finder.get_reference_surf(hemi, "sphere")
+        file_finder.get_fsaverage_template(hemi, "sphere")
     )
     registration_surface: Msh = mesh_io.read_gifti_surface(
         subject_files.get_surface(hemi, "sphere_reg")

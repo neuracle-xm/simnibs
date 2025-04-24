@@ -32,7 +32,7 @@ landmarks_mapper = {
 }
 
 
-# Modify load_subject_surfaces and load_reference_surfaces to return a dict of
+# Modify load_subject_surfaces and load_fsaverage_template to return a dict of
 # dicts instead of a dict of mesh objects as this is a little easier to work
 # with in this context
 def _msh_to_dict(d):
@@ -54,7 +54,7 @@ def extract_to_dict(func):
 
 
 load_subject_surfaces = extract_to_dict(mesh_io.load_subject_surfaces)
-load_reference_surfaces = extract_to_dict(mesh_io.load_reference_surfaces)
+load_fsaverage_surfaces = extract_to_dict(mesh_io.load_fsaverage_template)
 
 
 def setup_source_space(
@@ -96,7 +96,7 @@ def setup_source_space(
     # Make source morph
     if morph_to_fsaverage:
         subid_to = f"fsaverage ({morph_to_fsaverage}k)"
-        src_to = load_reference_surfaces("central", morph_to_fsaverage)
+        src_to = load_fsaverage_surfaces("central", morph_to_fsaverage)
         src_to = make_source_spaces(src_to, subid_to)
 
         morphs = make_cross_subject_morph(
