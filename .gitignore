@@ -4,17 +4,14 @@ simnibs/matlab_tools/SIMNIBSDIR.m
 simnibs/matlab_tools/SIMNIBSPYTHON.m
 simnibs/matlab_tools/simnibs
 simnibs/matlab_tools/simnibs.cmd
-simnibs/resources/spm12/
 activate_simnibs
 uninstall_simnibs
 simnibs/mesh_tools/cython_msh.c
-simnibs/simulation/petsc_solver.c
 simnibs/mesh_tools/cgal/create_mesh_surf.cpp
 simnibs/mesh_tools/cgal/create_mesh_vol.cpp
 simnibs/mesh_tools/cgal/cgal_misc.cpp
-simnibs/mesh_tools/cgal/polygon_mesh_processing.cpp
-simnibs/segmentation/_cat_c_utils.c
 simnibs/segmentation/_marching_cubes_lewiner_cy.c
+simnibs/segmentation/_sanlm.c
 simnibs/segmentation/_thickness.c
 Contents/
 simnibs/ccd-files/LICENSE
@@ -152,6 +149,3 @@ miniconda3/
 *.vrb
 *.xdy
 *.tdo
-!simnibs/external/bin/osx/fmm3dpy-1.0.0-cp39-cp39-macosx_10_9_x86_64.whl
-CGAL-5.4/*
-tbb/*
