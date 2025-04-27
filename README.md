@@ -2,7 +2,7 @@
 
 ![SimNIBS Frontpage](docs/_static/gallery/simnibs_workflow.png)
 The main goal of SimNIBS is to calculate electric fields caused by Transcranial Electrical Stimulation (TES) and Transcranial Magnetic Stimulation (TMS).
- 
+
 The pipeline is divided in three parts:
 1. Automatic segmentation of MRI images and meshing to create individualized head models
 2. Calculation of electric fields through the Finite Element Method (FEM)
@@ -10,8 +10,8 @@ The pipeline is divided in three parts:
 
 
 ## Build Status
-| Linux   | Windows    | MacOS |
-|---------|------------|-----|
+| Linux | Windows | MacOS |
+| ----- | ------- |****----------|-----|
 | [![Build Status](https://dev.azure.com/simnibs/simnibs/_apis/build/status/Linux?branchName=master)](https://dev.azure.com/simnibs/simnibs/_build/latest?definitionId=4&branchName=master) | [![Build Status](https://dev.azure.com/simnibs/simnibs/_apis/build/status/Windows?branchName=master)](https://dev.azure.com/simnibs/simnibs/_build/latest?definitionId=5&branchName=master) |  [![Build Status](https://dev.azure.com/simnibs/simnibs/_apis/build/status/MacOS?branchName=master)](https://dev.azure.com/simnibs/simnibs/_build/latest?definitionId=9&branchName=master)   |
 
 ## Getting Started
@@ -24,9 +24,11 @@ Please visit [the SimNIBS website](https://simnibs.github.io/simnibs/build/html/
 After cloning the repository:
 
 ```
-conda env create -f environment_.yml -n <name_of_my_environment>
-conda activate <name_of_my_environment>
-python -m pip install --editable .
+# create environment.yml
+python tools/environment.py create dev
+conda env create -f environment.yml
+conda activate simnibs_env
+python -m pip install --no-deps --no-build-isolation -e .
 python simnibs/cli/link_external_progs.py
 ```
 
