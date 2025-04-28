@@ -96,10 +96,10 @@ def cortical_surface_estimation(
 def central_surface_estimation(hemispheres, fraction=0.5, method="equivolume"):
     central = {}
     for k, v in hemispheres.items():
-        # thickness = v.compute_thickness()
-        # curv = v.compute_average_curvature(curv_kwargs=dict(smooth_iter=10))
-        # c = v.estimate_layers(method, fraction, thickness, curv.H)
-        c = v.estimate_layers(method, fraction, curv = "H", curv_kwargs=dict(smooth_iter=10))
+        thickness = v.compute_thickness()
+        curv = v.compute_average_curvature(curv_kwargs=dict(smooth_iter=10))
+        c = v.estimate_layers(thickness, curv.H, fraction, method)
+        # c = v.estimate_layers(method, fraction, curv = "H", curv_kwargs=dict(smooth_iter=10))
         central[k] = Surface(c, v.white.faces)
     return central
 
