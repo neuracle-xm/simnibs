@@ -6,6 +6,7 @@ import argparse
 import os
 import subprocess
 import shutil
+from pathlib import Path
 import tempfile
 import re
 
@@ -57,7 +58,7 @@ def custom_version_func(version: ScmVersion) -> str:
 
 def build(
     env_name: str | None = None,
-    simnibs_wheel_dir: str | None = None,
+    simnibs_wheel: str | None = None,
     # pack_dir: str | None = None,
     macos_developer_id=None,
 ):
@@ -79,42 +80,29 @@ def build(
     if os.path.isdir(pack_dir):
         shutil.rmtree(pack_dir)
 
-    if env_name is None:
-        assert (
-            simnibs_wheel_dir is not None
-        ), "You must specify a path to simnibs wheels when using a temporary environment"
-        simnibs_wheel_dir = os.path.abspath(simnibs_wheel_dir)
-        wheels = glob.glob(os.path.join(simnibs_wheel_dir, f"simnibs-{version}*.whl"))
-        if len(wheels) == 0:
-            raise FileNotFoundError(
-                f"Did not find any wheels for simnibs {version} in {simnibs_wheel_dir}"
-            )
+    if Path(env_name).is_file():
+        msg = "You must specify a path to simnibs wheels when using a temporary environment"
+        assert simnibs_wheel is not None, msg
+        assert (simnibs_wheel := Path(simnibs_wheel)).exists()
 
         # Create temporary environment
         env_is_temporary = True
         env_prefix = os.path.join(pack_dir, "simnibs_env_tmp")
 
-        if sys.platform == "linux":
-            os_name = "linux"
-        elif sys.platform == "darwin":
-            os_name = "macOS"
-        elif sys.platform == "win32":
-            os_name = "win"
-        else:
-            raise OSError("OS not supported!")
-        env_file = os.path.join(simnibs_root_dir, f"environment_{os_name}.yml")
-
-        print(f"Creating temporary environment from {env_file}")
+        print(f"Creating temporary environment from {env_name}")
         subprocess.run(
-            f"conda env create -p {env_prefix} -f {env_file} -y", check=True, shell=True
+            f"conda env create -p {env_prefix} -f {env_name} -y", check=True, shell=True
         )
 
         print("Installing SimNIBS")
         subprocess.run(
-            f"conda run -p {env_prefix} python -m pip install simnibs=={version} --no-deps --no-index --find-links={simnibs_wheel_dir}",
+            f"conda run -p {env_prefix} python -m pip install --no-deps {simnibs_wheel}",
             check=True,
             shell=True,
         )
+        # when env_name refers to a file, we create a temp. environment and
+        # specify the env prefix
+        env_name = None
 
     else:
         # Use an existing environment
@@ -311,10 +299,10 @@ if __name__ == "__main__":
         prog="simnibs-pack", description="Create SimNIBS installers."
     )
     parser.add_argument(
-        "--env", default=None, help="Name of existing environment to use."
+        "--env", default=None, help="Name of existing environment to use or the name of a conda environment file (yaml). In the latter case, a temporary environment will be created."
     )
     parser.add_argument(
-        "--simnibs-wheel-dir",
+        "--simnibs-wheel",
         default=None,
         help="Directory with the SimNIBS wheels to be packed",
     )
@@ -324,4 +312,4 @@ if __name__ == "__main__":
         help="Developer ID for signing in MacOS, DOES NOT SUPPORT NOTARIZATION (optional)",
     )
     args = parser.parse_args(sys.argv[1:])
-    build(args.env, args.simnibs_wheel_dir, args.macos_developer_id)
+    build(args.env, args.simnibs_wheel, args.macos_developer_id)
