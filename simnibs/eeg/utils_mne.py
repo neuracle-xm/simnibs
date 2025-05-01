@@ -58,9 +58,9 @@ load_fsaverage_surfaces = extract_to_dict(mesh_io.load_fsaverage_template)
 
 
 def setup_source_space(
-    m2m_dir: Union[Path, str],
-    subsampling: Union[None, int] = None,
-    morph_to_fsaverage: Union[None, int] = 10,
+    m2m_dir: Path | str,
+    subsampling: int | None = None,
+    morph_to_fsaverage: int | None = 5,
 ):
     """Setup a source space for use with MNE-Python.
 
@@ -70,10 +70,10 @@ def setup_source_space(
         The `m2m` directory containing the segmentation and head model results.
     subsampling : None | int
         The subsampling to use (default = None).
-    morph_to_fsaverage : None | int
+    morph_to_fsaverage : int | None
         Whether or not to create a mapping from subject space to the fsaverage
-        template (default = 10, which constructs a morph to the fsaverage 10k
-        model).
+        template (default = 5, which constructs a morph to the fsaverage 10k
+        model). If None, no morph will be computed.
 
     RETURNS
     -------
@@ -95,7 +95,7 @@ def setup_source_space(
 
     # Make source morph
     if morph_to_fsaverage:
-        subid_to = f"fsaverage ({morph_to_fsaverage}k)"
+        subid_to = f"fsaverage{morph_to_fsaverage})"
         src_to = load_fsaverage_surfaces("central", morph_to_fsaverage)
         src_to = make_source_spaces(src_to, subid_to)
 

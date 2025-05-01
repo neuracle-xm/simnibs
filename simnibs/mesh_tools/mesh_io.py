@@ -2654,7 +2654,7 @@ class Msh:
             Indices (one-based!) of outer skin faces.
         """
         assert tol > 0
-        
+
         f_orig_id = self.elm.elm_number[self.elm.tag1 == label_skin]
         faces = self.elm[f_orig_id, :3]
         verts = np.unique(faces)
@@ -7530,7 +7530,7 @@ def load_subject_morph_data(
     }
 
 
-def load_fsaverage_template(surface: str, resolution: int | None = None) -> dict:
+def load_fsaverage_template(surface: str, resolution: int = 7) -> dict:
     """Load both hemispheres of the requested fsaverage template surfaces
     included in simnibs.
 
@@ -7540,7 +7540,7 @@ def load_fsaverage_template(surface: str, resolution: int | None = None) -> dict
         Surface type (e.g., central, sphere, or inflated).
     resolution : int | None, optional
         Resolution of the fsaverage template. Available resolutions are 5, 6,
-        and 7 (None).
+        and 7 (default = 7).
 
     Returns
     -------

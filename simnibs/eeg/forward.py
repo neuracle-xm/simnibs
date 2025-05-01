@@ -199,7 +199,7 @@ def make_forward(
     out_format: str,
     info: Union[None, Path, str] = None,
     trans: Union[None, Path, str] = None,
-    morph_to_fsaverage: Union[None, int] = 10,
+    morph_to_fsaverage: int | None = 5,
     apply_average_proj=True,
     write: bool = False,
 ):
@@ -224,14 +224,13 @@ def make_forward(
     trans : Path | str | mne.Transform
         Filename or instance of mne.Transform (only used [and mandatory] when
         output_format = 'mne') (default = None).
-    morph_to_fsaverage : None | int {10, 40, 160}
-        Create a source morph object to fsaverage of the specified resolution.
-        The number denotes the (approximate) number of vertices per hemisphere
-        such that
-            10  ->  10,242 (fsaverage 5)
-            40  ->  40,962 (fsaverage 6)
-            160 -> 163,842 (fsaverage 7, full resolution)
-        The default is 10. Use None to omit morph.
+    morph_to_fsaverage : int {5, 6, 7} | None
+        The fsaverage template to morph to. The number denotes the subdivision
+        factor. The number of vertices per hemisphere for each subdivision is
+            5  ->  10,242
+            6  ->  40,962
+            7  -> 163,842 (full resolution)
+        By default, use fsaverage 7. Use None to omit morph.
     apply_average_proj : bool
 
     write : bool

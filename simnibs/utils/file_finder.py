@@ -39,7 +39,7 @@ HEMISPHERES = ["lh", "rh"]
 
 # map input resolution to fsaverage name
 fs_surfaces = ["central", "sphere"]
-fs_resolutions = [None, 10, 40, 160]
+fs_resolutions = [None, 5,6,7]
 fs_resolutions_names = ["", "10k", "40k", ""]
 fs_res_mapper = dict(zip(fs_resolutions, fs_resolutions_names))
 
@@ -211,7 +211,7 @@ def get_atlas(atlas_name, hemi="both"):
         raise ValueError("Invalid hemisphere name")
 
 
-def get_fsaverage_template(region: str, surface: str, resolution: None | int = None):
+def get_fsaverage_template(region: str, surface: str, resolution: int = 7):
     """Construct the filename of one of the fsaverage template surfaces
     included in simnibs.
 
@@ -222,7 +222,7 @@ def get_fsaverage_template(region: str, surface: str, resolution: None | int = N
     surface_type: str
         Surface type (e.g., central, sphere, or inflated).
     resolution: None | int
-        Available resolutions are 5, 6, and 7 (None).
+        Available resolutions are 5, 6, and 7 (default = 7).
 
     Returns
     -------

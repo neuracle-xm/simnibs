@@ -22,9 +22,9 @@ from_m = {k: 1 / v for k, v in to_m.items()}
 
 
 def setup_source_space(
-    m2m_dir: Union[Path, str],
-    subsampling: Union[None, int] = None,
-    morph_to_fsaverage: Union[None, int] = 10,
+    m2m_dir: Path, str,
+    subsampling: int | None = None,
+    morph_to_fsaverage: int | None = 5,
 ):
     """Setup a source space for use with FieldTrip.
 
@@ -36,8 +36,8 @@ def setup_source_space(
         The subsampling to use (default = None).
     morph_to_fsaverage : None | int
         Whether or not to create a mapping from subject space to the fsaverage
-    template (default = 10, which constructs a morph to the fsaverage 10k
-        model).
+        template (default = 5, which constructs a morph to the fsaverage 10k
+        model). If None, no morph will be computed.
 
     RETURNS
     -------

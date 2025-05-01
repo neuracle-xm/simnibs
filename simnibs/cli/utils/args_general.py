@@ -1,5 +1,8 @@
+import textwrap
+
 from simnibs import __version__
-from .helpers import CommandLineArgument
+from simnibs.cli.utils.helpers import CommandLineArgument
+from simnibs.cli.utils import actions
 
 subid = CommandLineArgument(
     ["subid"],
@@ -9,6 +12,7 @@ subid = CommandLineArgument(
         The former will resolve to "m2m_{subid}" in the current working
         directory. The latter cases both resolve to /path/to/m2m_{subid}.
         """,
+        action=actions.ResolveSubjectID,
     ),
 )
 
@@ -22,5 +26,22 @@ debug = CommandLineArgument(
         action="store_true",
         default=False,
         help="""Write results from intermediate steps to disk.""",
+    ),
+)
+
+fsaverage = CommandLineArgument(
+    ["--fsaverage"],
+    dict(
+        type=int,
+        choices=[5, 6, 7],
+        default=7,
+        help=textwrap.dedent("""
+        The fsaverage template to morph to. The number denotes the subdivision
+        factor. The number of vertices per hemisphere for each subdivision is
+            5  ->  10,242
+            6  ->  40,962
+            7  -> 163,842 (full resolution)
+        By default, use fsaverage 7.
+        """),
     ),
 )

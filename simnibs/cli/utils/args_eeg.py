@@ -5,26 +5,10 @@ subsampling = CommandLineArgument(
     ["-s", "--subsampling"],
     dict(
         type=int,
-        help="""Target number of sources in each hemisphere. Original
-        surfaces are ~100,000 vertices (default: %(default)s).""",
+        help="""Target number of vertices in each hemisphere (default: %(default)s).""",
     ),
 )
 
-fsaverage = CommandLineArgument(
-    ["--fsaverage"],
-    dict(
-        type=int,
-        choices=[10, 40, 160],
-        help="""
-        The resolution of the fsaverage template to morph to. The number
-        denotes the (approximate) number of vertices per hemisphere such that
-            10  ->  10,242 (fsaverage 5)
-            40  ->  40,962 (fsaverage 6)
-            160 -> 163,842 (fsaverage 7, full resolution)
-        By default, no interpolator is computed.
-        """,
-    ),
-)
 leadfield = CommandLineArgument(
     ["leadfield"], dict(type=str, help="Name of the leadfield to process (HDF5 file).")
 )

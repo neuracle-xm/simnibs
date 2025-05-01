@@ -25,7 +25,7 @@ def parse_args(argv):
     parent_parser = argparse.ArgumentParser(add_help=False)
     add_argument(parent_parser, args_general.subid)
     add_argument(parent_parser, args_eeg.leadfield)
-    add_argument(parent_parser, args_eeg.fsaverage)
+    add_argument(parent_parser, args_general.fsaverage)
     parent_parser.add_argument("--no-average-ref", **no_average_ref)
 
     parser = argparse.ArgumentParser(
