@@ -18,6 +18,8 @@ simnibs/ccd-files/LICENSE
 simnibs/ccd-files/README.md
 # notice the first / (no recursivity)
 /build
+environment*.yml
+environment*.yaml
 
 simnibs/_version.py
 
