@@ -92,7 +92,7 @@ end
 tline = fgetl(fid);
 version = sscanf(tline, '%f %d %d');
 v = int32(version(1));
-if v ~= 2 && v ~= 4
+if v ~= 2
     error(['Cant read mesh version ' num2str(version(1))]);
 end
 if version(3) ~= 8
@@ -123,17 +123,9 @@ while ~strcmp('$Nodes', line)
 end
 
 if is_binary
-   if v == 2
-       m = read_nodes_binary(m, fid);
-   else
-       m = read_nodes_binary4(m, fid);
-   end
+    m = read_nodes_binary(m, fid);
 else
-   if v == 2
-       m = read_nodes(m, fid);
-   else
-       m = read_nodes4(m, fid);
-   end
+    m = read_nodes(m, fid);
 end
 
 %% read elements
@@ -143,17 +135,9 @@ while ~strcmp('$Elements', line)
 end
 
 if is_binary
-    if v == 2
-        [m, continous_elm_numbers] = read_elements_binary(m, fid);
-    else
-        [m, continous_elm_numbers] = read_elements_binary4(m, fid);
-    end
+    [m, continous_elm_numbers] = read_elements_binary(m, fid);
 else
-    if v == 2
-        [m, continous_elm_numbers] = read_elements(m, fid);
-    else
-        [m, continous_elm_numbers] = read_elements4(m, fid);
-    end
+    [m, continous_elm_numbers] = read_elements(m, fid);
 end
 
 
@@ -253,78 +237,6 @@ function m = read_nodes(m, fid)
     if ~strcmp('$EndNodes', tline)
         error('End tag $EndNodes expected'); 
     end
-    
-function m = read_nodes_binary4(m, fid)
-    n_blocks = fread(fid,1, 'uint64');
-    number_of_nodes = fread(fid,1, 'uint64');
-    if ~isnumeric(number_of_nodes)
-        error('number of nodes is not a number');
-    end
-    node_numbers = [];%zeros(number_of_nodes, 0, 'int32');
-    m.nodes = [];%zeros(number_of_nodes, 3);
-    for b = 1:n_blocks
-        fread(fid,2, 'int');
-        if fread(fid,1, 'int')
-            error('Cant read parametric nodes')
-        end
-        n_in_block = fread(fid,1, 'uint64');
-        node_numbers = [node_numbers; fread(fid, n_in_block, 'int', 3*8)];
-        fseek(fid, -n_in_block*(4+3*8)+4, 'cof');
-        m.nodes = [m.nodes; fread(fid, [3, n_in_block], '3*double', 4)'];
-        fseek(fid, -4, 'cof');
-    end
-    [node_numbers, order] = sort(node_numbers);
-    m.nodes = m.nodes(order, :);
-    if (min(node_numbers) < 1) || ...
-       (max(node_numbers)> number_of_nodes) || ...
-       (length(node_numbers) ~= number_of_nodes)
-        error('node numbers have to be a continuous list of indexes starting at 1');
-    end
-    % sometimes there is an end of line after $Nodes, sometimes there is
-    % not... handle that
-    read_LF(fid);
-   
-    % confirm last line
-    tline = fgetl(fid);
-    if ~strcmp('$EndNodes', tline)
-        error('End tag $EndNodes expected'); 
-    end
-    
-function m = read_nodes4(m, fid)
-    % get number of nodes
-    tline = fgetl(fid);
-    l = sscanf(tline,'%d %d');
-    n_blocks = l(1);
-    number_of_nodes = l(2);
-    if ~isnumeric(number_of_nodes)
-        error('number of nodes is not a number');
-    end
-    node_numbers = [];%zeros(number_of_nodes, 0, 'int32');
-    m.nodes = [];%zeros(number_of_nodes, 3);
-    for b = 1:n_blocks
-        l = sscanf(fgetl(fid),'%d %d %d %d');
-        if l(3)
-            error('Cant read parametric nodes')
-        end
-        pts = textscan(fid, '%d %f %f %f', l(4));
-        node_numbers = [node_numbers; pts{1}];
-        m.nodes = [m.nodes; [pts{2} pts{3} pts{4}]];
-    end
-    [node_numbers, order] = sort(node_numbers);
-    m.nodes = m.nodes(order, :);
-    if (min(node_numbers) < 1) || ...
-       (max(node_numbers)> number_of_nodes) || ...
-       (length(node_numbers) ~= number_of_nodes)
-        error('node numbers have to be a continuous list of indexes starting at 1');
-    end
-
-    % read end line
-    tline = fgetl(fid);
-    if ~strcmp('$EndNodes', tline)
-        error('End tag $EndNodes expected'); 
-    end
-
-    
 
 function [m, continous_elm_numbers] = read_elements_binary(m, fid)
     % get number of elements    
@@ -403,65 +315,6 @@ function [m, continous_elm_numbers] = read_elements_binary(m, fid)
     if ~strcmp('$EndElements', tline)
         error(['End tag $EndElements expected, but I read: ' tline]);
     end
-
-       
-function [m, continous_elm_numbers] = read_elements_binary4(m, fid)
-    n_blocks = fread(fid,1, 'uint64');
-    number_of_elements = fread(fid,1, 'uint64');
-
-    m.triangles = [];
-    m.triangle_regions = [];
-    m.tetrahedra = [];
-    m.tetrahedron_regions = [];
-    tr_numbers = [];
-    th_numbers = [];
-    for b = 1:n_blocks
-        tag = fread(fid,1, 'int');
-        fread(fid,1, 'int');
-        type = fread(fid,1, 'int');
-        n_in_block = fread(fid,1, 'uint64');
-        buff = fread(fid, [nr_nodes_in_element(type)+1, n_in_block], '*int')';
-        switch type
-            case 2
-                if ~isempty(buff)
-                    tr_numbers = [tr_numbers; buff(:, 1)];
-                    m.triangles = [m.triangles; buff(:, 2:end)];
-                    m.triangle_regions = [m.triangle_regions; tag*ones(n_in_block,1, 'int32')];
-                end                
-            case 4
-                if ~isempty(buff)
-                    th_numbers = [th_numbers; buff(:, 1)];
-                    m.tetrahedra = [m.tetrahedra; buff(:, 2:end)];
-                    m.tetrahedron_regions = [m.tetrahedron_regions; tag*ones(n_in_block,1, 'int32')];
-                end
-            otherwise
-                continous_elm_numbers=false;
-                warning(['found element type ' num2str(type) '; skipped during reading! Only reading triangles and tetrahedra, not reading element data']);
-        end
-    end
-    [tr_numbers, order] = sort(tr_numbers);
-    m.triangles = m.triangles(order, :);
-    m.triangle_regions = m.triangle_regions(order);
-    [th_numbers, order] = sort(th_numbers);
-    m.tetrahedra = m.tetrahedra(order, :);
-    m.tetrahedron_regions = m.tetrahedron_regions(order);
-    element_numbers = [tr_numbers; th_numbers];
-    if (min(element_numbers) < 1) || ...
-       (max(element_numbers) > number_of_elements)
-       
-       continous_elm_numbers=false;
-       warning('only reading tetrahedra and triangles, not reading element_data')
-    end
-        
-    % sometimes there is an end of line after $Elements, sometimes there is
-    % not... handle that
-    read_LF(fid);
-    
-    % read end line
-    tline = fgetl(fid);
-    if ~strcmp('$EndElements', tline)
-        error(['End tag $EndElements expected, but I read: ' tline]);
-    end        
     
 function [m, continous_elm_numbers] = read_elements(m, fid)
     % get number of elements
@@ -512,73 +365,6 @@ function [m, continous_elm_numbers] = read_elements(m, fid)
     if ~strcmp('$EndElements', tline)
         error(['End tag $EndElements expected, but I read: ' tline]);
     end
-
-
-    
-function [m, continous_elm_numbers] = read_elements4(m, fid)
-    % get number of elements
-    tline = fgetl(fid);
-    l = sscanf(tline,'%d %d');
-    n_blocks = l(1);
-    number_of_elements = l(2);
-    if ~isnumeric( number_of_elements )
-        error('number of elements is not a number');
-    end
-    
-    m.triangles = [];
-    m.tetrahedra = [];
-    m.triangle_regions = [];
-    m.tetrahedron_regions = [];
-    tr_numbers = [];
-    th_numbers = [];
-    for b = 1:n_blocks
-        l = sscanf(fgetl(fid),'%d %d %d %d');
-        if l(3) == 2
-            c = textscan(fid,'%d %d %d %d', l(4));
-            tr_numbers=[tr_numbers; c{1}];
-            m.triangles = [m.triangles; [c{2} c{3} c{4}]];
-            m.triangle_regions = [m.triangle_regions; l(1)*ones(l(4),1, 'int32')];
-        elseif l(3) == 4
-            c = textscan(fid,'%d %d %d %d %d', l(4));
-            th_numbers=[th_numbers; c{1}];
-            m.tetrahedra = [m.tetrahedra; [c{2} c{3} c{4} c{5}]];
-            m.tetrahedron_regions = [m.tetrahedron_regions; l(1)*ones(l(4),1, 'int32')];
-        else
-            warning('only reading tetrahedra and triangles, not reading element_data')
-            c = textscan(fid,'%d %*d %d', l(4));
-            continue
-        end
-    end
-    [tr_numbers, order] = sort(tr_numbers);
-    m.triangles = m.triangles(order, :);
-    m.triangle_regions = m.triangle_regions(order);
-    [th_numbers, order] = sort(th_numbers);
-    m.tetrahedra = m.tetrahedra(order, :);
-    m.tetrahedron_regions = m.tetrahedron_regions(order);
-    element_numbers = [tr_numbers; th_numbers];
-    continous_elm_numbers=true;
-    if (min(element_numbers) < 1) || ...
-       (max(element_numbers)> number_of_elements) || ...
-       any(~((c{2} == 2)|(c{2} ==4))) 
-       
-       continous_elm_numbers=false;
-       warning('only reading tetrahedra and triangles, not reading element_data')
-    end
-    
-    if any(c{2}==2) && any(c{2}==4) && ...
-       find(c{2}==2, 1, 'last')>find(c{2}==4, 1)
-   
-       continous_elm_numbers=false;
-       warning('only reading tetrahedra and triangles, not reading element_data')   
-    end
-    
-    % read end line
-    tline = fgetl(fid);
-    if ~strcmp('$EndElements', tline)
-        error(['End tag $EndElements expected, but I read: ' tline]);
-    end
-
-
 
 function data = read_node_data(fid, number_of_nodes, isbinary)
 
