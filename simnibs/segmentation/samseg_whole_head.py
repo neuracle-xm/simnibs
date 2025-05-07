@@ -175,11 +175,13 @@ class SamsegWholeHead(Samseg):
         # ensures that they'll be skipped in all subsequent computations
         self.imageBuffers, self.mask = maskOutBackground(
             self.imageBuffers,
+            self.imageFileNames,
             self.modelSpecifications.atlasFileName,
             self.transform,
             self.modelSpecifications.brainMaskingSmoothingSigma,
             self.modelSpecifications.brainMaskingThreshold,
             self.probabilisticAtlas,
+            upsampled=False,
         )
 
         # Let's prepare for the bias field correction that is part of the imaging model. It assumes

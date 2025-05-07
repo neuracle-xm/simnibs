@@ -74,11 +74,13 @@ def readCroppedImages(imageFileNames, transformedTemplateFileName):
 
 def maskOutBackground(
     imageBuffers,
+    imageFileNames,
     atlasFileName,
     transform,
     brainMaskingSmoothingSigma,
     brainMaskingThreshold,
     probabilisticAtlas,
+    upsampled,
     visualizer=None,
     maskOutZeroIntensities=True,
 ):
@@ -114,7 +116,18 @@ def maskOutBackground(
         title="Background Priors",
     )
 
-    smoothingSigmas = [1.0 * brainMaskingSmoothingSigma] * 3
+    # brainMaskingSmoothingSigma is the appropriate smoothing factor for a 1mm^3 scan, 
+    # which should be scaled according to the actual resolution of the scan
+    if not upsampled:
+        # estimate appropriate factor for smoothing sigma for  voxel space of T1
+        voxelSize = np.array(nib.load(imageFileNames[0]).header.get_zooms())
+        # voxelSize = np.mean(np.abs(voxelDims))
+    else:
+        # the voxel size of the upsampled scan is .5 mm
+        voxelSize = np.array([.5, .5, .5])
+
+    
+    smoothingSigmas = 1.0 / voxelSize * brainMaskingSmoothingSigma
     smoothedBackgroundPrior = gems.KvlImage.smooth_image_buffer(
         backgroundPrior, smoothingSigmas
     )
@@ -262,11 +275,13 @@ def segmentUpsampled(
     modelSpecifications = parameters_and_inputs["modelSpecifications"]
     imageBuffersUpsampled, maskUpsampled = maskOutBackground(
         imageBuffersUpsampled,
+        input_bias_corrected,
         modelSpecifications.atlasFileName,
         transformUpsampled,
         modelSpecifications.brainMaskingSmoothingSigma,
         modelSpecifications.brainMaskingThreshold,
         probabilisticAtlas,
+        upsampled=True,
     )
 
     # Log-transform the intensities, note the scans are already
