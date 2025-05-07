@@ -63,7 +63,7 @@ class TmsCoilDeformationRange(TcdElement):
     def to_tcd(self, ascii_mode: bool = False) -> dict:
         tcd_deformation = {}
         tcd_deformation["initial"] = self.initial
-        tcd_deformation["range"] = list(self.range)
+        tcd_deformation["range"] = self.range.tolist()
         return tcd_deformation
 
     @classmethod

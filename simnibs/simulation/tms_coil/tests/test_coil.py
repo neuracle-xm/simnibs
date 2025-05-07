@@ -96,6 +96,8 @@ class TestReadCoil:
         with open(tmp_path / "test.tcd", "w") as f:
             json.dump(medium_tcd_coil_dict, f)
         coil = TmsCoil.from_tcd(str(tmp_path / "test.tcd"))
+        print(str(coil.to_tcd(ascii_mode=True)))
+        print(str(medium_tcd_coil_dict))
         assert str(coil.to_tcd(ascii_mode=True)) == str(medium_tcd_coil_dict)
 
     def test_read_full_tcd(self, full_tcd_coil_dict: dict[str, Any], tmp_path: Path):
@@ -333,7 +335,7 @@ class TestWriteNifti:
         test_nii = nib.load(testcoil_nii_gz)
 
         np.testing.assert_allclose(
-            np.array(nii.dataobj), np.array(test_nii.dataobj), atol=1e-10
+            np.asarray(nii.dataobj), np.asarray(test_nii.dataobj), atol=1e-10
         )
         np.testing.assert_allclose(nii.affine[:3, :3], 10 * np.identity(3))
         np.testing.assert_allclose(nii.affine[:4, 3], (-100, -100, -100, 1))
@@ -346,7 +348,7 @@ class TestWriteNifti:
         nii = nib.load(str(tmp_path / "test.nii.gz"))
         test_nii = nib.load(testcoil_nii_gz_B)
         np.testing.assert_allclose(
-            np.array(nii.dataobj), np.array(test_nii.dataobj), atol=1e-10
+            np.asarray(nii.dataobj), np.asarray(test_nii.dataobj), atol=1e-10
         )
         np.testing.assert_allclose(nii.affine[:3, :3], 10 * np.identity(3))
         np.testing.assert_allclose(nii.affine[:4, 3], (-100, -100, -100, 1))
