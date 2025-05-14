@@ -24,7 +24,34 @@ www.netlib.org/blas/#_licensing\
 **Copyright**\
 ?
 
-   
+
+brainnet
+=======
+github.com/simnibs/brainnet
+**License and link to online license text (if existing):**\
+GNU General Public License (GPL), Version 3 or later
+**Copyright**\
+?
+
+
+ brainnet
+=======
+github.com/simnibs/brainnet
+**License and link to online license text (if existing):**\
+GNU General Public License (GPL), Version 3 or later
+**Copyright**\
+?
+
+
+ brainsynth
+==========
+github.com/simnibs/brainsynth
+**License and link to online license text (if existing):**\
+GNU General Public License (GPL), Version 3 or later
+**Copyright**\
+?
+
+
 CAT12        
 =======
 www.neuro.uni-jena.de/cat\
@@ -45,14 +72,13 @@ www.cgal.org/license.html\
 Copyright (c) 1995-2024 The CGAL Project
 
 
-charm-gems
-===========
-github.com/simnibs/charm-gems\
+cortech
+=======
+github.com/simnibs/cortech
 **License and link to online license text (if existing):**\
-GNU General Public License (GPL), Version 3 or later\
-github.com/simnibs/charm-gems?tab=GPL-3.0-1-ov-file#readme\
+GNU General Public License (GPL), Version 3 or later
 **Copyright**\
-Oula Puonti and Koen Van Leemput
+?
 
 
 Cygwin API library
@@ -257,6 +283,16 @@ docs.python.org/3/license.html#psf-license\
 Python Software Foundation
 
 
+pytorch
+=======
+github.com/pytorch/pytorch
+**License and link to online license text (if existing):**\
+modified BSD license
+github.com/pytorch/pytorch/blob/main/LICENSE
+**Copyright**\
+see license text
+
+
 pyvista
 =======
 pyvista.org\
@@ -282,6 +318,15 @@ doc.qt.io/qt-6/licensing.html\
 The Qt Company\
 **Remarks**\
 used by simnibs_gui
+
+
+samseg
+===========
+github.com/freesurfer/samseg
+**License and link to online license text (if existing):**\
+?
+**Copyright**\
+?
 
 
 SCIKIT-IMAGE
