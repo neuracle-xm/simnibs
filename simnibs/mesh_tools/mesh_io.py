@@ -1724,10 +1724,10 @@ class Msh:
 
     def fix_surface_labels(self):
         """Fixels labels of surfaces"""
-        change = (self.elm.elm_type == 2) * (self.elm.tag1 < 1000)
-        self.elm.tag1[change] += 1000
-        change = (self.elm.elm_type == 2) * (self.elm.tag2 < 1000)
-        self.elm.tag2[change] += 1000
+        change = (self.elm.elm_type == 2) * (self.elm.tag1 < ElementTags.TH_SURFACE_START)
+        self.elm.tag1[change] += ElementTags.TH_SURFACE_START
+        change = (self.elm.elm_type == 2) * (self.elm.tag2 < ElementTags.TH_SURFACE_START)
+        self.elm.tag2[change] += ElementTags.TH_SURFACE_START
 
     def fix_surface_orientation(self):
         """Ensure that the majority of triangle normals point outwards.
@@ -1763,8 +1763,8 @@ class Msh:
         triangles = self.elm.elm_type == 2
         surf_tags = np.unique(self.elm.tag1[triangles])
         for s in surf_tags:
-            if s < 1000:
-                self.elm.tag1[triangles * (self.elm.tag1 == s)] += 1000
+            if s < ElementTags.TH_SURFACE_START:
+                self.elm.tag1[triangles * (self.elm.tag1 == s)] += ElementTags.TH_SURFACE_START
 
     def find_corresponding_tetrahedra(self):
         """Finds the tetrahedra corresponding to each triangle
@@ -1795,12 +1795,18 @@ class Msh:
         for t in tr_tags:
             # look into tetrahedra with tags t, 1000-t
             to_crop = [t]
-            to_crop.append(t - 1000)
-            if t >= 1100:  # Electrodes
-                to_crop.append(t - 600)
-            if t >= 2000:
-                to_crop.append(t - 2000)
-                to_crop.append(t - 1600)
+            to_crop.append(t - ElementTags.TH_SURFACE_START)
+            
+            #If is electrode rubber surface, also add saline of same electrode
+            if t >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and t <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END: 
+                electrode_index = t - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                to_crop.append(electrode_index + ElementTags.SALINE_START)
+            #If is electrode plug surface, also add electrode rubber and saline of same electrode
+            if t >= ElementTags.ELECTRODE_PLUG_SURFACE_START and t <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+                electrode_index = t - ElementTags.ELECTRODE_PLUG_SURFACE
+                to_crop.append(electrode_index + ElementTags.ELECTRODE_RUBBER_START)
+                to_crop.append(electrode_index + ElementTags.SALINE_START)
+
             # Select triangles and tetrahedra with tags
             th_of_interest = np.where(
                 (self.elm.elm_type == 4) * np.isin(self.elm.tag1, to_crop)
@@ -3029,7 +3035,7 @@ class Msh:
             tr_to_add.append(self.elm.get_outside_faces(elm_in_tag))
 
         for tr, tag in zip(tr_to_add, unique_tags):
-            self.elm.add_triangles(tr, 1000 + tag)
+            self.elm.add_triangles(tr, ElementTags.TH_SURFACE_START + tag)
 
         self.fix_tr_node_ordering()
 
@@ -3131,13 +3137,24 @@ class Msh:
         assert np.all(self.elm.elm_type == 4)
 
         if hierarchy is None:
-            hierarchy = (1, 2, 9, 3, 4, 8, 7, 6, 10, 5)
+            hierarchy = (
+                ElementTags.WM,
+                ElementTags.GM,
+                ElementTags.BLOOD,
+                ElementTags.CSF,
+                ElementTags.BONE,
+                ElementTags.SPONGY_BONE,
+                ElementTags.COMPACT_BONE,
+                ElementTags.EYE_BALLS,
+                ElementTags.MUSCLE,
+                ElementTags.SCALP
+            )
         hierarchy = np.asarray(hierarchy)
-        if np.any(hierarchy > 1000):
-            hierarchy -= 1000
+        if np.any(hierarchy > ElementTags.TH_SURFACE_START):
+            hierarchy -= ElementTags.TH_SURFACE_START
 
-        if (add_outer_as is not None) and (add_outer_as > 1000):
-            add_outer_as -= 1000
+        if (add_outer_as is not None) and (add_outer_as > ElementTags.TH_SURFACE_START):
+            add_outer_as -= ElementTags.TH_SURFACE_START
 
         if (faces is None) or (idx_tet_faces is None) or (adj_tets is None):
             faces, idx_tet_faces, adj_tets = self.elm._get_tet_faces_and_adjacent_tets()
@@ -3183,7 +3200,7 @@ class Msh:
             tag_tri[tag_tri == -1] = add_outer_as
         idx_tri = idx_tri[:, 0]
 
-        self.elm.add_triangles(faces[idx_tri, :] + 1, 1000 + tag_tri)
+        self.elm.add_triangles(faces[idx_tri, :] + 1, ElementTags.TH_SURFACE_START + tag_tri)
         self.fix_tr_node_ordering()
 
     def smooth_surfaces(self, n_steps, step_size=0.3, tags=None, max_gamma=5):

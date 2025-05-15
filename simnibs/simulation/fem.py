@@ -1523,23 +1523,34 @@ def _sim_tdcs_pair(mesh, cond, ref_electrode, el_surf, el_c, units, solver_optio
     )
     v = s.solve()
 
+    if ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
+        ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+    elif ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+        ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
+    else:
+        raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
+    
+    if el_surf >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and el_surf <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
+        el_surf_index = el_surf - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+    elif el_surf >= ElementTags.ELECTRODE_PLUG_SURFACE_START and el_surf <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+        el_surf_index = el_surf - ElementTags.ELECTRODE_PLUG_SURFACE
+    else:
+        raise ValueError("Electrode tag must either be a plug surface tag or a rubber surface tag")
+
     v = mesh_io.NodeData(v, name="v", mesh=mesh)
     flux = np.array(
         [
             _calc_flux_electrodes(
                 v,
                 cond,
-                [el_surf - 1000, el_surf - 600, el_surf - 2000, el_surf - 1600],
+                [el_surf_index + ElementTags.ELECTRODE_RUBBER_START, el_surf_index + ElementTags.SALINE_START],
                 units=units,
             ),
             _calc_flux_electrodes(
                 v,
                 cond,
                 [
-                    ref_electrode - 1000,
-                    ref_electrode - 600,
-                    ref_electrode - 2000,
-                    ref_electrode - 1600,
+                    ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START, ref_electrode_index + ElementTags.SALINE_START
                 ],
                 units=units,
             ),
@@ -1998,16 +2009,31 @@ def tdcs_leadfield(
                 )
 
                 v_ = mesh_io.NodeData(v, name="v", mesh=mesh)
+
+                if ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
+                    ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                elif ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+                    ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
+                else:
+                    raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
+                
+                other_electrodes_indexes = np.zeros_like(other_electrodes)
+                electrobe_rubber_surface_mask = (other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
+                electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_START)
+                if np.any(electrobe_rubber_surface_mask):
+                    other_electrodes_indexes[electrobe_rubber_surface_mask] = other_electrodes[electrobe_rubber_surface_mask] - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                if np.any(electrode_plug_mask):
+                    other_electrodes_indexes[electrode_plug_mask] = other_electrodes[electrode_plug_mask] - ElementTags.ELECTRODE_PLUG_SURFACE
+                if not (np.any(electrobe_rubber_surface_mask) or np.any(electrode_plug_mask)):
+                    raise ValueError("Electrode tag must either be a plug surface tag or a rubber surface tag")
+                
                 flux = np.array(
                     [
                         _calc_flux_electrodes(
                             v_,
                             cond,
                             [
-                                other_electrodes - 1000,
-                                other_electrodes - 600,
-                                other_electrodes - 2000,
-                                other_electrodes - 1600,
+                                other_electrodes_indexes + ElementTags.ELECTRODE_RUBBER_START, other_electrodes_indexes + ElementTags.SALINE_START
                             ],
                             units="mm",
                         ),
@@ -2015,10 +2041,7 @@ def tdcs_leadfield(
                             v_,
                             cond,
                             [
-                                ref_electrode - 1000,
-                                ref_electrode - 600,
-                                ref_electrode - 2000,
-                                ref_electrode - 1600,
+                                ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START, ref_electrode_index + ElementTags.SALINE_START
                             ],
                             units="mm",
                         ),
@@ -2131,16 +2154,31 @@ def _run_tdcs_leadfield(
     # when input_type == "nodes"
     if input_type == "tag":
         v_ = mesh_io.NodeData(v, name="v", mesh=mesh)
+        
+        if ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
+            ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+        elif ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+            ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
+        else:
+            raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
+        
+        other_electrodes_indexes = np.zeros_like(other_electrodes)
+        electrobe_rubber_surface_mask = (other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
+        electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_START)
+        if np.any(electrobe_rubber_surface_mask):
+            other_electrodes_indexes[electrobe_rubber_surface_mask] = other_electrodes[electrobe_rubber_surface_mask] - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+        if np.any(electrode_plug_mask):
+            other_electrodes_indexes[electrode_plug_mask] = other_electrodes[electrode_plug_mask] - ElementTags.ELECTRODE_PLUG_SURFACE
+        if not (np.any(electrobe_rubber_surface_mask) or np.any(electrode_plug_mask)):
+            raise ValueError("Electrode tag must either be a plug surface tag or a rubber surface tag")
+
         flux = np.array(
             [
                 _calc_flux_electrodes(
                     v_,
                     cond,
                     [
-                        other_electrodes - 1000,
-                        other_electrodes - 600,
-                        other_electrodes - 2000,
-                        other_electrodes - 1600,
+                        other_electrodes_indexes + ElementTags.ELECTRODE_RUBBER_START, other_electrodes_indexes + ElementTags.SALINE_START
                     ],
                     units="mm",
                 ),
@@ -2148,10 +2186,7 @@ def _run_tdcs_leadfield(
                     v_,
                     cond,
                     [
-                        ref_electrode - 1000,
-                        ref_electrode - 600,
-                        ref_electrode - 2000,
-                        ref_electrode - 1600,
+                        ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START, ref_electrode_index + ElementTags.SALINE_START
                     ],
                     units="mm",
                 ),

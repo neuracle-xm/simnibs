@@ -1835,7 +1835,7 @@ def create_mesh(
         if skin_tag is not None:
             # keep boundary only at regions with label skin_tag-1000
             # to save some tetrahedra
-            skin_tet_tag = skin_tag - 1000
+            skin_tet_tag = skin_tag - ElementTags.TH_SURFACE_START
             boundary *= label_img == skin_tet_tag
             boundary = dilate(boundary, 1)
             boundary *= label_img == skin_tet_tag

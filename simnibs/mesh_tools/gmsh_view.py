@@ -575,18 +575,18 @@ class PhysicalNames(object):
                         self.PhysicalVolumes[i] = cond_names[i - 1]
 
             for i in tri_tags:
-                if i < 100 and (cond_names[i - 1] is not None):
+                if i < ElementTags.ELECTRODE_RUBBER_START and (cond_names[i - 1] is not None):
                     self.PhysicalSurfaces[i] = " " + cond_names[i - 1]
-                if i > 1000 and i < 1099 and (cond_names[i - 1001] is not None):
-                    self.PhysicalSurfaces[i] = " " + cond_names[i - 1001]
+                if i > ElementTags.TH_SURFACE_START and i < ElementTags.INTERNAL_AIR_TH_SURFACE and (cond_names[i - (ElementTags.TH_SURFACE_START + 1)] is not None):
+                    self.PhysicalSurfaces[i] = " " + cond_names[i - (ElementTags.TH_SURFACE_START + 1)]
                 if i == ElementTags.INTERNAL_AIR_TH_SURFACE:
                     self.PhysicalSurfaces[i] = " Internal_air_surface"
-                if i > 1100 and i < 1500:
-                    self.PhysicalSurfaces[i] = str(i - 1100) + " top"
-                if i > 1500 and i < 2000:
-                    self.PhysicalSurfaces[i] = str(i - 1500)
-                if i > 2100:
-                    self.PhysicalSurfaces[i] = str(i - 2100) + " plug"
+                if i > ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and i < ElementTags.SALINE_TH_SURFACE_START:
+                    self.PhysicalSurfaces[i] = str(i - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) + " top"
+                if i > ElementTags.SALINE_TH_SURFACE_START and i < ElementTags.ELECTRODE_PLUG_SURFACE_START:
+                    self.PhysicalSurfaces[i] = str(i - ElementTags.SALINE_TH_SURFACE_START)
+                if i > ElementTags.ELECTRODE_PLUG_SURFACE_START:
+                    self.PhysicalSurfaces[i] = str(i - ElementTags.ELECTRODE_PLUG_SURFACE) + " plug"
 
     def __str__(self):
         string = ""
