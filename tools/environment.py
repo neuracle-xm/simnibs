@@ -427,6 +427,9 @@ def parse_args(argv):
     return parser.parse_args(argv[1:])
 
 
+DEFAULT_PLAT_TAGS = dict(
+    darwin="macosx_14_0_arm64", linux="manylinux_2_28_x86_64", windows="win_amd64"
+)
 # fmt: off
 DEPENDENCIES = Dependencies(
     CondaPackage("python", "3.11", comparison="eq"),
@@ -467,14 +470,12 @@ DEPENDENCIES = Dependencies(
     PipPackage("pytorch-ignite"),
 
     # Replace when new samseg is released...
-    # PyPIPackage("samseg", "0.4a0", comparison="eq"),
-    GitHubRelease("samseg", "0.5a0", "darwin", platform_tags=dict(darwin="macosx_14_0_arm64"), user="oulap", repository="samseg_wheels", release="dev"),
-    GitHubRelease("samseg", "0.5a0", "linux", platform_tags=dict(linux="manylinux_2_28_x86_64"), user="oulap", repository="samseg_wheels", release="dev"),
-    GitHubRelease("samseg", "0.5a0", "windows", platform_tags=dict(windows="win_amd64"), user="oulap", repository="samseg_wheels", release="dev"),
+    # PyPIPackage("samseg", "0.5a0", comparison="eq"),
+    GitHubRelease("samseg", "0.5a0", platform_tags=DEFAULT_PLAT_TAGS, user="oulap", repository="samseg_wheels", release="dev"),
 
     GitHubRelease("cortech", "0.1", platform_tags=dict(darwin="macosx_11_0_arm64", linux="manylinux_2_24_x86_64.manylinux_2_28_x86_64", windows="win_amd64"), user="simnibs"),
-    GitHubRelease("fmm3dpy", "1.0.4", platform_tags=dict(darwin="macosx_14_0_arm64", linux="manylinux_2_28_x86_64", windows="win_amd64"), user="simnibs"),
-    GitHubRelease("petsc4py", "3.22.2", platform_tags=dict(darwin="macosx_14_0_arm64", linux="manylinux_2_28_x86_64", windows="win_amd64"), user="simnibs"),
+    GitHubRelease("fmm3dpy", "1.0.4", platform_tags=DEFAULT_PLAT_TAGS, user="simnibs"),
+    GitHubRelease("petsc4py", "3.22.2", platform_tags=DEFAULT_PLAT_TAGS, user="simnibs"),
     GitHubCommit("brainsynth", "57fcdfe", user="simnibs"),
     GitHubCommit("brainnet", "88fbb63", user="simnibs"),
 
