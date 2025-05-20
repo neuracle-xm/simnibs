@@ -12,7 +12,7 @@ from simnibs.mesh_tools import mesh_io
 from simnibs.cli.utils import args_general
 
 
-def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
+def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
     """Map data from cortical surface vertices of a subject to fsaverage space.
 
     Parameters
@@ -35,7 +35,7 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
     m2m = SubjectFiles(subpath=m2m_dir)
 
     mesh = mesh_io.read_msh(filename_mesh)
-    mesh = mesh.crop_mesh([1, 2])
+    mesh = mesh.crop_mesh([LH_TAG, RH_TAG])
 
     filename_mesh = Path(filename_mesh)
     out = (
@@ -70,7 +70,9 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
         values.append(data)
         names.append(nodedata.field_name)
     if len(mesh.elmdata) > 1:
-        warnings.warn("Element data present in mesh file. This will not be mapped to fsaverage space.")
+        warnings.warn(
+            "Element data present in mesh file. This will not be mapped to fsaverage space."
+        )
 
     tags = np.concatenate(
         (
@@ -98,7 +100,8 @@ def parse_args(argv):
     )
     args_general.subid.add_to(parser)
     parser.add_argument(
-        "mesh", help="Name of a mesh file containing data defined on the mesh nodes to map to fsaverage (e.g., optimization results)."
+        "mesh",
+        help="Name of a mesh file containing data defined on the mesh nodes to map to fsaverage (e.g., optimization results).",
     )
     parser.add_argument(
         "--out",
