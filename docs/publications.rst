@@ -9,11 +9,11 @@ Version 4.6
 
 Improved segmentation
 ''''''''''''''''''''''''''''''''
-* `Diedrichsen M, Merhout J, Nielsen JD, Greve DN, Thielscher A, Puonti O, Modeling subcutaneous fat improves skull segmentation for individualized volume conductor head models, IEEE EMBS 2025, Copenhagen, Denmark <https://hmpg.net/>`_ 
+* `Diedrichsen M, Merhout J, Nielsen JD, Greve DN, Thielscher A, Puonti O, Modeling subcutaneous fat improves skull segmentation for individualized volume conductor head models, IEEE EMBS 2025, Copenhagen, Denmark <https://hmpg.net/>`_
 
 Improved pial and white matter surface reconstruction
 ''''''''''''''''''''''''''''''''
-* `Nielsen JD et al, End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://hmpg.net/>`_
+* `Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://arxiv.org/abs/2505.14017>`_
 
 Version 4.5
 -----------
@@ -33,7 +33,7 @@ Extended Head Model "Ernie Extended"
 Non-Human Primate Models
 ''''''''''''''''''''''''''''''''
 * `Mantell KE, Perera ND, Shirinpour S, Puonti O, Xu T, Zimmermann J, Falchier A, Heilbronner SR, Thielscher A, Opitz A (2023)
-  Anatomical details affect electric field predictions for non-invasive brain stimulation in non-human primates. 
+  Anatomical details affect electric field predictions for non-invasive brain stimulation in non-human primates.
   Neuroimage 279:120343. <https://doi.org/10.1016/j.neuroimage.2023.120343>`_
 
 Version 4.1
@@ -41,7 +41,7 @@ Version 4.1
 
 EEG forward modeling
 ''''''''''''''''''''
-* `Nielsen JD, Puonti O, Xue R, Thielscher A, Madsen KH (2023) Evaluating the influence of anatomical accuracy and electrode positions on EEG forward solutions. Neuroimage, 277:120259. <https://doi.org/10.1016/j.neuroimage.2023.120259>`_ 
+* `Nielsen JD, Puonti O, Xue R, Thielscher A, Madsen KH (2023) Evaluating the influence of anatomical accuracy and electrode positions on EEG forward solutions. Neuroimage, 277:120259. <https://doi.org/10.1016/j.neuroimage.2023.120259>`_
 
 Version 4.0
 -----------
@@ -68,7 +68,7 @@ TMS Optimization (ADM method)
 Magnetic Field Calculations
 '''''''''''''''''''''''''''
 * `Yazdanian, H., Saturnino, G. B., Thielscher, A., & Knudsen, K. (2020). Fast evaluation of the Biot-Savart integral using FFT for electrical conductivity imaging. Journal of Computational Physics, 109408. <https://doi.org/10.1016/j.jcp.2020.109408>`_
- 
+
 
 Electric Field Strength Optimization
 ''''''''''''''''''''''''''''''''''''
@@ -110,7 +110,7 @@ Uncertainty Quantification
 Version 2.1
 -------------
 
-Validation 
+Validation
 ''''''''''
 
 * `Puonti, O., Saturnino, G. B., Madsen, K. H., & Thielscher, A. (2020). Value and limitations of intracranial recordings for validating electric field modeling for transcranial brain stimulation. Neuroimage, 208, 116431. <https://doi.org/10.1016/j.neuroimage.2019.116431>`_

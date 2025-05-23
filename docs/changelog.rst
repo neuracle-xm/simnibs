@@ -2,19 +2,19 @@
 
 Changelog
 ===========
-4.6.0 
+4.6.0
 ------
   * Improved segmentation performance of :ref:`charm <head_modeling_tutorial>`, based on a :ref:`new probabilistic atlas <publications>`, in particular when supplying only a T1-weighted image. NOTE:  The command line option  --useatlasv1_0 switches back to the OLD atlas.
-  * More accurate reconstructions of the pial and white matter surfaces by charm, using a :ref:`new DL approach <publications>`.
+  * More accurate reconstructions of cortical surfaces (white matter and gray matter/pial) by charm, using a :ref:`new deep learning approach <publications>`.
   * tissue interfaces to internal air cavities have now their own tissue number (prevents placement of electrodes on these interfaces)
   * Update to numpy 2
-	
+
 NOTES & Known issues: Same as for version 4.5.0
 
 
-4.5.0 
+4.5.0
 ------
-  * New optimization method TMS that also supports bent and flexible coils, thereby systematically avoiding intersections of the coil with the head. 
+  * New optimization method TMS that also supports bent and flexible coils, thereby systematically avoiding intersections of the coil with the head.
   * New format (.tcd) for TMS coils that supports flexible and multi-element coils. Coils can now also be defined by their winding geometries. The A-fields (magnetic vector potential) are then determined via numerical integration of line integrals. This method complements coil definitions using magnetic dipoles and using precalculated A-fields stored on a regular grid (i.e. as NIfTI). The tcd-format supports all three cases.
   * TMS coil models for Brainsway H1, H4 and H7, and for MagVenture MST twin coil.
   * New optimization method for TES, including montages with rectangular electrodes, center-surround montages, temporal interference stimulation and electrode arrays for tumor treating field therapies.
@@ -36,12 +36,12 @@ NOTES & Known issues:
  * Setting custom conductivities and defining custom tissue types in the new tms_flex_opt and tes_flex_opt does not work yet.
 
 
-4.1.0 
+4.1.0
 ------
  * Tetrahedral quality of the meshes was increased substantially to improve numerical accuracy of the FEM calculations and remove outliers in the calculated electric fields
  * Option *--fs-dir* added to charm to use white matter and pial surfaces from FreeSurfer for more accurate representation of smaller sulci in the head meshes
  * I/O functions for neuronavigation data have been updated to support new Brainsight version 2.5.3
- 
+
 4.0.1
 ------
   * changed Brainsight position import/export to support only NIfTI:Aligned (to avoid ambiguities)
@@ -61,14 +61,14 @@ NOTES & Known issues:
  * Major code cleanup and restructuring under the hood
  * Tested on Windows 10, Linux and Macs with Intel and Apple Silicon
  * Headreco and mri2mesh are deprecated.
- 
+
 NOTE: Simnibs 4 is NOT backwards compatible. Head models created with charm cannot be used in older versions. Head models from older versions need to be converted using the command line tool *convert_3_to_4* for use with SimNIBS 4.
- 
+
 Known issues:
  * Installation fails on paths with non-standard characters, such as backslash, chinese characters, ... (workaround: provide another path)
  * simnibs_gui does not start on some linux systems, e.g. with wayland (workaround: ld preloading of libstdc++.so.6 seems to help; example: export LD_PRELOAD=/usr/lib/libstdc++.so.6 - path needs to be adjusted according to library path on local system)
  * The PARDISO solver (available as option for the FEM calculations) does not work on Apple Silicon
- 
+
 3.2.6
 ------
 * fixed a bug causing headreco to fail on MacOS
@@ -108,7 +108,7 @@ Bug fixes:
  * Further small fixes across the code
  * Fixed electrode meshing that sometimes caused some parts of the electrodes to be detached.
 
- 
+
 Known issues:
  * mri2mesh does not work with Freesurfer 7; please use Freesurfer 6 for now
  * SimNIBS is so far not tested on Macs with Apple Silicon, and is likely to give errors on those machines
@@ -147,7 +147,7 @@ Known issues:
  * SimNIBS is now installable as a python package
 
 
-2.1.2 
+2.1.2
 ---------
   * This upgrade focused on the MATLAB library for SimNIBS
   * The MATLAB library can be found in in the *matlab/functions/* folder in the simnibs directory
@@ -216,7 +216,7 @@ Known issues:
   * bug in mri2mesh fixed which prevented it to use the T2 image to reconstruct the skull
   * Changed standard colors in GUI
   * The GUI now lets you set TMS coil distances
-  * Removed deprecated post processing options 
+  * Removed deprecated post processing options
   * Added new TMS coil files
   * Fixed bug where the electrode thickness would change every time the electrode edition window opened
   * Fixed bug where every simulation would use the same conductivities
