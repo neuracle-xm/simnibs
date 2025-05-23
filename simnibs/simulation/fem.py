@@ -2016,10 +2016,11 @@ def tdcs_leadfield(
                     ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
                 else:
                     raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
+
                 
                 other_electrodes_indexes = np.zeros_like(other_electrodes)
                 electrobe_rubber_surface_mask = (other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
-                electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_START)
+                electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_END)
                 if np.any(electrobe_rubber_surface_mask):
                     other_electrodes_indexes[electrobe_rubber_surface_mask] = other_electrodes[electrobe_rubber_surface_mask] - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
                 if np.any(electrode_plug_mask):
@@ -2164,7 +2165,7 @@ def _run_tdcs_leadfield(
         
         other_electrodes_indexes = np.zeros_like(other_electrodes)
         electrobe_rubber_surface_mask = (other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
-        electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_START)
+        electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_END)
         if np.any(electrobe_rubber_surface_mask):
             other_electrodes_indexes[electrobe_rubber_surface_mask] = other_electrodes[electrobe_rubber_surface_mask] - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
         if np.any(electrode_plug_mask):
