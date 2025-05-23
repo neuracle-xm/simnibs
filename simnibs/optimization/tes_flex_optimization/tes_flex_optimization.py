@@ -154,6 +154,7 @@ class TesFlexOptimization:
         self.run_mapped_electrodes_simulation = False  
         self.net_electrode_file = None  
         self.fn_mapped_sim = []  
+        self.electrode_mapping = None
 
         # headmodel
         self.fn_mesh = None
@@ -1183,9 +1184,7 @@ class TesFlexOptimization:
         
         total_distance = sum(mapping_result['distances'])
         avg_distance = total_distance / len(row_ind) if row_ind.size > 0 else 0
-        
-        self.electrode_mapping = mapping_result
-        
+                
         mapping_file = os.path.join(self.output_folder, "electrode_mapping.json")
         with open(mapping_file, 'w') as f:
             json_data = {
