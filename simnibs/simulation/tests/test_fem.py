@@ -551,29 +551,21 @@ class TestTDCS:
         assert rdm(sol, x.value) < 0.1
         assert np.abs(mag(x.value, sol)) < np.log(1.1)
 
-    def test_tdcs_petsc_3_el(self, cube_msh):
-        m = cube_msh
-        areas = m.nodes_areas()
-        cond = np.ones(m.elm.nr)
-        cond[m.elm.tag1 > 5] = 1e3
-        cond = mesh_io.ElementData(cond)
-        el_tags = [1100, 1101, 1101]
-        currents = [0.5, -1.5, 1.0]
-        x = fem.tdcs(m, cond, currents, el_tags)
-        sol = (m.nodes.node_coord[:, 1] - 50) / 20
-        m.nodedata = [x, mesh_io.NodeData(sol, "Analytical")]
-        # mesh_io.write_msh(m, '~/Tests/fem.msh')
-        assert rdm(sol, x.value) < 0.1
-        assert np.abs(mag(x.value, sol)) < np.log(1.1)
-
-    def test_tdcs_petsc_3_el_mp(self, cube_msh):
+    @pytest.mark.parametrize("n_workers", [1, 2])
+    def test_tdcs_petsc_3_el(self, cube_msh, n_workers):
         m = cube_msh
         cond = np.ones(m.elm.nr)
         cond[m.elm.tag1 > 5] = 1e3
         cond = mesh_io.ElementData(cond)
         el_tags = [1100, 1101, 1101]
         currents = [0.5, -1.5, 1.0]
-        x = fem.tdcs(m, cond, currents, el_tags, n_workers=2)
+        x = fem.tdcs(
+            m,
+            cond,
+            currents,
+            el_tags,
+            n_workers=n_workers,
+        )
         sol = (m.nodes.node_coord[:, 1] - 50) / 20
         m.nodedata = [x, mesh_io.NodeData(sol, "Analytical")]
         # mesh_io.write_msh(m, '~/Tests/fem.msh')
@@ -650,27 +642,38 @@ class TestTMS:
         assert np.abs(mag(E, E_analytical)) < np.log(1.1)
 
     @patch.object(fem, "_get_da_dt_from_coil")
-    def test_tms_coil_parallel(self, mock_set_up, tms_sphere):
-        if sys.platform in ["win32", "darwin"]:
-            """Won't run on windows or MacOS because Mock does not work through multiprocessing """
-            assert True
-            return
+    @pytest.mark.parametrize("n_workers", [1, 2])
+    def test_tms_coil_parallel(self, mock_set_up, tms_sphere, n_workers):
         m, cond, dAdt, E_analytical = tms_sphere
         mock_set_up.return_value = dAdt.node_data2elm_data()
         matsimnibs = "MATSIMNIBS"
         didt = 6
-        fn_out = [tempfile.NamedTemporaryFile(delete=False).name for i in range(4)]
+
+        if n_workers == 1:
+            n = 1
+        else:
+            if sys.platform in ["win32", "darwin"]:
+                """Won't run on windows or MacOS because Mock does not work through multiprocessing """
+                assert True
+                return
+            n = 4
+
+        fn_out = [tempfile.NamedTemporaryFile(delete=False).name for _ in range(n)]
+        matsimnibs = n * [matsimnibs]
+        didt = n * [didt]
+
         fem.tms_coil(
             m,
             cond,
             None,
             "coil.ccd",
             "EJ",
-            4 * [matsimnibs],
-            4 * [didt],
+            matsimnibs,
+            didt,
             fn_out,
-            n_workers=2,
+            n_workers=n_workers,
         )
+
         for f in fn_out:
             E = mesh_io.read_msh(f).field["E"].value
             os.remove(f)

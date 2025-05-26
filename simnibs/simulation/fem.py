@@ -3,6 +3,9 @@
 Functions for assembling and solving FEM systems
 """
 
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+import functools
 import gc
 import multiprocessing
 import time
@@ -12,17 +15,16 @@ import h5py
 import logging
 import numpy as np
 import scipy.sparse as sparse
-from simnibs.simulation.tms_coil.tms_coil import TmsCoil
 
-from simnibs.utils.mesh_element_properties import ElementTags
+import mumps
+from petsc4py import PETSc
 
 from simnibs.mesh_tools import mesh_io
-from simnibs.utils import cond_utils as cond_lib
-import mumps
-from simnibs.utils.simnibs_logger import logger
-
-from petsc4py import PETSc
 from simnibs.simulation import pardiso
+from simnibs.simulation.tms_coil.tms_coil import TmsCoil
+from simnibs.utils import cond_utils as cond_lib
+from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs.utils.simnibs_logger import logger
 
 
 """
@@ -47,6 +49,49 @@ from simnibs.simulation import pardiso
 """
 
 VALID_SOLVER_OPTIONS = {"hypre", "pardiso", "mumps", "petsc_pardiso"}
+
+
+def run_in_new_thread(fn):
+    """Decorator that runs `fn` in a new thread."""
+
+    @functools.wraps(fn)
+    def wrapped_fn(*args, **kwargs):
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(fn, *args, **kwargs).result()
+
+    return wrapped_fn
+
+
+@run_in_new_thread
+def run_in_multiprocessing_pool(
+    n_workers: int, fn: Callable, iterable, pool_kwargs: dict | None = None
+):
+    """Submit an iterable to a pool of workers.  `fn` is executed as
+
+            fn(iterable[0]), fn(iterable[1]), ...
+
+    and the result returned as a list.
+
+    Parameters
+    ----------
+    n_workers : int
+        Number of workers.
+    fn : Callable
+        The function to call.
+    iterable : _type_
+        Iterable of arguments to `fn`.
+
+    Returns
+    -------
+    result
+        The concatenated result from running `fn`.
+    """
+    pool_kwargs = pool_kwargs or {}
+    with multiprocessing.Pool(processes=n_workers, **pool_kwargs) as pool:
+        result = pool.starmap_async(fn, iterable)
+        pool.close()
+        pool.join()
+    return result.get()
 
 
 class KSPSolver:
@@ -114,7 +159,7 @@ class KSPSolver:
         start = time.perf_counter()
         ksp.setUp()
         logger.log(
-            self.log_level, f"Time to set up KSP: {time.perf_counter()-start:8.4f} s"
+            self.log_level, f"Time to set up KSP: {time.perf_counter() - start:8.4f} s"
         )
 
         self.ksp = ksp
@@ -123,7 +168,9 @@ class KSPSolver:
         start = time.perf_counter()
         self._b[:] = b
         self.ksp.solve(self._b, self._x)
-        logger.log(self.log_level, f"Time to solve: {time.perf_counter()-start:8.4f} s")
+        logger.log(
+            self.log_level, f"Time to solve: {time.perf_counter() - start:8.4f} s"
+        )
         return self._x[:]
 
     def solve(self, b: np.ndarray):
@@ -143,20 +190,22 @@ class MUMPS_Solver:
         start = time.time()
         self.ctx = mumps.Context()
         self.ctx.set_matrix(A, symmetric=isSymmetric)
-        logger.log(self.log_level, f"{time.time()-start:.2f} seconds to init solver")
+        logger.log(self.log_level, f"{time.time() - start:.2f} seconds to init solver")
         start = time.time()
         self.ctx.analyze()
-        logger.log(self.log_level, f"{time.time()-start:.2f} seconds to analyze matrix")
+        logger.log(
+            self.log_level, f"{time.time() - start:.2f} seconds to analyze matrix"
+        )
         start = time.time()
         self.ctx.factor()
         logger.log(
-            self.log_level, f"{time.time()-start:.2f} seconds to factorize matrix"
+            self.log_level, f"{time.time() - start:.2f} seconds to factorize matrix"
         )
 
     def solve(self, b):
         start = time.time()
         x = self.ctx._solve_dense(b)
-        logger.log(self.log_level, f"{time.time()-start:.2f} seconds to solve system")
+        logger.log(self.log_level, f"{time.time() - start:.2f} seconds to solve system")
         return x
 
 
@@ -262,8 +311,7 @@ def calc_fields(potentials, fields, cond=None, dadt=None, units="mm", E=None):
                 E = mesh_io.ElementData(E, name="E", mesh=out_mesh)
             if E.nr != out_mesh.elm.nr:
                 raise ValueError(
-                    "Provided E does not have the same number of"
-                    " samples as the mesh!"
+                    "Provided E does not have the same number of samples as the mesh!"
                 )
             if E.nr_comp != 3:
                 raise ValueError("Provided E does not have 3 components!")
@@ -675,7 +723,7 @@ class FEMSystem(object):
         self._A = _assemble_matrix(vols, G, th_nodes, cond, dof_map, units=self.units)
         if np.any(np.diff(self.A.indptr) == 0):
             raise ValueError(
-                "Found a column of zeros in the stiffness matrix" " disconected nodes?"
+                "Found a column of zeros in the stiffness matrix disconected nodes?"
             )
 
         time_assemble = time.time() - start
@@ -1121,9 +1169,9 @@ class DipoleFEM(FEMSystem):
         """
         dip_pos = np.atleast_2d(dip_pos).astype(float)
         dip_mom = np.atleast_2d(dip_mom).astype(float)
-        assert (
-            dip_pos.shape == dip_mom.shape
-        ), "`dip_pos` and `dip_mom` must have the same dimensions"
+        assert dip_pos.shape == dip_mom.shape, (
+            "`dip_pos` and `dip_mom` must have the same dimensions"
+        )
         n_dip = dip_pos.shape[0]
 
         if self.units == "mm":
@@ -1469,14 +1517,14 @@ def tdcs(
     potential: simnibs.msh.mesh_io.NodeData
         Total electric potential
     """
-    assert len(currents) == len(
-        electrode_surface_tags
-    ), "there should be one channel for each current"
+    assert len(currents) == len(electrode_surface_tags), (
+        "there should be one channel for each current"
+    )
 
     surf_tags = np.unique(mesh.elm.tag1[mesh.elm.elm_type == 2])
-    assert np.all(
-        np.isin(electrode_surface_tags, surf_tags)
-    ), "Could not find all the electrode surface tags in the mesh"
+    assert np.all(np.isin(electrode_surface_tags, surf_tags)), (
+        "Could not find all the electrode surface tags in the mesh"
+    )
 
     assert np.isclose(np.sum(currents), 0), "Currents should sum to 0"
 
@@ -1490,27 +1538,12 @@ def tdcs(
                 mesh, cond, ref_electrode, el_surf, el_c, units, solver_options
             )
     else:
-        with multiprocessing.Pool(processes=n_workers) as pool:
-            sims = []
-            for el_surf, el_c in zip(electrode_surface_tags[1:], currents[1:]):
-                sims.append(
-                    pool.apply_async(
-                        _sim_tdcs_pair,
-                        (
-                            mesh,
-                            cond,
-                            ref_electrode,
-                            el_surf,
-                            el_c,
-                            units,
-                            solver_options,
-                        ),
-                    )
-                )
-            for s in sims:
-                total_p += s.get()
-            pool.close()
-            pool.join()
+        args_list = [
+            (mesh, cond, ref_electrode, el_surf, el_c, units, solver_options)
+            for el_surf, el_c in zip(electrode_surface_tags[1:], currents[1:])
+        ]
+        result = run_in_multiprocessing_pool(n_workers, _sim_tdcs_pair, args_list)
+        total_p = sum(result)
 
     return mesh_io.NodeData(total_p, "v", mesh=mesh)
 
@@ -1523,19 +1556,37 @@ def _sim_tdcs_pair(mesh, cond, ref_electrode, el_surf, el_c, units, solver_optio
     )
     v = s.solve()
 
-    if ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
-        ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
-    elif ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+    if (
+        ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+        and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END
+    ):
+        ref_electrode_index = (
+            ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+        )
+    elif (
+        ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+        and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END
+    ):
         ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
     else:
-        raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
-    
-    if el_surf >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and el_surf <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
+        raise ValueError(
+            "Reference electrode tag must either be a plug surface tag or a rubber surface tag"
+        )
+
+    if (
+        el_surf >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+        and el_surf <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END
+    ):
         el_surf_index = el_surf - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
-    elif el_surf >= ElementTags.ELECTRODE_PLUG_SURFACE_START and el_surf <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+    elif (
+        el_surf >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+        and el_surf <= ElementTags.ELECTRODE_PLUG_SURFACE_END
+    ):
         el_surf_index = el_surf - ElementTags.ELECTRODE_PLUG_SURFACE
     else:
-        raise ValueError("Electrode tag must either be a plug surface tag or a rubber surface tag")
+        raise ValueError(
+            "Electrode tag must either be a plug surface tag or a rubber surface tag"
+        )
 
     v = mesh_io.NodeData(v, name="v", mesh=mesh)
     flux = np.array(
@@ -1543,14 +1594,18 @@ def _sim_tdcs_pair(mesh, cond, ref_electrode, el_surf, el_c, units, solver_optio
             _calc_flux_electrodes(
                 v,
                 cond,
-                [el_surf_index + ElementTags.ELECTRODE_RUBBER_START, el_surf_index + ElementTags.SALINE_START],
+                [
+                    el_surf_index + ElementTags.ELECTRODE_RUBBER_START,
+                    el_surf_index + ElementTags.SALINE_START,
+                ],
                 units=units,
             ),
             _calc_flux_electrodes(
                 v,
                 cond,
                 [
-                    ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START, ref_electrode_index + ElementTags.SALINE_START
+                    ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START,
+                    ref_electrode_index + ElementTags.SALINE_START,
                 ],
                 units=units,
             ),
@@ -1562,7 +1617,7 @@ def _sim_tdcs_pair(mesh, cond, ref_electrode, el_surf, el_c, units, solver_optio
         logger.info("Estimated current calibration error: {0:.1%}".format(error))
     else:
         logger.warning(
-            f"The current calibration error exceeded 10%! Estimated error value: {error*100:.2f}%"
+            f"The current calibration error exceeded 10%! Estimated error value: {error * 100:.2f}%"
         )
     del s
     gc.collect()
@@ -1709,31 +1764,14 @@ def tms_coil(
             )
         _finalize_global_solver()
     else:
-        with multiprocessing.Pool(
-            processes=n_workers, initializer=_set_up_global_solver, initargs=(S,)
-        ) as pool:
-            sims = []
+        pool_kwargs = dict(initializer=_set_up_global_solver, initargs=(S,))
+        args_list = [
+            (mesh, cond, cond_list, fn_coil, fields, matsimnibs, didt, fn_out, fn_geo)
             for matsimnibs, didt, fn_out, fn_geo in zip(
                 matsimnibs_list, didt_list, output_names, geo_names
-            ):
-                sims.append(
-                    pool.apply_async(
-                        _run_tms,
-                        (
-                            mesh,
-                            cond,
-                            cond_list,
-                            fn_coil,
-                            fields,
-                            matsimnibs,
-                            didt,
-                            fn_out,
-                            fn_geo,
-                        ),
-                    )
-                )
-            pool.close()
-            pool.join()
+            )
+        ]
+        _ = run_in_multiprocessing_pool(n_workers, _run_tms, args_list, pool_kwargs)
 
 
 def _set_up_global_solver(S):
@@ -1840,9 +1878,9 @@ def tdcs_neumann(mesh, cond, currents, electrode_surface_tags):
     potential: simnibs.msh.mesh_io.NodeData
         Total electric potential
     """
-    assert len(electrode_surface_tags) == len(
-        currents
-    ), "Please define one current per electrode"
+    assert len(electrode_surface_tags) == len(currents), (
+        "Please define one current per electrode"
+    )
     assert np.isclose(np.sum(currents), 0.0), "Sum of currents must be zero"
     S = TDCSFEMNeumann(mesh, cond, electrode_surface_tags[0])
     b = S.assemble_rhs(electrode_surface_tags[1:], currents[1:])
@@ -1987,14 +2025,14 @@ def tdcs_leadfield(
 
     n_sims = len(electrode_surface) - 1
     currents = [current] * n_sims if isinstance(current, float) else current
-    assert (
-        len(currents) == n_sims
-    ), f"Number of currents ({len(currents)}) do not correspond to the number of simulations ({n_sims})"
+    assert len(currents) == n_sims, (
+        f"Number of currents ({len(currents)}) do not correspond to the number of simulations ({n_sims})"
+    )
 
     # Run simulations (sequential)
     if n_workers == 1:
         for i, (el_tag, current) in enumerate(zip(electrode_surface[1:], currents)):
-            logger.info(f"Running Simulation {i+1} of {n_sims}")
+            logger.info(f"Running Simulation {i + 1} of {n_sims}")
             b = S.assemble_rhs([el_tag], [current])
             v = S.solve(b)
 
@@ -2010,31 +2048,58 @@ def tdcs_leadfield(
 
                 v_ = mesh_io.NodeData(v, name="v", mesh=mesh)
 
-                if ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
-                    ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
-                elif ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
-                    ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
+                if (
+                    ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                    and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END
+                ):
+                    ref_electrode_index = (
+                        ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                    )
+                elif (
+                    ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+                    and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END
+                ):
+                    ref_electrode_index = (
+                        ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
+                    )
                 else:
-                    raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
+                    raise ValueError(
+                        "Reference electrode tag must either be a plug surface tag or a rubber surface tag"
+                    )
 
-                
                 other_electrodes_indexes = np.zeros_like(other_electrodes)
-                electrobe_rubber_surface_mask = (other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
-                electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_END)
+                electrobe_rubber_surface_mask = (
+                    other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                ) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
+                electrode_plug_mask = (
+                    other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+                ) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_END)
                 if np.any(electrobe_rubber_surface_mask):
-                    other_electrodes_indexes[electrobe_rubber_surface_mask] = other_electrodes[electrobe_rubber_surface_mask] - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                    other_electrodes_indexes[electrobe_rubber_surface_mask] = (
+                        other_electrodes[electrobe_rubber_surface_mask]
+                        - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                    )
                 if np.any(electrode_plug_mask):
-                    other_electrodes_indexes[electrode_plug_mask] = other_electrodes[electrode_plug_mask] - ElementTags.ELECTRODE_PLUG_SURFACE
-                if not (np.any(electrobe_rubber_surface_mask) or np.any(electrode_plug_mask)):
-                    raise ValueError("Electrode tag must either be a plug surface tag or a rubber surface tag")
-                
+                    other_electrodes_indexes[electrode_plug_mask] = (
+                        other_electrodes[electrode_plug_mask]
+                        - ElementTags.ELECTRODE_PLUG_SURFACE
+                    )
+                if not (
+                    np.any(electrobe_rubber_surface_mask) or np.any(electrode_plug_mask)
+                ):
+                    raise ValueError(
+                        "Electrode tag must either be a plug surface tag or a rubber surface tag"
+                    )
+
                 flux = np.array(
                     [
                         _calc_flux_electrodes(
                             v_,
                             cond,
                             [
-                                other_electrodes_indexes + ElementTags.ELECTRODE_RUBBER_START, other_electrodes_indexes + ElementTags.SALINE_START
+                                other_electrodes_indexes
+                                + ElementTags.ELECTRODE_RUBBER_START,
+                                other_electrodes_indexes + ElementTags.SALINE_START,
                             ],
                             units="mm",
                         ),
@@ -2042,7 +2107,9 @@ def tdcs_leadfield(
                             v_,
                             cond,
                             [
-                                ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START, ref_electrode_index + ElementTags.SALINE_START
+                                ref_electrode_index
+                                + ElementTags.ELECTRODE_RUBBER_START,
+                                ref_electrode_index + ElementTags.SALINE_START,
                             ],
                             units="mm",
                         ),
@@ -2052,7 +2119,7 @@ def tdcs_leadfield(
                 error = np.abs(np.abs(flux[0]) - np.abs(flux[1])) / current_
                 if error > 0.1:
                     logger.warning(
-                        f"The current calibration error exceeded 10%! Estimated error value: {error*100:.2f}%"
+                        f"The current calibration error exceeded 10%! Estimated error value: {error * 100:.2f}%"
                     )
 
             E = np.vstack([-d.dot(v) for d in D]).T * 1e3
@@ -2072,45 +2139,43 @@ def tdcs_leadfield(
 
     # Run simulations (parallel)
     else:
+
+        def get_electrodes_from_type_and_tag(input_type, el_tag):
+            if input_type == "tag":
+                ref_electrode = el_tag
+                other_electrodes = np.array(
+                    [x for x in electrode_surface if x != ref_electrode]
+                )
+            else:
+                ref_electrode = el_tag
+                other_electrodes = [
+                    x for x in electrode_surface if np.all(x != ref_electrode)
+                ][0]
+            return ref_electrode, other_electrodes
+
         # Lock has to be passed through inheritance
         S.lock = multiprocessing.Lock()
-        with multiprocessing.Pool(
-            processes=n_workers,
+        pool_kwargs = dict(
             initializer=_set_up_tdcs_global_solver,
             initargs=(S, n_sims, D, post_pro, cond_roi, field),
-        ) as pool:
-            sims = []
-            for i, (el_tag, current) in enumerate(zip(electrode_surface[1:], currents)):
-                if input_type == "tag":
-                    ref_electrode = el_tag
-                    other_electrodes = np.array(
-                        [x for x in electrode_surface if x != ref_electrode]
-                    )
-                else:
-                    ref_electrode = el_tag
-                    other_electrodes = [
-                        x for x in electrode_surface if np.all(x != ref_electrode)
-                    ][0]
-                sims.append(
-                    pool.apply_async(
-                        _run_tdcs_leadfield,
-                        (
-                            i,
-                            [el_tag],
-                            [current],
-                            fn_hdf5,
-                            dataset,
-                            input_type,
-                            mesh,
-                            cond,
-                            ref_electrode,
-                            other_electrodes,
-                        ),
-                    )
-                )
-            [s.get() for s in sims]
-            pool.close()
-            pool.join()
+        )
+        args_list = [
+            (
+                i,
+                [el_tag],
+                [current],
+                fn_hdf5,
+                dataset,
+                input_type,
+                mesh,
+                cond,
+                *get_electrodes_from_type_and_tag(input_type, el_tag),
+            )
+            for i, (el_tag, current) in enumerate(zip(electrode_surface[1:], currents))
+        ]
+        _ = run_in_multiprocessing_pool(
+            n_workers, _run_tdcs_leadfield, args_list, pool_kwargs
+        )
 
 
 # ### Functions for running tDCS leadfields in parallel ####
@@ -2155,23 +2220,45 @@ def _run_tdcs_leadfield(
     # when input_type == "nodes"
     if input_type == "tag":
         v_ = mesh_io.NodeData(v, name="v", mesh=mesh)
-        
-        if ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END:
-            ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
-        elif ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+
+        if (
+            ref_electrode >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+            and ref_electrode <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END
+        ):
+            ref_electrode_index = (
+                ref_electrode - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+            )
+        elif (
+            ref_electrode >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+            and ref_electrode <= ElementTags.ELECTRODE_PLUG_SURFACE_END
+        ):
             ref_electrode_index = ref_electrode - ElementTags.ELECTRODE_PLUG_SURFACE
         else:
-            raise ValueError("Reference electrode tag must either be a plug surface tag or a rubber surface tag")
-        
+            raise ValueError(
+                "Reference electrode tag must either be a plug surface tag or a rubber surface tag"
+            )
+
         other_electrodes_indexes = np.zeros_like(other_electrodes)
-        electrobe_rubber_surface_mask = (other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
-        electrode_plug_mask = (other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_END)
+        electrobe_rubber_surface_mask = (
+            other_electrodes >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+        ) & (other_electrodes <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END)
+        electrode_plug_mask = (
+            other_electrodes >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+        ) & (other_electrodes <= ElementTags.ELECTRODE_PLUG_SURFACE_END)
         if np.any(electrobe_rubber_surface_mask):
-            other_electrodes_indexes[electrobe_rubber_surface_mask] = other_electrodes[electrobe_rubber_surface_mask] - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+            other_electrodes_indexes[electrobe_rubber_surface_mask] = (
+                other_electrodes[electrobe_rubber_surface_mask]
+                - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+            )
         if np.any(electrode_plug_mask):
-            other_electrodes_indexes[electrode_plug_mask] = other_electrodes[electrode_plug_mask] - ElementTags.ELECTRODE_PLUG_SURFACE
+            other_electrodes_indexes[electrode_plug_mask] = (
+                other_electrodes[electrode_plug_mask]
+                - ElementTags.ELECTRODE_PLUG_SURFACE
+            )
         if not (np.any(electrobe_rubber_surface_mask) or np.any(electrode_plug_mask)):
-            raise ValueError("Electrode tag must either be a plug surface tag or a rubber surface tag")
+            raise ValueError(
+                "Electrode tag must either be a plug surface tag or a rubber surface tag"
+            )
 
         flux = np.array(
             [
@@ -2179,7 +2266,8 @@ def _run_tdcs_leadfield(
                     v_,
                     cond,
                     [
-                        other_electrodes_indexes + ElementTags.ELECTRODE_RUBBER_START, other_electrodes_indexes + ElementTags.SALINE_START
+                        other_electrodes_indexes + ElementTags.ELECTRODE_RUBBER_START,
+                        other_electrodes_indexes + ElementTags.SALINE_START,
                     ],
                     units="mm",
                 ),
@@ -2187,7 +2275,8 @@ def _run_tdcs_leadfield(
                     v_,
                     cond,
                     [
-                        ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START, ref_electrode_index + ElementTags.SALINE_START
+                        ref_electrode_index + ElementTags.ELECTRODE_RUBBER_START,
+                        ref_electrode_index + ElementTags.SALINE_START,
                     ],
                     units="mm",
                 ),
@@ -2197,7 +2286,7 @@ def _run_tdcs_leadfield(
         error = np.abs(np.abs(flux[0]) - np.abs(flux[1])) / current_
         if error > 0.1:
             logger.warning(
-                f"The current calibration error exceeded 10%! Estimated error value: {error*100:.2f}%"
+                f"The current calibration error exceeded 10%! Estimated error value: {error * 100:.2f}%"
             )
 
     # Calculate E and postprocessing
@@ -2317,7 +2406,7 @@ def tms_many_simulations(
     # Run sequentially
     if n_workers == 1:
         for i, matsimnibs, didt in zip(range(n_sims), matsimnibs_list, didt_list):
-            logger.info(f"Running Simulation {i+1} of {n_sims}")
+            logger.info(f"Running Simulation {i + 1} of {n_sims}")
             dAdt = _get_da_dt_from_coil(fn_coil, mesh, didt, matsimnibs)
             # b = S.assemble_tms_rhs(dAdt)
             b = S.assemble_rhs(dAdt)
@@ -2352,26 +2441,20 @@ def tms_many_simulations(
         del S
         gc.collect()
 
-    # Run in parallel
     else:
         # Lock has to be passed through inheritance
         S.lock = multiprocessing.Lock()
-        with multiprocessing.Pool(
-            processes=n_workers,
+        pool_kwargs = dict(
             initializer=_set_up_tms_many_global_solver,
             initargs=(S, fn_coil, n_sims, D, post_pro, cond, field, roi),
-        ) as pool:
-            sims = []
-            for i, matsimnibs, didt in zip(range(n_sims), matsimnibs_list, didt_list):
-                sims.append(
-                    pool.apply_async(
-                        _run_tms_many_simulations,
-                        (i, matsimnibs, didt, fn_hdf5, dataset),
-                    )
-                )
-            [s.get() for s in sims]
-            pool.close()
-            pool.join()
+        )
+        args_list = [
+            (i, matsimnibs, didt, fn_hdf5, dataset)
+            for i, matsimnibs, didt in zip(range(n_sims), matsimnibs_list, didt_list)
+        ]
+        _ = run_in_multiprocessing_pool(
+            n_workers, _run_tms_many_simulations, args_list, pool_kwargs
+        )
 
 
 ### Functions for running man TMS simulations in parallel ####
@@ -2403,7 +2486,7 @@ def _run_tms_many_simulations(i, matsimnibs, didt, fn_hdf5, dataset):
     global tms_many_global_cond
     global tms_many_global_field
     global tms_many_global_roi
-    logger.info(f"Running Simulation {i+1} of {tms_many_global_nsims}")
+    logger.info(f"Running Simulation {i + 1} of {tms_many_global_nsims}")
     # RHS
     dAdt = _get_da_dt_from_coil(
         tms_many_global_fn_coil, tms_many_global_solver.mesh, didt, matsimnibs
@@ -2506,7 +2589,7 @@ def electric_dipole(
     assert dipole_moments.shape[1] == 3, "dipole_moments should be in Nx3 format!"
     if dipole_positions.shape[0] != dipole_moments.shape[0]:
         raise ValueError(
-            "Different number of entries for " "dipole_positions and dipole_moments"
+            "Different number of entries for dipole_positions and dipole_moments"
         )
 
     S = DipoleFEM(mesh, cond, solver_options, units)
