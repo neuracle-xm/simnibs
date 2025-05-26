@@ -14,6 +14,17 @@ from simnibs.simulation import fem
 from simnibs.simulation import analytical_solutions
 from simnibs.mesh_tools import mesh_io
 
+N_WORKERS_CASES = [
+    1,
+    pytest.param(
+        2,
+        marks=pytest.mark.skipif(
+            sys.platform in {"darwin", "win32"},
+            reason="Mock does not work through multiprocessing on these platforms.",
+        ),
+    ),
+]
+
 
 @pytest.fixture
 def sphere3_msh():
@@ -642,21 +653,13 @@ class TestTMS:
         assert np.abs(mag(E, E_analytical)) < np.log(1.1)
 
     @patch.object(fem, "_get_da_dt_from_coil")
-    @pytest.mark.parametrize("n_workers", [1, 2])
+    @pytest.mark.parametrize("n_workers", N_WORKERS_CASES)
     def test_tms_coil_parallel(self, mock_set_up, tms_sphere, n_workers):
         m, cond, dAdt, E_analytical = tms_sphere
         mock_set_up.return_value = dAdt.node_data2elm_data()
         matsimnibs = "MATSIMNIBS"
         didt = 6
-
-        if n_workers == 1:
-            n = 1
-        else:
-            if sys.platform in ["win32", "darwin"]:
-                """Won't run on windows or MacOS because Mock does not work through multiprocessing """
-                assert True
-                return
-            n = 4
+        n = 1 if n_workers == 1 else 4
 
         fn_out = [tempfile.NamedTemporaryFile(delete=False).name for _ in range(n)]
         matsimnibs = n * [matsimnibs]
@@ -684,13 +687,9 @@ class TestTMS:
 class TestLeadfield:
     @pytest.mark.parametrize("post_pro", [False, True])
     @pytest.mark.parametrize("field", ["E", "J"])
-    @pytest.mark.parametrize("n_workers", [1, 2])
     @pytest.mark.parametrize("input_type", ["tag", "nodes"])
+    @pytest.mark.parametrize("n_workers", N_WORKERS_CASES)
     def test_leadfield(self, input_type, n_workers, field, post_pro, cube_msh):
-        if sys.platform in ["win32", "darwin"] and n_workers > 1:
-            """ Same as above, does not work on windows or MacOS"""
-            return
-
         m = cube_msh
         cond = np.ones(m.elm.nr)
         cond[m.elm.tag1 > 5] = 1e3
@@ -766,12 +765,9 @@ class TestLeadfield:
 
 class TestTMSMany:
     @pytest.mark.parametrize("post_pro", [False, True])
-    @pytest.mark.parametrize("n_workers", [1, 2])
+    @pytest.mark.parametrize("n_workers", N_WORKERS_CASES)
     @patch.object(fem, "_get_da_dt_from_coil")
     def test_many_simulations(self, mock_set_up, n_workers, post_pro, tms_sphere):
-        if sys.platform in ["win32", "darwin"] and n_workers > 1:
-            """ Same as above, does not work on windows """
-            return
         m, cond, dAdt, E_analytical = tms_sphere
         mock_set_up.return_value = dAdt.node_data2elm_data()
         matsimnibs = np.eye(6)
