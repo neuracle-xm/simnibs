@@ -30,7 +30,7 @@ dependencies = [
   "numpy>=2",
   "petsc4py",
   "pillow",
-  "pygpc==0.4.1",
+  "pygpc>=0.4.1",
   "PyQt5",
   "requests",
   "samseg",
