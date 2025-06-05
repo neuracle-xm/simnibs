@@ -1,22 +1,19 @@
+import glob
+import itertools
 import logging
 import os
+import re
 import shutil
 import time
-import nibabel as nib
-import glob
-import re
-import numpy as np
 
+import nibabel as nib
+import numpy as np
 import samseg
 
 from simnibs import SIMNIBSDIR
-from simnibs.segmentation import charm_utils, simnibs_segmentation_utils
 from simnibs import __version__
 from simnibs import utils
 from simnibs.utils.simnibs_logger import logger
-from simnibs.utils import file_finder
-from simnibs.utils import transformations
-from simnibs.utils.transformations import crop_vol
 from simnibs.mesh_tools.meshing import create_mesh
 from simnibs.mesh_tools.mesh_io import (
     load_freesurfer_surfaces,
@@ -25,9 +22,9 @@ from simnibs.mesh_tools.mesh_io import (
     write_msh,
     ElementData,
 )
-from simnibs.utils import cond_utils
-from simnibs.utils import html_writer
-from simnibs.segmentation import brain_surface
+from simnibs.utils import cond_utils, file_finder, html_writer, transformations
+from simnibs.utils.threading import run_in_multiprocessing_pool
+from simnibs.segmentation import brain_surface, charm_utils, simnibs_segmentation_utils
 
 
 def run(
@@ -345,6 +342,9 @@ def run(
             fs_sub = file_finder.FreeSurferSubject(fs_dir)
             logger.info(f"FreeSurfer subject directory is {fs_sub.root.resolve()}")
 
+            # cortex = cortech.Cortex.from_freesurfer_subject_dir(fs_dir)
+            # central = cortex.estimate_layers("equivolume", 0.5)
+
             surfaces = {
                 "white": load_freesurfer_surfaces(fs_sub, "white", coord="ras"),
                 "sphere": load_freesurfer_surfaces(fs_sub, "sphere"),
@@ -373,12 +373,14 @@ def run(
                 surface_settings["topofit_contrast"],
                 surface_settings["topofit_resolution"],
                 surface_settings["topofit_device"],
-            )
-            hemispheres = hemispheres[0]
+            )[0]
 
-            # we could consider
-            # - remove self-intersections
-            # - decouple white and pial surface
+            for h, hemi in hemispheres.items():
+                m = make_surface_mesh(hemi.white.vertices, hemi.white.faces + 1)
+                write_gifti_surface(m, sub_files.surfaces["white"][h])
+
+                m = make_surface_mesh(hemi.pial.vertices, hemi.pial.faces + 1)
+                write_gifti_surface(m, sub_files.surfaces["pial"][h])
 
             logger.info("Estimating the central gray matter surface")
 
@@ -388,19 +390,16 @@ def run(
                 surface_settings["central_surface_method"],
             )
 
-            for h, s in hemispheres.items():
-                m = make_surface_mesh(s.white.vertices, s.white.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["white"][h])
-
-                m = make_surface_mesh(s.pial.vertices, s.pial.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["pial"][h])
-
-                m = make_surface_mesh(central[h].vertices, central[h].faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["central"][h])
+            for hemi, surface in central.items():
+                m = make_surface_mesh(surface.vertices, surface.faces + 1)
+                write_gifti_surface(m, sub_files.surfaces["central"][hemi])
 
             logger.info("Generating spherical registrations")
-            brain_surface.spherical_registration_cat_parallel(
-                sub_files, surface_settings["spherical_registration_process_pool"]
+
+            _ = run_in_multiprocessing_pool(
+                surface_settings["spherical_registration_process_pool"],
+                brain_surface.spherical_registration_cat,
+                itertools.product([sub_files], file_finder.HEMISPHERES),
             )
 
         if surface_settings["update_segmentation_from_surfaces"]:
@@ -427,7 +426,7 @@ def run(
             np.uint16
         )  # Cast to uint16, otherwise meshing complains
         label_affine = label_image.affine
-        label_buffer, label_affine, _ = crop_vol(
+        label_buffer, label_affine, _ = transformations.crop_vol(
             label_buffer, label_affine, label_buffer > 0, thickness_boundary=5
         )
         # reduce memory consumption a bit
