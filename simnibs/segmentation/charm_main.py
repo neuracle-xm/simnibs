@@ -304,8 +304,8 @@ def run(
         im_tmp = nib.load(sub_files.reference_volume)
         scode = im_tmp.get_sform(coded=True)[1]
         qcode = im_tmp.get_qform(coded=True)[1]
-        upsampled_image = nib.load(sub_files.T1_upsampled)
-        affine_upsampled = upsampled_image.affine
+        t1w_upsampled = nib.load(sub_files.T1_upsampled)
+        affine_upsampled = t1w_upsampled.affine
         upsampled_tissues = nib.Nifti1Image(cleaned_upsampled_tissues, affine_upsampled)
 
         # Set the tissue labeling codes and matrices
@@ -314,16 +314,16 @@ def run(
         nib.save(upsampled_tissues, sub_files.tissue_labeling_upsampled)
 
         # Set the upsampled image codes and matrices correctly
-        upsampled_image.set_qform(affine_upsampled, qcode)
-        upsampled_image.set_sform(affine_upsampled, scode)
-        nib.save(upsampled_tissues, sub_files.T1_upsampled)
+        t1w_upsampled.set_qform(affine_upsampled, qcode)
+        t1w_upsampled.set_sform(affine_upsampled, scode)
+        nib.save(t1w_upsampled, sub_files.T1_upsampled)
 
         # And also for the T2 if needed
         if len(bias_corrected_image_names) > 1:
-            upsampled_image = nib.load(sub_files.T2_upsampled)
-            upsampled_image.set_qform(affine_upsampled, qcode)
-            upsampled_image.set_sform(affine_upsampled, scode)
-            nib.save(upsampled_tissues, sub_files.T2_upsampled)
+            t2w_upsampled = nib.load(sub_files.T2_upsampled)
+            t2w_upsampled.set_qform(affine_upsampled, qcode)
+            t2w_upsampled.set_sform(affine_upsampled, scode)
+            nib.save(t2w_upsampled, sub_files.T2_upsampled)
 
         del cleaned_upsampled_tissues
 
@@ -485,7 +485,7 @@ def run(
         )
         logger.info("Relabeling internal air boundaries")
         final_mesh = final_mesh.relabel_internal_air()
-        
+
         logger.info("Writing mesh")
         write_msh(final_mesh, sub_files.fnamehead)
         v = final_mesh.view(cond_list=cond_utils.standard_cond(), add_logo=True)
