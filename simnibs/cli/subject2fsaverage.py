@@ -5,9 +5,9 @@ import warnings
 
 import numpy as np
 
-# import simnibs
+
 from simnibs.utils.file_finder import SubjectFiles
-from simnibs.utils.transformations import SurfaceMorph
+from simnibs.utils.transformations import cross_subject_map
 from simnibs.mesh_tools import mesh_io
 from simnibs.cli.utils import args_general
 
@@ -46,11 +46,8 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
     if not out.parent.exists():
         out.mkdir()
 
-    sub_sph = mesh_io.load_subject_surfaces(m2m, "sphere.reg")
-    fsavg_sph = mesh_io.load_fsaverage_template("sphere", fsaverage_res)
     fsavg_surf = mesh_io.load_fsaverage_template("central", fsaverage_res)
-
-    morph = {h: SurfaceMorph(sub_sph[h], fsavg_sph[h]) for h in m2m.hemispheres}
+    reg = cross_subject_map(m2m, "fsaverage", subsampling_to=fsaverage_res)
 
     # indices of vertices per hemisphere
     idx = {
@@ -63,7 +60,7 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
     for nodedata in mesh.nodedata:  # Only node data is supported
         data = np.concatenate(
             [
-                morph[hemi].transform(nodedata.value[idx[hemi]])
+                reg[hemi].resample(nodedata.value[idx[hemi]])
                 for hemi in tag2hemi.values()
             ]
         )

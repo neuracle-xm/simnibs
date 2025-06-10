@@ -11,7 +11,7 @@ from simnibs.eeg.utils import Montage
 from simnibs.mesh_tools import mesh_io
 from simnibs.utils import csv_reader
 from simnibs.utils.file_finder import SubjectFiles
-from simnibs.utils.transformations import make_cross_subject_morph, normalize
+from simnibs.utils.transformations import cross_subject_map, normalize
 from simnibs.utils.simnibs_logger import logger
 
 assert (
@@ -99,9 +99,7 @@ def setup_source_space(
         src_to = load_fsaverage_surfaces("central", morph_to_fsaverage)
         src_to = make_source_spaces(src_to, subid_to)
 
-        morphs = make_cross_subject_morph(
-            m2m, "fsaverage", subsampling, morph_to_fsaverage
-        )
+        morphs = cross_subject_map(m2m, "fsaverage", subsampling, morph_to_fsaverage)
         mmaps = {h: v.morph_mat for h, v in morphs.items()}
         morph = make_source_morph(src_from, src_to, mmaps)
     else:

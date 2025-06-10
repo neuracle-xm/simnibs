@@ -41,6 +41,8 @@ import scipy.sparse.csgraph
 import nibabel
 import h5py
 
+import cortech
+
 from simnibs.utils import file_finder
 from simnibs.utils.mesh_element_properties import ElementTags, ElementTypes
 
@@ -1800,9 +1802,13 @@ class Msh:
 
     def fix_surface_labels(self):
         """Fixels labels of surfaces"""
-        change = (self.elm.elm_type == 2) * (self.elm.tag1 < ElementTags.TH_SURFACE_START)
+        change = (self.elm.elm_type == 2) * (
+            self.elm.tag1 < ElementTags.TH_SURFACE_START
+        )
         self.elm.tag1[change] += ElementTags.TH_SURFACE_START
-        change = (self.elm.elm_type == 2) * (self.elm.tag2 < ElementTags.TH_SURFACE_START)
+        change = (self.elm.elm_type == 2) * (
+            self.elm.tag2 < ElementTags.TH_SURFACE_START
+        )
         self.elm.tag2[change] += ElementTags.TH_SURFACE_START
 
     def fix_surface_orientation(self):
@@ -1840,7 +1846,9 @@ class Msh:
         surf_tags = np.unique(self.elm.tag1[triangles])
         for s in surf_tags:
             if s < ElementTags.TH_SURFACE_START:
-                self.elm.tag1[triangles * (self.elm.tag1 == s)] += ElementTags.TH_SURFACE_START
+                self.elm.tag1[triangles * (self.elm.tag1 == s)] += (
+                    ElementTags.TH_SURFACE_START
+                )
 
     def find_corresponding_tetrahedra(self):
         """Finds the tetrahedra corresponding to each triangle
@@ -1872,13 +1880,19 @@ class Msh:
             # look into tetrahedra with tags t, 1000-t
             to_crop = [t]
             to_crop.append(t - ElementTags.TH_SURFACE_START)
-            
-            #If is electrode rubber surface, also add saline of same electrode
-            if t >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START and t <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END: 
+
+            # If is electrode rubber surface, also add saline of same electrode
+            if (
+                t >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                and t <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END
+            ):
                 electrode_index = t - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
                 to_crop.append(electrode_index + ElementTags.SALINE_START)
-            #If is electrode plug surface, also add electrode rubber and saline of same electrode
-            if t >= ElementTags.ELECTRODE_PLUG_SURFACE_START and t <= ElementTags.ELECTRODE_PLUG_SURFACE_END:
+            # If is electrode plug surface, also add electrode rubber and saline of same electrode
+            if (
+                t >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+                and t <= ElementTags.ELECTRODE_PLUG_SURFACE_END
+            ):
                 electrode_index = t - ElementTags.ELECTRODE_PLUG_SURFACE
                 to_crop.append(electrode_index + ElementTags.ELECTRODE_RUBBER_START)
                 to_crop.append(electrode_index + ElementTags.SALINE_START)
@@ -2696,7 +2710,10 @@ class Msh:
         return any_intersections
 
     def partition_skin_surface(
-        self, label_skin=ElementTags.SCALP_TH_SURFACE, assume_single_outside_component=True, tol: float = 1e-3
+        self,
+        label_skin=ElementTags.SCALP_TH_SURFACE,
+        assume_single_outside_component=True,
+        tol: float = 1e-3,
     ):
         """Return indices of vertices and faces estimated to be on the inner
         and outer skin surface (the inner part would be those inside nasal
@@ -2778,10 +2795,11 @@ class Msh:
         # the indices are into self
         return v_in, v_out, f_in, f_out
 
-    def relabel_internal_air(self,
-                             label_skin=ElementTags.SCALP_TH_SURFACE,
-                             label_new=ElementTags.INTERNAL_AIR_TH_SURFACE
-                             ):
+    def relabel_internal_air(
+        self,
+        label_skin=ElementTags.SCALP_TH_SURFACE,
+        label_new=ElementTags.INTERNAL_AIR_TH_SURFACE,
+    ):
         """
         Relabels skin in internal air cavities to something else;
         relevant for charm meshes and TES optimization to determine valid skin region.
@@ -2800,10 +2818,71 @@ class Msh:
         """
 
         m = copy.copy(self)
-        _, _, f_in, _ = self.partition_skin_surface(label_skin)  # internal air triangles
+        # internal air triangles
+        _, _, f_in, _ = self.partition_skin_surface(label_skin)
         m.elm.tag1[f_in - 1] = label_new
         m.elm.tag2[:] = m.elm.tag1
         return m
+
+    def project_points_on_surface(
+        self,
+        points,
+        surface_tags: int | list[int] | tuple | np.ndarray | None = None,
+        distance: float | np.ndarray = 0.0,
+    ):
+        """Find the position on the surface closest to each coordinate
+
+        Parameters
+        -------
+        points: nx3 ndarray
+            Points which will be projected on the surface.
+        surface_tags: (optional)
+            Tag of the target surface. Default: None (positions will be
+            projected on closest surface)
+        distance: float or nx1 ndarray (optional)
+            Distance (normal) to the surface to be enforced. Default: 0
+            Note: negative values will move the point inside, positive values
+            outside the volume defined by the surface
+
+        Returns
+        ------
+        coords_projected: nx3 ndarray
+            coordinates projected on the surface
+        """
+        points = np.array(points)
+        if points.ndim == 1:
+            points = points.reshape((1, len(points)))
+
+        tri_mask = self.elm.get_triangles(surface_tags)
+        tri_node_list = self.elm.node_number_list[tri_mask, :3] - 1
+        tri_nodes = np.unique(tri_node_list)
+
+        # construct the surface
+        vertices = self.nodes.node_coord[tri_nodes]
+
+        old2new = np.zeros(tri_nodes[-1] + 1, dtype=np.int32)
+        old2new[tri_nodes] = np.arange(len(tri_nodes))
+        faces = old2new[tri_node_list]
+
+        surface = cortech.Surface(vertices, faces)
+        tris, _, projs, _ = surface.project_points(points)
+
+        # ensure distance (optional)
+        if not np.all(np.isclose(distance, 0.0)):
+            distance = np.array(distance)
+            if distance.ndim == 0:
+                distance = distance.reshape(1)
+
+            tri_pts = surface.as_mesh()[tris]
+
+            sideA = tri_pts[:, 1] - tri_pts[:, 0]
+            sideB = tri_pts[:, 2] - tri_pts[:, 0]
+            n = np.cross(sideA, sideB)
+            n /= np.linalg.norm(n, axis=1)[:, None]
+
+            projs += distance[:, None] * n
+
+        return projs
 
     def get_AABBTree(self):
         """
@@ -3223,7 +3302,7 @@ class Msh:
                 ElementTags.COMPACT_BONE,
                 ElementTags.EYE_BALLS,
                 ElementTags.MUSCLE,
-                ElementTags.SCALP
+                ElementTags.SCALP,
             )
         hierarchy = np.asarray(hierarchy)
         if np.any(hierarchy > ElementTags.TH_SURFACE_START):
@@ -3276,7 +3355,9 @@ class Msh:
             tag_tri[tag_tri == -1] = add_outer_as
         idx_tri = idx_tri[:, 0]
 
-        self.elm.add_triangles(faces[idx_tri, :] + 1, ElementTags.TH_SURFACE_START + tag_tri)
+        self.elm.add_triangles(
+            faces[idx_tri, :] + 1, ElementTags.TH_SURFACE_START + tag_tri
+        )
         self.fix_tr_node_ordering()
 
     def smooth_surfaces(self, n_steps, step_size=0.3, tags=None, max_gamma=5):

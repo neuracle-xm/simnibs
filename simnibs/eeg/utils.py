@@ -5,12 +5,10 @@ from typing import Iterable, Union
 from nibabel.affines import apply_affine
 import numpy as np
 
+import cortech
+
 from simnibs.utils import csv_reader
-from simnibs.utils.transformations import (
-    _get_nearest_triangles_on_surface,
-    _project_points_to_surface,
-    coordinates_nonlinear,
-)
+from simnibs.utils.transformations import coordinates_nonlinear
 from simnibs.utils.spatial_transform import fit_matched_points_analytical
 from simnibs.utils.file_finder import templates
 
@@ -97,8 +95,8 @@ class Montage:
 
         split_idx = np.cumsum((self.n_channels, self.n_headpoints))
         points = np.concatenate((self.ch_pos, self.headpoints, self.get_landmark_pos()))
-        pttris = _get_nearest_triangles_on_surface(points, surf, n, subset)
-        _, _, projs, _ = _project_points_to_surface(points, surf, pttris)
+        surface = cortech.Surface(surf["points"], surf["tris"])
+        _, _, projs, _ = surface.project_points(points, n, subset)
 
         self.ch_pos, self.headpoints, proj_landmarks = np.split(projs, split_idx)
         if self.landmarks:

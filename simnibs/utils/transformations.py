@@ -30,14 +30,19 @@ import copy
 import nibabel as nib
 import numpy as np
 import scipy.ndimage
-import scipy.spatial
-from scipy.sparse import coo_matrix, csr_matrix
-from typing import Union
+
+import cortech
 
 from simnibs.utils.mesh_element_properties import ElementTags
 from simnibs.utils.simnibs_logger import logger
-from simnibs.utils.file_finder import templates, SubjectFiles, get_fsaverage_template
+from simnibs.utils.file_finder import (
+    _validate_hemi_arg,
+    templates,
+    SubjectFiles,
+    get_fsaverage_template,
+)
 from simnibs.utils.csv_reader import write_csv_positions, read_csv_positions
+
 
 __all__ = [
     "warp_volume",
@@ -45,7 +50,7 @@ __all__ = [
     "subject2mni_coords",
     "mni2subject_coords",
     "mni2subject_coilpos",
-    "subject_atlas",
+    "atlas2subject",
     "middle_gm_interpolation",
 ]
 
@@ -925,69 +930,6 @@ def vectors_affine(vectors, affine, keep_length=True):
     return vectors_tr
 
 
-def project_points_on_surface(mesh, pts, surface_tags=None, distance=0.0):
-    """Find the position on the surface closest to each coordinate
-
-    Parameters
-    -------
-    coords: nx3 ndarray
-        Vectors to be transformed
-    mesh: simnibs.msh.mesh_io.Msh
-        Mesh structure
-    surface_tags: int (optional)
-            Tag of the target surface.
-            Default: None (positions will be projected on closest surface)
-    distance: float or nx1 ndarray (optional)
-        Distance (normal) to the surface to be enforced. Default: 0
-        Note: negative values will move the point inside, positive values
-              outside the volume defined by the surface
-
-    Returns
-    ------
-    coords_projected: nx3 ndarray
-        coordinates projected on the surface
-    """
-    pts = np.array(pts)
-    if pts.ndim == 1:
-        pts = pts.reshape((1, len(pts)))
-
-    # get surface
-    if surface_tags is not None:
-        tr_of_interest = (mesh.elm.elm_type == 2) * (
-            np.in1d(mesh.elm.tag1, surface_tags)
-        )
-    else:
-        tr_of_interest = mesh.elm.elm_type == 2
-    tri_node_list = mesh.elm.node_number_list[tr_of_interest, :3] - 1
-    tri_nodes = np.unique(tri_node_list)
-
-    old2new = np.zeros(tri_nodes[-1] + 1, dtype="int32")
-    old2new[tri_nodes] = np.arange(len(tri_nodes))
-    surf = {"tris": old2new[tri_node_list], "points": mesh.nodes.node_coord[tri_nodes]}
-
-    # get indices of close-by surface nodes and their connected triangles
-    pttris = _get_nearest_triangles_on_surface(pts, surf, n=3)
-
-    # project points on triangles
-    tris, _, projs, dists = _project_points_to_surface(pts, surf, pttris)
-
-    # ensure distance (optional)
-    if not np.all(np.isclose(distance, 0)):
-        distance = np.array(distance)
-        if distance.ndim == 0:
-            distance = distance.reshape(1)
-
-        tri_pts = surf["points"][surf["tris"][tris]]
-        sideA = tri_pts[:, 1] - tri_pts[:, 0]
-        sideB = tri_pts[:, 2] - tri_pts[:, 0]
-        n = np.cross(sideA, sideB)
-        n /= np.linalg.norm(n, axis=1)[:, None]
-
-        projs += distance[:, None] * n
-
-    return projs
-
-
 def transform_tdcs_positions(coords, transf_type, transf_def, pos_y=None, mesh=None):
     """Transform positions of tDCS electrodes
 
@@ -1034,12 +976,10 @@ def transform_tdcs_positions(coords, transf_type, transf_def, pos_y=None, mesh=N
         raise ValueError("Invalid transformation type")
 
     if mesh:
-        coords_transf = project_points_on_surface(
-            mesh, coords_transf, surface_tags=1005
-        )
+        coords_transf = mesh.project_points_on_surface(coords_transf, surface_tags=1005)
         if pos_y is not None:
-            pos_y_transf = project_points_on_surface(
-                mesh, pos_y_transf, surface_tags=1005
+            pos_y_transf = mesh.project_points_on_surface(
+                pos_y_transf, surface_tags=1005
             )
 
     if pos_y is not None:
@@ -1093,8 +1033,8 @@ def transform_tms_positions(
     if transf_type == "affine":
         coords_transf = coordinates_affine(coords, transf_def)
         if mesh:
-            coords_transf = project_points_on_surface(
-                mesh, coords_transf, surface_tags=1005, distance=distances
+            coords_transf = mesh.project_points_on_surface(
+                coords_transf, surface_tags=1005, distance=distances
             )
         vy_transf = vectors_affine(v_y, transf_def)
         vz_transf = vectors_affine(v_z, transf_def)
@@ -1107,8 +1047,8 @@ def transform_tms_positions(
             coords, transf_def, vectors=v_z
         )
         if mesh:
-            coords_transf = project_points_on_surface(
-                mesh, coords_transf, surface_tags=1005, distance=distances
+            coords_transf = mesh.project_points_on_surface(
+                coords_transf, surface_tags=1005, distance=distances
             )
     else:
         raise ValueError("Invalid transformation type")
@@ -1807,120 +1747,74 @@ def normalize(arr: np.ndarray, axis=None, inplace: bool = False):
         return np.divide(arr, size, where=size != 0)
 
 
-class SurfaceMorph:
-    """
-    Computes a mapping between surfaces defined on a sphere.
-    """
-
-    def __init__(self, surf_from, surf_to, method="linear", n: int = 2):
-        assert method in {"nearest", "linear"}
-        self.method = method
-        self.n = n
-
-        self._fit(surf_from, surf_to)
-
-    def _fit(self, surf_from, surf_to):
-        """Create a morph map which allows morphing of values from the nodes in
-        `surf_from` to `surf_to` by nearest neighbor or linear interpolation.
-
-        A morph map is a sparse matrix with
-        dimensions (n_points_surf_to, n_points_surf_from) where each row has
-        exactly three entries that sum to one. It is created by projecting each
-        point in `surf_to` onto closest triangle in `surf_from` and determining
-        the barycentric coordinates.
-
-        Testing all points against all triangles is expensive and inefficient,
-        thus we compute an approximation by finding, for each point in
-        `surf_to`, the `self.n` nearest nodes on `surf_from` and the triangles
-        to which these points belong. We then test only against these triangles.
-
-        PARAMETERS
-        ----------
-        surf_from :
-            The source mesh (i.e., the mesh to interpolate *from*).
-        surf_to :
-            The target mesh (i.e., the mesh to interpolate *to*).
-        """
-        # Ensure on unit sphere
-        points_from = normalize(surf_from.nodes.node_coord, axis=1)
-        points_to = normalize(surf_to.nodes.node_coord, axis=1)
-        n_from = len(points_from)
-        n_to = len(points_to)
-
-        if self.method == "nearest":
-            # in_v = np.copy(in_surf.nodes.node_coord)
-            # in_v /= np.average(np.linalg.norm(in_v, axis=1))
-            # kdtree = scipy.spatial.cKDTree(in_v)
-
-            # out_v = np.copy(out_surf.nodes.node_coord)
-            # # Normalize the radius of the output sphere
-            # out_v /= np.average(np.linalg.norm(out_v, axis=1))
-            # _, closest = kdtree.query(out_v)
-            kdtree = scipy.spatial.cKDTree(points_from)
-            # self.morph_mat = kdtree.query(points_to)[1]
-            rows = np.arange(n_to)
-            cols = kdtree.query(points_to)[1]
-            weights = np.ones(n_to)
-
-        elif self.method == "linear":
-            # Find the triangle (in surf) to which each point in points
-            # projects and get the associated weights
-            # n_points, d_points = points_to.shape
-            surf_ = dict(
-                points=points_from, tris=surf_from.elm.node_number_list[:, :3] - 1
-            )
-            pttris = _get_nearest_triangles_on_surface(points_to, surf_, self.n)
-            tris, weights, _, _ = _project_points_to_surface(points_to, surf_, pttris)
-            rows = np.repeat(np.arange(n_to), points_to.shape[1])
-            cols = surf_["tris"][tris].ravel()
-            weights = weights.ravel()
-        else:
-            raise ValueError
-
-        self.morph_mat = csr_matrix((weights, (rows, cols)), shape=(n_to, n_from))
-
-    def transform(self, values):
-        return self.morph_mat @ values
-
-
-def make_cross_subject_morph(
-    subject_from: Union[Path, str, SubjectFiles],
-    subject_to: Union[Path, str, SubjectFiles],
-    subsampling_from: Union[None, int] = None,
-    subsampling_to: Union[None, int] = None,
-    surface_morph_kwargs: Union[dict, None] = None,
+def subject_spherical_registration(
+    subject: Path | str | SubjectFiles,
+    hemi: list[str] | str | tuple = ("lh", "rh"),
+    subsampling: int | None = None,
 ):
-    """
-    subject_from, subject_to :
-        Special subject name is 'fsaverage'.
-    subsampling_from, subsampling_to :
-        Special subsampling for 'fsaverage' is 10, 40 and None.
-
-    """
-    from simnibs.mesh_tools.mesh_io import (
-        load_fsaverage_template,
-        load_subject_surfaces,
-    )
-
-    surface_morph_kwargs = surface_morph_kwargs or {}
-    surfs = []
-    for subject, subsampling in zip(
-        (subject_from, subject_to), (subsampling_from, subsampling_to)
-    ):
-        if subject == "fsaverage":
-            surfaces = load_fsaverage_template("sphere", subsampling)
-        else:
-            subject_files = (
-                subject
-                if isinstance(subject, SubjectFiles)
-                else SubjectFiles(subpath=str(subject))
+    hemi = _validate_hemi_arg(hemi)
+    if subject == "fsaverage":
+        return {
+            h: cortech.SphericalRegistration.from_filename(
+                get_fsaverage_template(h, "sphere", subsampling)
             )
-            surfaces = load_subject_surfaces(subject_files, "sphere.reg", subsampling)
-        surfs.append(surfaces)
-    return {
-        h: SurfaceMorph(surfs[0][h], surfs[1][h], **surface_morph_kwargs)
-        for h in surfaces
-    }
+            for h in hemi
+        }
+    else:
+        subject_files = (
+            subject
+            if isinstance(subject, SubjectFiles)
+            else SubjectFiles(subpath=str(subject))
+        )
+        return {
+            h: cortech.SphericalRegistration.from_filename(
+                subject_files.get_surface(h, "sphere.reg", subsampling)
+            )
+            for h in hemi
+        }
+
+
+def cross_subject_map(
+    subject_from: Path | str | SubjectFiles,
+    subject_to: Path | str | SubjectFiles,
+    subsampling_from: int | None = None,
+    subsampling_to: int | None = None,
+    hemi: str | list[str] | tuple = ("lh", "rh"),
+    project_kwargs: dict | None = None,
+) -> dict[str, cortech.SphericalRegistration]:
+    """Construct a mapping from `subject_from` to `subject_to`.
+
+    Parameters
+    ----------
+    subject_from : Path | str | SubjectFiles
+        Subject to map *from*. Can be "fsaverage".
+    subject_to : Path | str | SubjectFiles
+        Subject to map *to*. Can be "fsaverage".
+    subsampling_from : int | None
+        Subsampling of *from* subject to use (as available). Available
+        subsamplings for "fsaverage" are 10, 40 and None.
+    subsampling_to : int | None
+        Subsampling of *to* subject to use (as available). Available
+        subsamplings for "fsaverage" are 10, 40 and None.
+    hemi :
+        Hemisphere(s) for which to construct the mapping (default is both
+        hemispheres).
+    project_kwargs :
+        Keyword arguments for the `project` method of
+        cortech.surface.SphericalRegistration (e.g., method="nearest" for
+        nearest neighbor interpolation).
+
+    Returns
+    -------
+    Maps : dict[str, cortech.SphericalRegistration]
+        Dictionary of pre-projected cortech.surface.SphericalRegistration
+        objects.
+    """
+    hemi = _validate_hemi_arg(hemi)
+    project_kwargs = project_kwargs or {}
+    sph_fr = subject_spherical_registration(subject_from, hemi, subsampling_from)
+    sph_to = subject_spherical_registration(subject_to, hemi, subsampling_to)
+    return {k: sph_fr[k].project(sph_to[k], **project_kwargs) for k in sph_fr}
 
 
 def middle_gm_interpolation(
@@ -2008,9 +1902,6 @@ def middle_gm_interpolation(
     names_fsavg = []
 
     middle_surf = mesh_io.load_subject_surfaces(subject_files, "central")
-    reg_surf = mesh_io.load_subject_surfaces(subject_files, "sphere.reg")
-
-    ref_surf = mesh_io.load_fsaverage_template("sphere")
     avg_surf = mesh_io.load_fsaverage_template("central")
 
     for hemi in subject_files.hemispheres:
@@ -2020,9 +1911,7 @@ def middle_gm_interpolation(
 
     if out_fsaverage is not None:
         # Intersubject interpolators
-        morph = {
-            h: SurfaceMorph(reg_surf[h], ref_surf[h]) for h in subject_files.hemispheres
-        }
+        morph = cross_subject_map(subject_files, "fsaverage")
 
     h = []
     for name, data in m.field.items():
@@ -2055,7 +1944,7 @@ def middle_gm_interpolation(
                                 hemi + sim_name + ".fsavg." + name + "." + q_name,
                             )
                             mesh_io.write_curv(
-                                out_avg, q_transformed, ref_surf[hemi].elm.nr
+                                out_avg, q_transformed, avg_surf[hemi].elm.nr
                             )
                             avg_surf[hemi].add_node_field(
                                 q_transformed, f"{name}_{q_name}"
@@ -2088,7 +1977,7 @@ def middle_gm_interpolation(
                                 out_fsaverage, hemi + sim_name + ".fsavg." + name
                             )
                             mesh_io.write_curv(
-                                out_avg, f_transformed, ref_surf[hemi].elm.nr
+                                out_avg, f_transformed, avg_surf[hemi].elm.nr
                             )
                             names_fsavg.append(out_avg)
                             avg_surf[hemi].add_node_field(f_transformed, name)
@@ -2135,386 +2024,84 @@ def middle_gm_interpolation(
         )
 
 
-def subject_atlas(atlas_name, m2m_dir, hemi="both"):
-    """Loads a brain atlas based of the FreeSurfer fsaverage template
+def atlas2subject(
+    m2m: str | SubjectFiles,
+    atlas: str,
+    hemi: list[str] | str | tuple = ("lh", "rh"),
+    split_labels: bool = False,
+    return_ctab: bool = False,
+    return_names: bool = False,
+):
+    """Transform an atlas from fsaverage space to subject space.
 
     Parameters
-    -----------
-    atlas_name: 'a2009s', 'DK40' or 'HCP_MMP1'
-            Name of atlas to load
+    ----------
+    m2m : str | SubjectFiles
+        Output directory of a CHARM run for given subject.
+    atlas : str
+        Name of the atlas to map to the subject.
+    hemi : list[str] | str | tuple, optional
+        _description_, by default ("lh", "rh")
+    split_labels : bool, optional
+        If true, split the array of labels into a dictionary which maps names
+        to a mask of the vertices with the given label (default = False). For
+        example
 
-            'a2009s': Destrieux atlas (FreeSurfer v4.5, aparc.a2009s)
-            Cite: Destrieux, C. Fischl, B. Dale, A., Halgren, E. A sulcal
-            depth-based anatomical parcellation of the cerebral cortex.
-            Human Brain Mapping (HBM) Congress 2009, Poster #541
+            names = ["region A", "region B", "region C", ...]
+            label = [1, 3, 2, 1, ...]
 
-            'DK40': Desikan-Killiany atlas (FreeSurfer, aparc.a2005s)
-            Cite: Desikan RS, S�gonne F, Fischl B, Quinn BT, Dickerson BC,
-            Blacker D, Buckner RL, Dale AM, Maguire RP, Hyman BT, Albert MS,
-            Killiany RJ. An automated labeling system for subdividing the
-            human cerebral cortex on MRI scans into gyral based regions of
-            interest. Neuroimage. 2006 Jul 1;31(3):968-80.
+        to
 
-            'HCP_MMP1': Human Connectome Project (HCP) Multi-Modal Parcellation
-            Cite: Glasser MF, Coalson TS, Robinson EC, et al. A multi-modal
-            parcellation of human cerebral cortex. Nature. 2016;536(7615):171-178.
-
-    m2m_folder: str
-        Path to the m2m_{subject_id} folder, generated during the segmantation
-
-    hemi (optional): 'lh', 'rh' or 'both'
-        Hemisphere to use. In the case of 'both', will assume that left hemisphere
-        nodes comes before right hemisphere nodes
+            {
+                "region A": [1, 0, 0, 1, ...],
+                "region B": [0, 0, 1, 0, ...],
+                "region C": [0, 1, 0, 0, ...]
+            }
 
     Returns
-    ---------
-    atlas: dict
-        Dictionary where atlas['region'] = roi
-    """
-    from simnibs.mesh_tools.mesh_io import read_gifti_surface
-
-    if atlas_name not in ["a2009s", "DK40", "HCP_MMP1"]:
-        raise ValueError("Invalid atlas name")
-
-    subject_files = SubjectFiles(subpath=m2m_dir)
-
-    if hemi in ["lh", "rh"]:
-        fn_atlas = os.path.join(
-            templates.atlases_surfaces, f"{hemi}.aparc_{atlas_name}.annot"
-        )
-        labels, _, names = nib.freesurfer.io.read_annot(fn_atlas)
-        morph = SurfaceMorph(
-            read_gifti_surface(get_fsaverage_template(hemi, "sphere")),
-            read_gifti_surface(subject_files.surfaces["sphere.reg"][hemi]),
-            method="nearest",  # we are interpolating labels
-        )
-        labels_sub = morph.transform(labels)
-        atlas = {}
-        for i, name in enumerate(names):
-            atlas[name.decode()] = labels_sub == i
-
-        return atlas
-
-    # If both hemispheres
-    elif hemi == "both":
-        atlas_lh = subject_atlas(atlas_name, m2m_dir, "lh")
-        atlas_rh = subject_atlas(atlas_name, m2m_dir, "rh")
-        atlas = {}
-        pad_rh = np.zeros_like(list(atlas_rh.values())[0])
-        pad_lh = np.zeros_like(list(atlas_lh.values())[0])
-        for name, mask in atlas_lh.items():
-            atlas[f"lh.{name}"] = np.append(mask, pad_rh)  # pad after
-        for name, mask in atlas_rh.items():
-            atlas[f"rh.{name}"] = np.append(pad_lh, mask)  # pad after
-
-        return atlas
-    else:
-        raise ValueError("Invalid hemisphere name")
-
-
-def _project_points_to_surface(
-    points: np.ndarray,
-    surf: dict,
-    pttris: Union[list, np.ndarray],
-    return_all: bool = False,
-):
-    """Project each point in `points` to the closest point on the surface
-    described by `surf` restricted to the triangles in `pttris`.
-
-    PARAMETERS
-    ----------
-    points : ndarray
-        Array with shape (n, d) where n is the number of points and d is the
-        dimension.
-    surf : dict
-        Dictionary with keys 'points' and 'tris' describing the surface mesh on
-        which the points are to be projected.
-    pttris : ndarray | list
-        If a ragged/nested array, the ith entry contains the triangles against
-        which the ith point will be tested.
-    return_all : bool
-        Whether to return all projection results (i.e., the projection of a
-        point on each of the triangles which it was tested against) or only the
-        projection on the closest triangle.
-
-    RETURNS
     -------
-    tris : ndarray
-        The index of the triangle onto which a point was projected.
-    weights : ndarray
-        The linear interpolation weights resulting in the projection of a point
-        onto a particular triangle.
-    projs :
-        The coordinates of the projection of a point on a triangle.
-    dists :
-        The distance of a point to its projection on a triangle.
-
-    NOTES
-    -----
-    The cost function to be minimized is the squared distance between a point
-    P and a triangle T
-
-        Q(s,t) = |P - T(s,t)|**2 =
-               = a*s**2 + 2*b*s*t + c*t**2 + 2*d*s + 2*e*t + f
-
-    The gradient
-
-        Q'(s,t) = 2(a*s + b*t + d, b*s + c*t + e)
-
-    is set equal to (0,0) to find (s,t).
-
-    REFERENCES
-    ----------
-    https://www.geometrictools.com/Documentation/DistancePoint3Triangle3.pdf
-
+    dict
+        A dictionary mapping hemisphere(s) to (1) an array of labels
+        (when split_labels == False), or a dictionary of names to label mask
+        (when split_labels == True).
     """
+    if not isinstance(m2m, SubjectFiles):
+        m2m = SubjectFiles(subpath=m2m)
 
-    npttris = list(map(len, pttris))
-    pttris = np.concatenate(pttris)
+    assert atlas in ("a2009s", "DK40", "HCP_MMP1"), "Invalid atlas"
 
-    m = surf["points"][surf["tris"]]
-    v0 = m[:, 0]  # Origin of the triangle
-    e0 = m[:, 1] - v0  # s coordinate axis
-    e1 = m[:, 2] - v0  # t coordinate axis
+    hemi = (hemi,) if isinstance(hemi, str) else hemi
+    assert all(h in ("lh", "rh") for h in hemi)
 
-    # Vector from point to triangle origin (if reverse, the negative
-    # determinant must be used)
-    rep_points = np.repeat(points, npttris, axis=0)
-    w = v0[pttris] - rep_points
+    sub_labels = {}
+    sub_ctab = {}
+    sub_names = {}
+    for h in hemi:
+        fn_atlas = os.path.join(templates.atlases_surfaces, f"{h}.aparc_{atlas}.annot")
+        labels, ctab, names = nib.freesurfer.io.read_annot(fn_atlas)
+        names = list(map(np.bytes_.decode, names))
+        sub_ctab[h] = ctab
+        sub_names[h] = names
 
-    a = np.sum(e0**2, 1)[pttris]
-    b = np.sum(e0 * e1, 1)[pttris]
-    c = np.sum(e1**2, 1)[pttris]
-    d = np.sum(e0[pttris] * w, 1)
-    e = np.sum(e1[pttris] * w, 1)
-    # f = np.sum(w**2, 1)
+        sph_fsavg = get_fsaverage_template(h, "sphere")
+        sph_sub = m2m.surfaces["sphere.reg"][h]
 
-    # s,t are so far unnormalized!
-    s = b * e - c * d
-    t = b * d - a * e
-    det = a * c - b**2
+        fsavg = cortech.SphericalRegistration.from_file(sph_fsavg)
+        subject = cortech.SphericalRegistration.from_file(sph_sub)
 
-    # Project points (s,t) to the closest points on the triangle (s',t')
-    sp, tp = np.zeros_like(s), np.zeros_like(t)
+        lab_map = fsavg.project_and_resample(subject, labels, method="nearest")
 
-    # We do not need to check a point against all edges/interior of a triangle.
-    #
-    #          t
-    #     \ R2|
-    #      \  |
-    #       \ |
-    #        \|
-    #         \
-    #         |\
-    #         | \
-    #     R3  |  \  R1
-    #         |R0 \
-    #    _____|____\______ s
-    #         |     \
-    #     R4  | R5   \  R6
-    #
-    # The code below is equivalent to the following if/else structure
-    #
-    # if s + t <= 1:
-    #     if s < 0:
-    #         if t < 0:
-    #             region 4
-    #         else:
-    #             region 3
-    #     elif t < 0:
-    #         region 5
-    #     else:
-    #         region 0
-    # else:
-    #     if s < 0:
-    #         region 2
-    #     elif t < 0
-    #         region 6
-    #     else:
-    #         region 1
+        if split_labels:
+            sub_labels[h] = {n: lab_map == i for i, n in zip(labels, names)}
+        else:
+            sub_labels[h] = lab_map
 
-    # Conditions
-    st_l1 = s + t <= det
-    s_l0 = s < 0
-    t_l0 = t < 0
-
-    # Region 0 (inside triangle)
-    i = np.flatnonzero(st_l1 & ~s_l0 & ~t_l0)
-    deti = det[i]
-    sp[i] = s[i] / deti
-    tp[i] = t[i] / deti
-
-    # Region 1
-    # The idea is to substitute the constraints on s and t into F(s,t) and
-    # solve, e.g., here we are in region 1 and have Q(s,t) = Q(s,1-s) = F(s)
-    # since in this case, for a point to be on the triangle, s+t must be 1
-    # meaning that t = 1-s.
-    i = np.flatnonzero(~st_l1 & ~s_l0 & ~t_l0)
-    aa, bb, cc, dd, ee = a[i], b[i], c[i], d[i], e[i]
-    numer = cc + ee - (bb + dd)
-    denom = aa - 2 * bb + cc
-    sp[i] = np.clip(numer / denom, 0, 1)
-    tp[i] = 1 - sp[i]
-
-    # Region 2
-    i = np.flatnonzero(~st_l1 & s_l0)  # ~t_l0
-    aa, bb, cc, dd, ee = a[i], b[i], c[i], d[i], e[i]
-    tmp0 = bb + dd
-    tmp1 = cc + ee
-    j = tmp1 > tmp0
-    j_ = ~j
-    k, k_ = i[j], i[j_]
-    numer = tmp1[j] - tmp0[j]
-    denom = aa[j] - 2 * bb[j] + cc[j]
-    sp[k] = np.clip(numer / denom, 0, 1)
-    tp[k] = 1 - sp[k]
-    sp[k_] = 0
-    tp[k_] = np.clip(-ee[j_] / cc[j_], 0, 1)
-
-    # Region 3
-    i = np.flatnonzero(st_l1 & s_l0 & ~t_l0)
-    cc, ee = c[i], e[i]
-    sp[i] = 0
-    tp[i] = np.clip(-ee / cc, 0, 1)
-
-    # Region 4
-    i = np.flatnonzero(st_l1 & s_l0 & t_l0)
-    aa, cc, dd, ee = a[i], c[i], d[i], e[i]
-    j = dd < 0
-    j_ = ~j
-    k, k_ = i[j], i[j_]
-    sp[k] = np.clip(-dd[j] / aa[j], 0, 1)
-    tp[k] = 0
-    sp[k_] = 0
-    tp[k_] = np.clip(-ee[j_] / cc[j_], 0, 1)
-
-    # Region 5
-    i = np.flatnonzero(st_l1 & ~s_l0 & t_l0)
-    aa, dd = a[i], d[i]
-    tp[i] = 0
-    sp[i] = np.clip(-dd / aa, 0, 1)
-
-    # Region 6
-    i = np.flatnonzero(~st_l1 & t_l0)  # ~s_l0
-    aa, bb, cc, dd, ee = a[i], b[i], c[i], d[i], e[i]
-    tmp0 = bb + ee
-    tmp1 = aa + dd
-    j = tmp1 > tmp0
-    j_ = ~j
-    k, k_ = i[j], i[j_]
-    numer = tmp1[j] - tmp0[j]
-    denom = aa[j] - 2 * bb[j] + cc[j]
-    tp[k] = np.clip(numer / denom, 0, 1)
-    sp[k] = 1 - tp[k]
-    tp[k_] = 0
-    sp[k_] = np.clip(-dd[j_] / aa[j_], 0, 1)
-
-    # Distance from original point to its projection on the triangle
-    projs = v0[pttris] + sp[:, None] * e0[pttris] + tp[:, None] * e1[pttris]
-    dists = np.linalg.norm(rep_points - projs, axis=1)
-    weights = np.column_stack((1 - sp - tp, sp, tp))
-
-    if return_all:
-        tris = pttris
-    else:
-        # Find the closest projection
-        indptr = [0] + np.cumsum(npttris).tolist()
-        i = _sliced_argmin(dists, indptr)
-        tris = pttris[i]
-        weights = weights[i]
-        projs = projs[i]
-        dists = dists[i]
-
-    return tris, weights, projs, dists
-
-
-def _get_nearest_triangles_on_surface(
-    points: np.ndarray, surf: dict, n: int = 1, subset=None, return_index: bool = False
-):
-    """For each point in `points` get the `n` nearest nodes on `surf` and
-    return the triangles to which these nodes belong.
-
-    points : ndarray
-        Points for which we want to find the candidate triangles. Shape (n, d)
-        where n is the number of points and d is the dimension.
-    surf : dict
-        Dictionary with keys points and tris corresponding to the nodes and
-        triangulation of the surface, respectively.
-    n : int
-        Number of nearest vertices in `surf` to consider for each point in
-        `points`.
-    subset : array-like
-        Use only a subset of the vertices in `surf`. Should be indices *not* a
-        boolean mask!
-    return_index : bool
-        Return the index (or indices if n > 1) of the nearest vertex in `surf`
-        for each point in `points`.
-
-    RETURNS
-    -------
-    pttris : list
-        Point to triangle mapping.
-    """
-    assert isinstance(n, int) and n >= 1
-
-    surf_points = surf["points"] if subset is None else surf["points"][subset]
-    tree = scipy.spatial.cKDTree(surf_points)
-    _, ix = tree.query(points, n)
-    if subset is not None:
-        ix = subset[ix]  # ensure ix indexes into surf['points']
-    pttris = _get_triangle_neighbors(surf["tris"], len(surf["points"]))[ix]
-    if n > 1:
-        pttris = list(map(lambda x: np.unique(np.concatenate(x)), pttris))
-
-    return (pttris, ix) if return_index else pttris
-
-
-def _get_triangle_neighbors(tris: np.ndarray, nr: Union[int, None] = None):
-    """For each point get its neighboring triangles (i.e., the triangles to
-    which it belongs).
-
-    PARAMETERS
-    ----------
-    tris : ndarray
-        Array describing a triangulation with size (n, 3) where n is the number
-        of triangles.
-    nr : int
-        Number of points. If None, it is inferred from `tris` as tris.max()+1
-        (default = None).
-
-    RETURNS
-    -------
-    pttris : ndarray
-        Array of arrays where pttris[i] are the neighboring triangles of the
-        ith point.
-    """
-    n_tris, n_dims = tris.shape
-    nr = tris.max() + 1 if nr is None else nr
-
-    rows = tris.ravel()
-    cols = np.repeat(np.arange(n_tris), n_dims)
-    data = np.ones_like(rows)
-    csr = coo_matrix((data, (rows, cols)), shape=(nr, n_tris)).tocsr()
-    return np.array(np.split(csr.indices, csr.indptr[1:-1]), dtype=object)
-
-
-def _sliced_argmin(x: np.ndarray, indptr: np.ndarray):
-    """Perform argmin on slices of x.
-
-    PARAMETERS
-    ----------
-    x : 1-d array
-        The array to perform argmin on.
-    indptr : 1-d array-like
-        The indices of the slices. The ith slice is indptr[i]:indptr[i+1].
-
-    RETURNS
-    -------
-    res : 1-d array
-        The indices (into x) corresponding to the minimum values in each chunk.
-    """
-    assert x.ndim == 1
-    return np.array([x[i:j].argmin() + i for i, j in zip(indptr[:-1], indptr[1:])])
+    out = (sub_labels,)
+    if return_ctab:
+        out += (sub_ctab,)
+    if return_names:
+        out += (sub_names,)
+    return out[0] if len(out) == 1 else out
 
 
 def create_new_connectivity_list_point_mask(points, con, point_mask):

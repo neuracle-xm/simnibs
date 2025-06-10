@@ -8,12 +8,14 @@ subid = CommandLineArgument(
     ["subid"],
     dict(
         type=str,
-        help="""Subject ID or /path/to/{subid} or /path/to/m2m_{subid}.
-        The former will resolve to "m2m_{subid}" in the current working
-        directory. The latter cases both resolve to /path/to/m2m_{subid}.
-        """,
+        help="Subject ID or /path/to/{subid} or /path/to/m2m_{subid}. The former will resolve to m2m_{subid} in the current working directory. The latter cases both resolve to /path/to/m2m_{subid}",
         action=actions.ResolveSubjectID,
     ),
+)
+
+out_dir = CommandLineArgument(
+    ["-o", "--out_dir"],
+    dict(default=".", help="Directory in which to save output file(s)."),
 )
 
 version = CommandLineArgument(

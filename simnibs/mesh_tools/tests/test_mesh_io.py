@@ -11,6 +11,7 @@ from simnibs.utils.mesh_element_properties import ElementTypes
 from simnibs import SIMNIBSDIR
 from simnibs.mesh_tools import mesh_io
 from simnibs.utils import itk_mesh_io
+from simnibs.utils.mesh_element_properties import ElementTags
 
 
 @pytest.fixture
@@ -55,6 +56,27 @@ def atlas_itk_msh():
         SIMNIBSDIR, "_internal_resources", "testing_files", "cube_atlas", "atlas.txt.gz"
     )
     return itk_mesh_io.itk_to_msh(fn)
+
+
+def toCartesian(pts):
+    r = pts[:, 0]
+    phi = pts[:, 1]
+    theta = pts[:, 2]
+
+    pts_cart = np.zeros(pts.shape, dtype="float64")
+    pts_cart[:, 0] = r * np.cos(phi * np.pi / 180.0) * np.sin(theta * np.pi / 180.0)
+    pts_cart[:, 1] = r * np.sin(phi * np.pi / 180.0) * np.sin(theta * np.pi / 180.0)
+    pts_cart[:, 2] = r * np.cos(theta * np.pi / 180.0)
+    return pts_cart
+
+
+def get_angle(v1, v2):
+    angle = np.sum(v1 * v2, axis=1) / (
+        np.linalg.norm(v1, axis=1) * np.linalg.norm(v2, axis=1)
+    )
+    angle[angle > 1.0] = 1.0
+    angle = np.arccos(angle) / np.pi * 180
+    return angle
 
 
 class TestGetitem:
@@ -1305,6 +1327,97 @@ class TestMsh:
         idx_tet1, idx_tet2 = m.split_tets_along_line(1246, 2337, return_tetindices=True)
         assert m.nodes.nr == n_nodes_pre + 1
         assert m.elm.nr == n_tets_pre + len(idx_tet1)
+
+    @pytest.mark.parametrize(
+        "points",
+        [
+            ("inside", "all"),
+            ("outside", "all"),
+            ("inside", "single"),
+            ("outside", "single"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "surface_tags", [None, ElementTags.CSF_TH_SURFACE, ElementTags.SCALP_TH_SURFACE]
+    )
+    @pytest.mark.parametrize(
+        "distance",
+        [0.0, 10.0, [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]],
+    )
+    def test_project_points_on_surface(
+        self, sphere3_msh, points, surface_tags, distance
+    ):
+        # r phi theta
+        pts_sph = np.array(
+            (
+                (80, 0, 0),
+                (80, 0, 45),
+                (80, 0, 90),
+                (80, 45, 0),
+                (80, 45, 45),
+                (80, 45, 90),
+            )
+        )
+        if points[0] == "outside":
+            pts_sph[:, 0] = 100.0
+
+        # Diameter of the surface to which the point(s) is/are expected to project
+        if surface_tags is None:
+            if points[0] == "inside":
+                diameter = 85.0
+            elif points[0] == "outside":
+                diameter = 95.0
+        else:
+            diameter = np.linalg.norm(
+                sphere3_msh.nodes[
+                    sphere3_msh.elm.node_number_list[
+                        sphere3_msh.elm.get_tags(surface_tags), :3
+                    ]
+                ],
+                axis=2,
+            ).mean()
+
+        # If ensuring distance, we need to add this
+        if isinstance(distance, list):
+            if points[1] == "single":
+                distance = distance[0]
+            else:
+                distance = np.array(distance)
+
+        diameter = diameter + distance
+
+        # (analytical) target points
+        pts_sph_expected = copy.deepcopy(pts_sph)
+        pts_sph_expected[:, 0] = diameter
+
+        pts_cart = toCartesian(pts_sph)
+        pts_cart_expected = toCartesian(pts_sph_expected)
+
+        match points[1]:
+            case "all":
+                pass
+            case "single":
+                pts_cart = pts_cart[0]
+                pts_cart_expected = pts_cart_expected[0]
+
+        pts_prj = sphere3_msh.project_points_on_surface(
+            pts_cart, surface_tags, distance
+        )
+
+        # There is inaccuracy in the angle between the projected and expected
+        # positions because of the limited resolution of the sphere, hence
+        # set the tolerance to reflect this
+        scale = np.abs(pts_sph_expected[0, 0] - pts_sph[0, 0])
+        if scale > 20:
+            TOL_ANGLE = 1.0
+        elif scale > 10:
+            TOL_ANGLE = 0.75
+        else:
+            TOL_ANGLE = 0.5
+        TOL_NORM = 0.5
+
+        assert np.all(get_angle(pts_prj, np.atleast_2d(pts_cart_expected)) < TOL_ANGLE)
+        assert np.all(np.abs(np.linalg.norm(pts_prj, axis=1) - diameter) < TOL_NORM)
 
 
 class TestData:

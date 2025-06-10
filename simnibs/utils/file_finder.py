@@ -35,16 +35,22 @@ __all__ = [
 ]
 
 # This defines hemisphere names as well as their order!
-HEMISPHERES = ["lh", "rh"]
+HEMISPHERES = ("lh", "rh")
 
 # map input resolution to fsaverage name
 fs_surfaces = ["central", "sphere"]
-fs_resolutions = [None, 5,6,7]
+fs_resolutions = [None, 5, 6, 7]
 fs_resolutions_names = ["", "10k", "40k", ""]
 fs_res_mapper = dict(zip(fs_resolutions, fs_resolutions_names))
 
 coil_models = os.path.join(SIMNIBSDIR, "resources", "coil_models")
 ElectrodeCaps_MNI = os.path.join(SIMNIBSDIR, "resources", "ElectrodeCaps_MNI")
+
+
+def _validate_hemi_arg(hemi: list[str] | str | tuple = HEMISPHERES):
+    hemi = (hemi,) if isinstance(hemi, str) else hemi
+    assert all(h in HEMISPHERES for h in hemi)
+    return hemi
 
 
 class Templates:
@@ -211,7 +217,7 @@ def get_atlas(atlas_name, hemi="both"):
         raise ValueError("Invalid hemisphere name")
 
 
-def get_fsaverage_template(region: str, surface: str, resolution: int = 7):
+def get_fsaverage_template(region: str, surface: str, resolution: int | None = 7):
     """Construct the filename of one of the fsaverage template surfaces
     included in simnibs.
 
@@ -554,6 +560,9 @@ class SubjectFiles:
             surface = "sphere.reg"  # keep backwards compatible
         subsampling = self._parse_subsampling(subsampling)
         return Path(self.surface_folder) / subsampling / f"{hemi}.{surface}.gii"
+
+    def get_surfaces(self, surface, subsampling=None):
+        return {h: self.get_surface(surface, subsampling) for h in HEMISPHERES}
 
     def get_morph_data(self, hemi, data, subsampling=None):
         """Get morphometry data files, e.g., thickness."""
