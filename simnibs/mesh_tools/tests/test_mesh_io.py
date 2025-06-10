@@ -7,9 +7,19 @@ import h5py
 import pytest
 from scipy.spatial import ConvexHull
 
+from simnibs.utils.mesh_element_properties import ElementTypes
 from simnibs import SIMNIBSDIR
 from simnibs.mesh_tools import mesh_io
 from simnibs.utils import itk_mesh_io
+
+
+@pytest.fixture
+def simple_element():
+    triangles = np.arange(1, 13).reshape(4, 3)
+    tetrahedra = np.arange(1, 17).reshape(4, 4)
+    elm = mesh_io.Elements(triangles, tetrahedra)
+    elm.tag1 = elm.tag2 = [1, 1, 2, 3, 11, 12, 11, 13]
+    return elm
 
 
 @pytest.fixture(scope="module")
@@ -206,6 +216,40 @@ class TestElements:
         assert np.all(
             elm[:]
             == np.array([[1, 3, 2, -1], [4, 1, 2, -1], [1, 3, 2, 4], [4, 1, 3, 7]])
+        )
+
+    @pytest.mark.parametrize("tags", [1, (1, 2), [11, 12]])
+    @pytest.mark.parametrize("return_indices", [False, True])
+    def test_get_tags(self, simple_element, tags, return_indices):
+        target = np.isin(simple_element.tag1, tags)
+        target = np.where(target)[0] + 1 if return_indices else target
+
+        np.testing.assert_allclose(
+            target, simple_element.get_tags(tags, return_indices)
+        )
+
+    @pytest.mark.parametrize("tags", [None, 1, (1, 2), [11, 12]])
+    @pytest.mark.parametrize("return_indices", [False, True])
+    def test_get_triangles(self, simple_element, tags, return_indices):
+        target = np.isin(simple_element.elm_type, ElementTypes.TRIANGLE)
+        if tags is not None:
+            target &= np.isin(simple_element.tag1, tags)
+        target = np.where(target)[0] + 1 if return_indices else target
+
+        np.testing.assert_allclose(
+            target, simple_element.get_triangles(tags, return_indices)
+        )
+
+    @pytest.mark.parametrize("tags", [None, 11, (1, 2), [11, 12]])
+    @pytest.mark.parametrize("return_indices", [False, True])
+    def test_get_tetrahedra(self, simple_element, tags, return_indices):
+        target = np.isin(simple_element.elm_type, ElementTypes.TETRAHEDRON)
+        if tags is not None:
+            target &= np.isin(simple_element.tag1, tags)
+        target = np.where(target)[0] + 1 if return_indices else target
+
+        np.testing.assert_allclose(
+            target, simple_element.get_tetrahedra(tags, return_indices)
         )
 
     def test_elm_init_node_number_list(self):

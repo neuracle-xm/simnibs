@@ -42,7 +42,7 @@ import nibabel
 import h5py
 
 from simnibs.utils import file_finder
-from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs.utils.mesh_element_properties import ElementTags, ElementTypes
 
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import nifti_transform
@@ -229,7 +229,7 @@ class Elements:
             self.node_number_list = np.zeros((points.shape[0], 4), dtype="int32")
             self.node_number_list[:, 0] = points.astype("int32")
             self.node_number_list[:, 1:] = -1
-            self.elm_type = np.ones((self.nr,), dtype="int32") * 15
+            self.elm_type = np.full((self.nr,), ElementTypes.POINT, dtype=np.int32)
 
         if lines is not None:
             assert lines.shape[1] == 2
@@ -237,7 +237,7 @@ class Elements:
             self.node_number_list = np.zeros((lines.shape[0], 4), dtype="int32")
             self.node_number_list[:, :2] = lines.astype("int32")
             self.node_number_list[:, 2:] = -1
-            self.elm_type = np.ones((self.nr,), dtype="int32") * 1
+            self.elm_type = np.full((self.nr,), ElementTypes.LINE, dtype=np.int32)
 
         if triangles is not None:
             assert triangles.shape[1] == 3
@@ -245,20 +245,23 @@ class Elements:
             self.node_number_list = np.zeros((triangles.shape[0], 4), dtype="int32")
             self.node_number_list[:, :3] = triangles.astype("int32")
             self.node_number_list[:, 3] = -1
-            self.elm_type = np.ones((self.nr,), dtype="int32") * 2
+            self.elm_type = np.full((self.nr,), ElementTypes.TRIANGLE, dtype=np.int32)
 
         if tetrahedra is not None:
             assert tetrahedra.shape[1] == 4
             assert np.all(tetrahedra > 0), "Node count should start at 1"
             if len(self.node_number_list) == 0:
                 self.node_number_list = tetrahedra.astype("int32")
-                self.elm_type = np.ones((self.nr,), dtype="int32") * 4
+                self.elm_type = np.full(
+                    (self.nr,), ElementTypes.TETRAHEDRON, dtype=np.int32
+                )
             else:
                 self.node_number_list = np.vstack(
                     (self.node_number_list, tetrahedra.astype("int32"))
                 )
                 self.elm_type = np.append(
-                    self.elm_type, np.ones(len(tetrahedra), dtype="int32") * 4
+                    self.elm_type,
+                    np.full(len(tetrahedra), ElementTypes.TETRAHEDRON, dtype=np.int32),
                 )
 
         if len(self.node_number_list) > 0:
@@ -273,12 +276,85 @@ class Elements:
     @property
     def triangles(self):
         """Triangle element numbers"""
-        return self.elm_number[self.elm_type == 2]
+        return self.elm_number[self.elm_type == ElementTypes.TRIANGLE]
 
     @property
     def tetrahedra(self):
         """Tetrahedra element numbers"""
-        return self.elm_number[self.elm_type == 4]
+        return self.elm_number[self.elm_type == ElementTypes.TETRAHEDRON]
+
+    def get_tags(
+        self, tags: int | list[int] | tuple | np.ndarray, return_indices: bool = False
+    ):
+        """Get elements with the specified tags.
+
+        Parameters
+        ----------
+        tags : int | list | tuple | np.ndarray
+            Return element with this/these tag/tags.
+        return_indices : bool, optional
+            If false, return boolean mask. If true, return the indices
+            (1-based!) (default = False).
+
+        Returns
+        -------
+        elements
+            Indices or mask of elements.
+        """
+        m = np.isin(self.tag1, tags)
+        return self.elm_number[m] if return_indices else m
+
+    def get_triangles(
+        self,
+        tags: int | list[int] | tuple | np.ndarray | None = None,
+        return_indices: bool = False,
+    ):
+        """Get indices or mask of triangle elements.
+
+        Parameters
+        ----------
+        tags : int | list | tuple | np.ndarray | None, optional
+            Return only triangles with this/these tag/tags (default = None,
+            i.e., all triangles).
+        return_indices : bool, optional
+            If false, return boolean mask indicating which elements are
+            triangles. If true, return the indices (1-based!) of the triangle
+            elements (default = False).
+
+        Returns
+        -------
+        triangles
+            Indices or mask of triangle elements.
+        """
+        m = self.elm_type == ElementTypes.TRIANGLE
+        m = m & self.get_tags(tags) if tags is not None else m
+        return self.elm_number[m] if return_indices else m
+
+    def get_tetrahedra(
+        self,
+        tags: int | list[int] | tuple | np.ndarray | None = None,
+        return_indices: bool = False,
+    ):
+        """Get indices or mask of tetrahedral elements.
+
+        Parameters
+        ----------
+        tags : int | list | tuple | np.ndarray | None, optional
+            Return only tetrahedra with this/these tag/tags (default = None,
+            i.e., all tetrahedra).
+        mask : bool, optional
+            If false, return boolean mask indicating which elements are
+            tetrahedra. If true, return the indices (1-based!) of the
+            tetrahedral elements (default = False).
+
+        Returns
+        -------
+        tetrahedra
+            Indices or mask of tetrahedra elements.
+        """
+        m = self.elm_type == ElementTypes.TETRAHEDRON
+        m = m & self.get_tags(tags) if tags is not None else m
+        return self.elm_number[m] if return_indices else m
 
     @property
     def elm_number(self):
