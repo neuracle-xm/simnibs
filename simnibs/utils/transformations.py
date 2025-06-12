@@ -1755,7 +1755,7 @@ def subject_spherical_registration(
     hemi = _validate_hemi_arg(hemi)
     if subject == "fsaverage":
         return {
-            h: cortech.SphericalRegistration.from_filename(
+            h: cortech.SphericalRegistration.from_file(
                 get_fsaverage_template(h, "sphere", subsampling)
             )
             for h in hemi
@@ -1767,7 +1767,7 @@ def subject_spherical_registration(
             else SubjectFiles(subpath=str(subject))
         )
         return {
-            h: cortech.SphericalRegistration.from_filename(
+            h: cortech.SphericalRegistration.from_file(
                 subject_files.get_surface(h, "sphere.reg", subsampling)
             )
             for h in hemi
@@ -1792,10 +1792,10 @@ def cross_subject_map(
         Subject to map *to*. Can be "fsaverage".
     subsampling_from : int | None
         Subsampling of *from* subject to use (as available). Available
-        subsamplings for "fsaverage" are 10, 40 and None.
+        subsamplings for "fsaverage" are 5, 6, 7, and None (= 7).
     subsampling_to : int | None
         Subsampling of *to* subject to use (as available). Available
-        subsamplings for "fsaverage" are 10, 40 and None.
+        subsamplings for "fsaverage" are 5, 6, 7, and None (= 7).
     hemi :
         Hemisphere(s) for which to construct the mapping (default is both
         hemispheres).
@@ -1814,7 +1814,9 @@ def cross_subject_map(
     project_kwargs = project_kwargs or {}
     sph_fr = subject_spherical_registration(subject_from, hemi, subsampling_from)
     sph_to = subject_spherical_registration(subject_to, hemi, subsampling_to)
-    return {k: sph_fr[k].project(sph_to[k], **project_kwargs) for k in sph_fr}
+    for k in sph_fr:
+        sph_fr[k].project(sph_to[k], **project_kwargs)
+    return sph_fr
 
 
 def middle_gm_interpolation(
