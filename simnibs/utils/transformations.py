@@ -2094,6 +2094,7 @@ def atlas2subject(
         lab_map = fsavg.project_and_resample(subject, labels, method="nearest")
 
         if split_labels:
+            labels = np.unique(labels)
             sub_labels[h] = {n: lab_map == i for i, n in zip(labels, names)}
         else:
             sub_labels[h] = lab_map
