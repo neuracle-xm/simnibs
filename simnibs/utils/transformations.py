@@ -1940,7 +1940,7 @@ def middle_gm_interpolation(
                         h.append(hemi)
                         # Interpolate to fsavg
                         if out_fsaverage is not None:
-                            q_transformed = morph[hemi].transform(q_data.value)
+                            q_transformed = morph[hemi].resample(q_data.value)
                             out_avg = os.path.join(
                                 out_fsaverage,
                                 hemi + sim_name + ".fsavg." + name + "." + q_name,
@@ -1972,7 +1972,7 @@ def middle_gm_interpolation(
                         h.append(hemi)
                         middle_surf[hemi].add_node_field(interpolated, name)
                         if out_fsaverage is not None:
-                            f_transformed = morph[hemi].transform(
+                            f_transformed = morph[hemi].resample(
                                 interpolated.value.squeeze()
                             )
                             out_avg = os.path.join(
