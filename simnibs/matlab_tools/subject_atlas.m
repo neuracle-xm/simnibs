@@ -32,7 +32,8 @@ assert(any(strcmp(atlas_name,{'a2009s', 'DK40', 'HCP_MMP1'})), ...
        ['invalid atlas name: ' atlas_name])
 
 tmp_folder = tempname;
-[status,result] = system([simnibs_cli_call('subject_atlas') subdir ' -a ' atlas_name ' -o ' tmp_folder]);
+cmd = [simnibs_cli_call('subject_atlas'), subdir, "-a", atlas_name, "-o", tmp_folder];
+[status,result] = system(join(cmd));
 if status ~= 0
     rmdir(tmp_folder, 's');
     error('There was an error running subject_atlas:\n %s',result)
