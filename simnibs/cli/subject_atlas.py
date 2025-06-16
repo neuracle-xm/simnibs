@@ -100,7 +100,9 @@ def main():
     for hemi in labels:
         fn_out = os.path.join(
             args.out_dir,
-            FILENAME_ATLAS_OUT.format(hemi, subject_files.subid, args.atlas),
+            FILENAME_ATLAS_OUT.format(
+                hemi=hemi, subid=subject_files.subid, atlas=args.atlas
+            ),
         )
         logger.info("Writing: " + fn_out)
         nib.freesurfer.write_annot(
