@@ -667,8 +667,8 @@ class FEMSystem(object):
         logger.info("Assembling FEM Matrix")
         start = time.time()
         msh = self.mesh
-        cond = self.cond[msh.elm.elm_type == 4]
-        th_nodes = msh.elm.node_number_list[msh.elm.elm_type == 4]
+        cond = self.cond[msh.elm.get_tetrahedra()]
+        th_nodes = msh.elm.node_number_list[msh.elm.get_tetrahedra()]
         G = _gradient_operator(msh)
         if store_G:
             self._G = G  # stores the operator in case we need it later (TMS)
@@ -843,14 +843,14 @@ class TMSFEM(FEMSystem):
             electric field targeting." bioRxiv (2020).
         """
         msh = self.mesh
-        cond = self.cond[msh.elm.elm_type == 4]
+        cond = self.cond[msh.elm.get_tetrahedra()]
         if isinstance(dadt, mesh_io.NodeData):
             dadt = dadt.node_data2elm_data()
         dadt = dadt.value
-        dadt = dadt[msh.elm.elm_type == 4]
+        dadt = dadt[msh.elm.get_tetrahedra()]
         G = _gradient_operator(msh) if self._G is None else self._G
         vols = _vol(msh)
-        th_nodes = msh.elm.node_number_list[msh.elm.elm_type == 4]
+        th_nodes = msh.elm.node_number_list[msh.elm.get_tetrahedra()]
         # integrate in each node of each element, the value for repeated nodes will be summed
         # together later
         elm_node_integral = np.zeros((len(th_nodes), 4), dtype=np.float64)
@@ -918,7 +918,7 @@ class TDCSFEMDirichlet(FEMSystem):
         assert len(self.electrodes) == len(self.potentials)
         bcs = []
         for t, p in zip(self.electrodes, self.potentials):
-            elements_in_surface = (mesh.elm.tag1 == t) * (mesh.elm.elm_type == 2)
+            elements_in_surface = mesh.elm.get_triangles(t)
             if np.sum(elements_in_surface) == 0:
                 raise ValueError("Did not find any surface with tag: {0}".format(t))
             n = np.unique(mesh.elm.node_number_list[elements_in_surface, :3])
@@ -979,9 +979,7 @@ class TDCSFEMNeumann(FEMSystem):
         # The first surface is set to a DirichletBC
         if self.input_type == "tag":
             # Find the nodes in the tag
-            elements_in_surface = (mesh.elm.tag1 == self.ground_electrode) * (
-                mesh.elm.elm_type == 2
-            )
+            elements_in_surface = mesh.elm.get_triangles(self.ground_electrode)
             if np.sum(elements_in_surface) == 0:
                 raise ValueError(
                     "Did not find any surface with tag: {0}".format(
@@ -1020,11 +1018,7 @@ class TDCSFEMNeumann(FEMSystem):
         for e, c in zip(electrodes, currents):
             if self.input_type == "tag":
                 # Find the nodes in the tag
-                nodes = np.unique(
-                    self.mesh.elm[
-                        (self.mesh.elm.tag1 == e) * (self.mesh.elm.elm_type == 2), :3
-                    ]
-                )
+                nodes = np.unique(self.mesh.elm[self.mesh.elm.get_triangles(e), :3])
             elif self.input_type == "nodes":
                 nodes = e
             else:
@@ -1291,7 +1285,7 @@ def assemble_diagonal_mass_matrix(msh, units="mm"):
     M: scipy.sparse.csc_matrix:
         Diagonal matrix
     """
-    th_nodes = msh.elm.node_number_list[msh.elm.elm_type == 4]
+    th_nodes = msh.elm.node_number_list[msh.elm.get_tetrahedra()]
     vols = _vol(msh)
 
     # I'm using csc for consistency
@@ -1320,14 +1314,7 @@ def _gradient_operator(msh, volume_tag=None):
         [-1, 0, 0, 1]
     And T is the transfomation to baricentric coordinates
     """
-    if volume_tag is None:
-        th = msh.nodes[msh.elm.node_number_list[msh.elm.elm_type == 4]]
-    else:
-        th = msh.nodes[
-            msh.elm.node_number_list[
-                (msh.elm.elm_type == 4) * (msh.elm.tag1 == volume_tag)
-            ]
-        ]
+    th = msh.nodes[msh.elm.node_number_list[msh.elm.get_tetrahedra(volume_tag)]]
     A = np.hstack([-np.ones((3, 1)), np.eye(3)])
     G = np.linalg.solve(th[:, 1:4] - th[:, 0, None], A[None, :, :])
     G = np.transpose(G, (0, 2, 1))
@@ -1399,15 +1386,15 @@ def grad_matrix(msh, G=None, split=False):
     """
     if G is None:
         G = _gradient_operator(msh)
-    th = msh.elm.elm_number[msh.elm.elm_type == 4] - 1
-    tr = msh.elm.elm_number[msh.elm.elm_type == 2] - 1
+    th = msh.elm.elm_number[msh.elm.get_tetrahedra()] - 1
+    tr = msh.elm.elm_number[msh.elm.get_triangles()] - 1
     cp = msh.find_corresponding_tetrahedra() - 1
     G_expanded = np.empty((msh.elm.nr, 4, 3), dtype=float)
     G_expanded[th] = G
     G_expanded[tr] = G_expanded[cp]
     G = G_expanded
     th_nodes = np.zeros((msh.elm.nr, 4), dtype=int)
-    th_nodes[th] = msh.elm.node_number_list[msh.elm.elm_type == 4]
+    th_nodes[th] = msh.elm.node_number_list[msh.elm.get_tetrahedra()]
     th_nodes[tr] = th_nodes[cp]
     if not split:
         D = sparse.csc_matrix((3 * msh.elm.nr, msh.nodes.nr))
@@ -1432,14 +1419,7 @@ def grad_matrix(msh, G=None, split=False):
 
 def _vol(msh, volume_tag=None):
     """Volume of the tetrahedra"""
-    if volume_tag is None:
-        th = msh.nodes[msh.elm.node_number_list[msh.elm.elm_type == 4]]
-    else:
-        th = msh.nodes[
-            msh.elm.node_number_list[
-                (msh.elm.elm_type == 4) * (msh.elm.tag1 == volume_tag)
-            ]
-        ]
+    th = msh.nodes[msh.elm.node_number_list[msh.elm.get_tetrahedra(volume_tag)]]
     return np.abs(np.linalg.det(th[:, 1:] - th[:, 0, None])) / 6.0
 
 
@@ -1475,7 +1455,7 @@ def tdcs(
         electrode_surface_tags
     ), "there should be one channel for each current"
 
-    surf_tags = np.unique(mesh.elm.tag1[mesh.elm.elm_type == 2])
+    surf_tags = np.unique(mesh.elm.tag1[mesh.elm.get_triangles()])
     assert np.all(
         np.isin(electrode_surface_tags, surf_tags)
     ), "Could not find all the electrode surface tags in the mesh"
@@ -1591,14 +1571,14 @@ def _calc_flux_electrodes(
     m.elmdata = [cond]
     # Select mesh nodes wich are is in one electrode as well as the scalp
     # Triangles in scalp
-    tr_scalp = np.isin(m.elm.tag1, scalp_tag) * (m.elm.elm_type == 2)
+    tr_scalp = m.elm.get_triangles(scalp_tag)
     if not np.any(tr_scalp):
         raise ValueError("Could not find skin surface")
     tr_scalp_nodes = m.elm.node_number_list[tr_scalp, :3]
     tr_index = m.elm.elm_number[tr_scalp]
 
     # Tetrahehedra in electrode
-    th_el = np.isin(m.elm.tag1, el_volume) * (m.elm.elm_type == 4)
+    th_el = m.elm.get_tetrahedra(el_volume)
     if not np.any(th_el):
         raise ValueError("Could not find electrode volume")
     th_el_nodes = m.elm.node_number_list[th_el]

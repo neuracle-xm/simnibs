@@ -159,12 +159,12 @@ class TestgPC_Regression:
             assert np.allclose(mean_e, 5e3)
             # J is a bit more complicated
             mean_J = f["mesh_roi/elmdata/J_mean"][()]
-            assert np.allclose(mean_J[msh.elm.tag1 == 4], mean_E_expected)
-            assert np.allclose(mean_J[msh.elm.tag1 == 5], 10 * mean_E_expected)
+            assert np.allclose(mean_J[msh.elm.get_tags(4)], mean_E_expected)
+            assert np.allclose(mean_J[msh.elm.get_tags(5)], 10 * mean_E_expected)
             coeffs = gpc_reg.expand(gpc_reg.grid.coords**2, return_error=False)
             mean = gpc_reg.mean(coeffs)
             assert np.allclose(
-                mean_J[msh.elm.tag1 == 3], mean * -np.array([1, 0, 0]) * 1e3
+                mean_J[msh.elm.get_tags(3)], mean * -np.array([1, 0, 0]) * 1e3
             )
             dsets = f["mesh_roi/elmdata/"].keys()
 
@@ -208,7 +208,7 @@ class TestSampler:
         mesh, poslist, fn_hdf5, roi = sampler_args
         S = simnibs_gpc.gPCSampler(mesh, poslist, fn_hdf5, roi)
 
-        assert np.all(S.mesh_roi.elm.tag1 == 3)
+        assert S.mesh_roi.elm.get_tags(3).all()
 
         S.create_hdf5()
         with h5py.File(fn_hdf5, "r") as f:
@@ -321,7 +321,7 @@ class TestSampler:
             S.qoi_function = extra_qoi + S.qoi_function
 
         E1 = S.run_simulation([1])
-        assert E1.shape == (3 * np.sum(mesh.elm.tag1 == 3),)
+        assert E1.shape == (3 * mesh.elm.get_tags(3).sum(),)
         assert np.allclose(E1.reshape(-1, 3), [-1e3, 0, 0])
 
         S.run_simulation([2])
@@ -354,7 +354,7 @@ class TestSampler:
         S.qoi_function["rand"] = lambda v, rand: rand
 
         E1 = S.run_simulation([1])
-        assert E1.shape == (3 * np.sum(mesh.elm.tag1 == 3),)
+        assert E1.shape == (3 * mesh.elm.get_tags(3).sum(),)
         assert np.allclose(E1.reshape(-1, 3), [-1e3, 0, 0])
 
         S.run_simulation([2])
@@ -421,7 +421,7 @@ class TestRunGPC:
         assert np.all(pdf_type == ['normal', 'beta', 'beta', 'normal'])
         assert np.all(pdfshape == [[0, 1, 2, 0.2], [1, 1, 3, 0.3]])
         assert np.all(limits == [[None, 0.2, 0.3, None], [None, 0.3, 0.4, None]])
- 
+
 
     @patch.object(simnibs_gpc, 'pygpc')
     @patch.object(simnibs_gpc, 'gPC_regression')
@@ -434,7 +434,7 @@ class TestRunGPC:
         poslist.cond[2].distribution_type = 'normal'
         poslist.cond[2].distribution_parameters = [0.2, 0.3]
         poslist.pos = [sim_struct.POSITION()]
-        
+
         reg_mock = Mock(simnibs_gpc.pygpc.reg)
         reg_mock.poly_idx = None
         reg_mock.grid = Mock(simnibs_gpc.pygpc.grid)
@@ -452,5 +452,5 @@ class TestRunGPC:
                order_start=0,
                order_end=10,
                eps=1e-4,
-               print_out=True) 
+               print_out=True)
 """

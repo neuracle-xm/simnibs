@@ -642,10 +642,10 @@ class TDCSoptimize:
         bar = mesh_elec.elements_baricenters()
         norms = mesh_elec.triangle_normals()
         for t, c in zip(elec_tags, currents):
-            triangles.append(mesh_elec.elm[mesh_elec.elm.tag1 == t, :3])
+            triangles.append(mesh_elec.elm[mesh_elec.elm.get_tags(t), :3])
             values.append(c * np.ones(len(triangles[-1])))
-            avg_norm = np.average(norms[mesh_elec.elm.tag1 == t], axis=0)
-            pos = np.average(bar[mesh_elec.elm.tag1 == t], axis=0)
+            avg_norm = np.average(norms[mesh_elec.elm.get_tags(t)], axis=0)
+            pos = np.average(bar[mesh_elec.elm.get_tags(t)], axis=0)
             pos += avg_norm * 4
             elec_pos.append(pos)
 
@@ -846,10 +846,7 @@ class TDCSoptimize:
         s += "Mean field magnitude: {0:.2e} ({1})\n".format(
             field.mean_field_norm(), self.field_units
         )
-        if np.any(self.mesh.elm.elm_type == 4):
-            v_units = "mm3"
-        else:
-            v_units = "mm2"
+        v_units = "mm3" if self.mesh.elm.get_tetrahedra().any() else "mm2"
 
         s += f"Focality: 50 %: {field.get_focality(cuttofs=50, peak_percentile=99.9)[0]:.2e} ({v_units})\n"
         s += f"          70 %: {field.get_focality(cuttofs=70, peak_percentile=99.9)[0]:.2e} ({v_units})\n"
@@ -1811,18 +1808,18 @@ class TDCSDistributedOptimize:
         field = np.float64(field[:])
 
         # setting values in eyes to zero
-        if np.any(self.mesh.elm.tag1 == ElementTags.EYE_BALLS_TH_SURFACE):
+        if self.mesh.elm.get_tags(ElementTags.EYE_BALLS_TH_SURFACE).any():
             logger.info("setting target values in eyes to zero")
             if self.lf_type == "node":
                 eye_nodes = np.unique(
                     self.mesh.elm.node_number_list[
-                        self.mesh.elm.tag1 == ElementTags.EYE_BALLS_TH_SURFACE, :
+                        self.mesh.elm.get_tags(ElementTags.EYE_BALLS_TH_SURFACE), :
                     ]
                 )
                 eye_nodes = eye_nodes[eye_nodes > 0]
                 field[eye_nodes - 1] = 0.0  # node indices in mesh are 1-based
             elif self.lf_type == "element":
-                field[self.mesh.elm.tag1 == ElementTags.EYE_BALLS_TH_SURFACE] = 0.0
+                field[self.mesh.elm.get_tags(ElementTags.EYE_BALLS_TH_SURFACE)] = 0.0
 
         if self.mni_space:
             self.mesh.nodes.node_coord = orig_nodes

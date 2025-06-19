@@ -882,11 +882,11 @@ def _prepare_skin_surface(mesh: Msh) -> Msh:
         If the meshfix call returned an error
     """
     try:
-        if not np.any(mesh.elm.tag1 == ElementTags.INTERNAL_AIR_TH_SURFACE):
+        if not mesh.elm.get_tags(ElementTags.INTERNAL_AIR_TH_SURFACE).any():
             skin = mesh.relabel_internal_air().crop_mesh(ElementTags.SCALP_TH_SURFACE)
         else:
             skin = mesh.crop_mesh(ElementTags.SCALP_TH_SURFACE)
-        
+
         with tempfile.TemporaryDirectory() as tmp_dirname:
             mesh_io.write_off(skin, os.path.join(tmp_dirname, "mymesh.off"))
             cmd = [

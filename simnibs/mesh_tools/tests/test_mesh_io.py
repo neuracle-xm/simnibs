@@ -7,11 +7,10 @@ import h5py
 import pytest
 from scipy.spatial import ConvexHull
 
-from simnibs.utils.mesh_element_properties import ElementTypes
 from simnibs import SIMNIBSDIR
 from simnibs.mesh_tools import mesh_io
 from simnibs.utils import itk_mesh_io
-from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs.utils.mesh_element_properties import ElementTags, ElementTypes
 
 
 @pytest.fixture
@@ -32,7 +31,7 @@ def sphere3_msh():
 @pytest.fixture(scope="module")
 def sphere3_baricenters(sphere3_msh):
     baricenters = np.zeros((sphere3_msh.elm.nr, 3), dtype=float)
-    th_indexes = np.where(sphere3_msh.elm.elm_type == 4)[0]
+    th_indexes = sphere3_msh.elm.get_tetrahedra(return_indices=True)
     baricenters[th_indexes] = np.average(
         sphere3_msh.nodes.node_coord[
             sphere3_msh.elm.node_number_list[th_indexes, :4] - 1
@@ -40,7 +39,7 @@ def sphere3_baricenters(sphere3_msh):
         axis=1,
     )
 
-    tr_indexes = np.where(sphere3_msh.elm.elm_type == 2)[0]
+    tr_indexes = sphere3_msh.elm.get_triangles(return_indices=True)
     baricenters[tr_indexes] = np.average(
         sphere3_msh.nodes.node_coord[
             sphere3_msh.elm.node_number_list[tr_indexes, :3] - 1
@@ -241,37 +240,80 @@ class TestElements:
         )
 
     @pytest.mark.parametrize("tags", [1, (1, 2), [11, 12]])
-    @pytest.mark.parametrize("return_indices", [False, True])
-    def test_get_tags(self, simple_element, tags, return_indices):
-        target = np.isin(simple_element.tag1, tags)
-        target = np.where(target)[0] + 1 if return_indices else target
+    @pytest.mark.parametrize("invert", [False, True])
+    @pytest.mark.parametrize(
+        ("return_element_numbers", "return_indices"),
+        ([False, False], [False, True], [True, False]),
+    )
+    def test_get_tags(
+        self, simple_element, tags, invert, return_element_numbers, return_indices
+    ):
+        target = np.isin(simple_element.tag1, tags, invert=invert)
+        if return_element_numbers:
+            target = np.where(target)[0] + 1
+        elif return_indices:
+            target = np.where(target)[0]
 
         np.testing.assert_allclose(
-            target, simple_element.get_tags(tags, return_indices)
+            target,
+            simple_element.get_tags(
+                tags,
+                invert,
+                return_element_numbers=return_element_numbers,
+                return_indices=return_indices,
+            ),
         )
 
     @pytest.mark.parametrize("tags", [None, 1, (1, 2), [11, 12]])
-    @pytest.mark.parametrize("return_indices", [False, True])
-    def test_get_triangles(self, simple_element, tags, return_indices):
+    @pytest.mark.parametrize(
+        ("return_element_numbers", "return_indices"),
+        ([False, False], [False, True], [True, False]),
+    )
+    def test_get_triangles(
+        self, simple_element, tags, return_element_numbers, return_indices
+    ):
         target = np.isin(simple_element.elm_type, ElementTypes.TRIANGLE)
         if tags is not None:
             target &= np.isin(simple_element.tag1, tags)
-        target = np.where(target)[0] + 1 if return_indices else target
+
+        if return_element_numbers:
+            target = np.where(target)[0] + 1
+        elif return_indices:
+            target = np.where(target)[0]
 
         np.testing.assert_allclose(
-            target, simple_element.get_triangles(tags, return_indices)
+            target,
+            simple_element.get_triangles(
+                tags,
+                return_element_numbers=return_element_numbers,
+                return_indices=return_indices,
+            ),
         )
 
     @pytest.mark.parametrize("tags", [None, 11, (1, 2), [11, 12]])
-    @pytest.mark.parametrize("return_indices", [False, True])
-    def test_get_tetrahedra(self, simple_element, tags, return_indices):
+    @pytest.mark.parametrize(
+        ("return_element_numbers", "return_indices"),
+        ([False, False], [False, True], [True, False]),
+    )
+    def test_get_tetrahedra(
+        self, simple_element, tags, return_element_numbers, return_indices
+    ):
         target = np.isin(simple_element.elm_type, ElementTypes.TETRAHEDRON)
         if tags is not None:
             target &= np.isin(simple_element.tag1, tags)
-        target = np.where(target)[0] + 1 if return_indices else target
+
+        if return_element_numbers:
+            target = np.where(target)[0] + 1
+        elif return_indices:
+            target = np.where(target)[0]
 
         np.testing.assert_allclose(
-            target, simple_element.get_tetrahedra(tags, return_indices)
+            target,
+            simple_element.get_tetrahedra(
+                tags,
+                return_element_numbers=return_element_numbers,
+                return_indices=return_indices,
+            ),
         )
 
     def test_elm_init_node_number_list(self):
@@ -345,10 +387,10 @@ class TestElements:
 
     def test_find_adjacent_tetrahedra_tr(self, sphere3_msh):
         adj_elements = sphere3_msh.elm.find_adjacent_tetrahedra()
-        outer_surf = sphere3_msh.elm.tag1 == 1005
+        outer_surf = sphere3_msh.elm.get_tags(1005)
         assert np.all(adj_elements[outer_surf, 1:] == -1)
         assert np.all(sphere3_msh.elm.tag1[adj_elements[outer_surf, 0] - 1] == 5)
-        inner = sphere3_msh.elm.tag1 == 1004
+        inner = sphere3_msh.elm.get_tags(1004)
         assert np.all(
             np.isin(sphere3_msh.elm.tag1[adj_elements[inner, :1] - 1], [4, 5])
         )
@@ -356,16 +398,16 @@ class TestElements:
     def test_find_adjacent_tetrahedra_tr_dangling(self, sphere3_msh):
         m = sphere3_msh.crop_mesh([3, 1005])
         adj_elements = m.elm.find_adjacent_tetrahedra()
-        outer_surf = m.elm.tag1 == 1005
+        outer_surf = m.elm.get_tags(1005)
         assert np.all(adj_elements[outer_surf] == -1)
 
     def test_find_adjacent_tetrahedra_th(self, sphere3_msh):
         adj_elements = sphere3_msh.elm.find_adjacent_tetrahedra()
-        inner_vol = sphere3_msh.elm.tag1 == 3
+        inner_vol = sphere3_msh.elm.get_tags(3)
         assert np.all(
             np.unique(sphere3_msh.elm.tag1[adj_elements[inner_vol] - 1]) == [3, 4]
         )
-        mid = sphere3_msh.elm.tag1 == 4
+        mid = sphere3_msh.elm.get_tags(4)
         assert np.all(
             np.unique(sphere3_msh.elm.tag1[adj_elements[mid] - 1]) == [3, 4, 5]
         )
@@ -377,30 +419,29 @@ class TestElements:
 
     def test_connected_components_disconnected_th(self, sphere3_msh):
         elm_select = sphere3_msh.elm.elm_number[
-            (sphere3_msh.elm.tag1 == 3) + (sphere3_msh.elm.tag1 == 5)
+            sphere3_msh.elm.get_tags(3) | sphere3_msh.elm.get_tags(5)
         ]
         cc = sphere3_msh.elm.connected_components(elm_select)
         assert len(cc) == 2
-        assert np.all(cc[0] == sphere3_msh.elm.elm_number[(sphere3_msh.elm.tag1 == 3)])
-        assert np.all(cc[1] == sphere3_msh.elm.elm_number[(sphere3_msh.elm.tag1 == 5)])
+        assert np.all(cc[0] == sphere3_msh.elm.get_tags(3, return_element_numbers=True))
+        assert np.all(cc[1] == sphere3_msh.elm.get_tags(5, return_element_numbers=True))
 
     def test_connected_components_disconnected_th_tr(self, sphere3_msh):
         elm_select = sphere3_msh.elm.elm_number[
-            (sphere3_msh.elm.tag1 == 3) + (sphere3_msh.elm.tag1 == 1005)
+            sphere3_msh.elm.get_tags(3) | sphere3_msh.elm.get_tags(5)
         ]
         cc = sphere3_msh.elm.connected_components(elm_select)
         assert len(cc) == 2
-        assert np.all(cc[0] == sphere3_msh.elm.elm_number[(sphere3_msh.elm.tag1 == 3)])
-        assert np.all(
-            cc[1] == sphere3_msh.elm.elm_number[(sphere3_msh.elm.tag1 == 1005)]
-        )
+        assert np.all(cc[0] == sphere3_msh.elm.get_tags(3, return_element_numbers=True))
+        assert np.all(cc[1] == sphere3_msh.elm.get_tags(5, return_element_numbers=True))
 
     def test_add_triangles(self, sphere3_msh):
         m = copy.deepcopy(sphere3_msh)
-        m.elm.add_triangles(m.elm[m.elm.tag1 == 1005, :3], 1006)
-        assert m.elm.nr == sphere3_msh.elm.nr + np.sum(m.elm.tag1 == 1005)
+        m.elm.add_triangles(m.elm[m.elm.get_tags(1005), :3], 1006)
+        assert m.elm.nr == sphere3_msh.elm.nr + m.elm.get_tags(1005).sum()
         assert np.all(
-            m.elm[m.elm.tag1 == 1006] == sphere3_msh.elm[sphere3_msh.elm.tag1 == 1005]
+            m.elm[m.elm.get_tags(1006)]
+            == sphere3_msh.elm[sphere3_msh.elm.get_tags(1005)]
         )
 
     def test_node_elm_adjacency(self, sphere3_msh):
@@ -413,12 +454,13 @@ class TestElements:
 
     def test_add_triangles_tags(self, sphere3_msh):
         m = copy.deepcopy(sphere3_msh)
-        tr = m.elm[m.elm.tag1 == 1005, :3]
-        tags = m.elm.tag1[m.elm.tag1 == 1005] + 1
+        tr = m.elm[m.elm.get_tags(1005), :3]
+        tags = m.elm.tag1[m.elm.get_tags(1005)] + 1
         m.elm.add_triangles(tr, tags)
-        assert m.elm.nr == sphere3_msh.elm.nr + np.sum(m.elm.tag1 == 1005)
+        assert m.elm.nr == sphere3_msh.elm.nr + m.elm.get_tags(1005).sum()
         assert np.all(
-            m.elm[m.elm.tag1 == 1006] == sphere3_msh.elm[sphere3_msh.elm.tag1 == 1005]
+            m.elm[m.elm.get_tags(1006)]
+            == sphere3_msh.elm[sphere3_msh.elm.get_tags(1005)]
         )
 
 
@@ -432,13 +474,13 @@ class TestMsh:
     def test_crop_mesh(self, sphere3_msh):
         cropped_mesh = sphere3_msh.crop_mesh([1003, 5])
         nr_elements_tags = np.sum(
-            np.logical_or(cropped_mesh.elm.tag1 == 1003, cropped_mesh.elm.tag1 == 5)
+            cropped_mesh.elm.get_tags(1003) | cropped_mesh.elm.get_tags(5)
         )
         assert nr_elements_tags == cropped_mesh.elm.nr
 
     def test_crop_mesh_type(self, sphere3_msh):
-        cropped_mesh = sphere3_msh.crop_mesh(elm_type=4)
-        assert np.all(cropped_mesh.elm.elm_type == 4)
+        cropped_mesh = sphere3_msh.crop_mesh(elm_type=ElementTypes.TETRAHEDRON)
+        assert np.all(cropped_mesh.elm.get_tetrahedra())
 
     def test_crop_mesh_nodes(self, sphere3_msh):
         target = range(1, 11)
@@ -500,22 +542,22 @@ class TestMsh:
 
     def test_remove_elements(self, sphere3_msh):
         removed = sphere3_msh.remove_from_mesh(1003)
-        assert np.all(removed.elm.tag1 != 1003)
+        assert np.all(removed.elm.get_tags(1003, invert=True))
 
     def test_remove_mesh_type(self, sphere3_msh):
-        removed = sphere3_msh.remove_from_mesh(elm_type=4)
-        assert np.all(removed.elm.elm_type == 2)
+        removed = sphere3_msh.remove_from_mesh(elm_type=ElementTypes.TETRAHEDRON)
+        assert np.all(removed.elm.get_triangles())
 
     def test_remove_mesh_nodes(self, sphere3_msh):
         removed = sphere3_msh.remove_from_mesh(
-            nodes=np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 5])
+            nodes=np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(5)])
         )
 
         assert len(np.setdiff1d([3, 1003, 4], removed.elm.tag1)) == 0
 
     def test_remove_mesh_elements(self, sphere3_msh):
         removed = sphere3_msh.remove_from_mesh(
-            elements=sphere3_msh.elm.elm_number[sphere3_msh.elm.tag1 == 1005]
+            elements=sphere3_msh.elm.elm_number[sphere3_msh.elm.get_tags(1005)]
         )
         assert len(np.setdiff1d([3, 1003, 4, 1004, 5], removed.elm.tag1)) == 0
 
@@ -523,7 +565,7 @@ class TestMsh:
         baricenters = sphere3_msh.elements_baricenters()
 
         b = np.zeros((sphere3_msh.elm.nr, 3), dtype=float)
-        th_indexes = np.where(sphere3_msh.elm.elm_type == 4)[0]
+        th_indexes = sphere3_msh.elm.get_tetrahedra(return_indices=True)
         b[th_indexes] = np.average(
             sphere3_msh.nodes.node_coord[
                 sphere3_msh.elm.node_number_list[th_indexes, :4] - 1
@@ -531,7 +573,7 @@ class TestMsh:
             axis=1,
         )
 
-        tr_indexes = np.where(sphere3_msh.elm.elm_type == 2)[0]
+        tr_indexes = sphere3_msh.elm.get_triangles(return_indices=True)
         b[tr_indexes] = np.average(
             sphere3_msh.nodes.node_coord[
                 sphere3_msh.elm.node_number_list[tr_indexes, :3] - 1
@@ -727,9 +769,9 @@ class TestMsh:
 
     def test_curvature(self, sphere3_msh):
         # https://computergraphics.stackexchange.com/a/1721
-        surf_1005 = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1005, :3])
-        surf_1004 = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1004, :3])
-        surf_1003 = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1003, :3])
+        surf_1005 = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1005), :3])
+        surf_1004 = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1004), :3])
+        surf_1003 = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1003), :3])
         curv = sphere3_msh.gaussian_curvature()
         assert np.allclose(curv[surf_1005], (1 / 95**2), atol=1e-4)
         assert np.allclose(curv[surf_1004], (1 / 90**2), atol=1e-4)
@@ -755,7 +797,7 @@ class TestMsh:
     def tests_node_normal(self, sphere3_msh):
         normals = sphere3_msh.nodes_normals()
         outer_nodes = np.unique(
-            sphere3_msh.elm.node_number_list[sphere3_msh.elm.tag1 == 1005, :3]
+            sphere3_msh.elm.node_number_list[sphere3_msh.elm.get_tags(1005), :3]
         )
         # high tolerance due to low resolution
         np.testing.assert_allclose(
@@ -777,7 +819,7 @@ class TestMsh:
     def tests_node_area2(self, sphere3_msh):
         areas = sphere3_msh.nodes_areas()
         outer_nodes = np.unique(
-            sphere3_msh.elm.node_number_list[sphere3_msh.elm.tag1 == 1005, :3]
+            sphere3_msh.elm.node_number_list[sphere3_msh.elm.get_tags(1005), :3]
         )
         # high tolerance due to low resolution
         assert np.isclose(np.sum(areas[outer_nodes]), np.pi * 4.0 * 95**2, rtol=1)
@@ -858,7 +900,7 @@ class TestMsh:
         m.elm.node_number_list[:, 1] = sphere3_msh.elm.node_number_list[:, 2]
         m.elm.node_number_list[:, 2] = sphere3_msh.elm.node_number_list[:, 1]
         m.fix_th_node_ordering()
-        th = m.nodes[m.elm.node_number_list[m.elm.elm_type == 4, :]]
+        th = m.nodes[m.elm.node_number_list[m.elm.get_tetrahedra(), :]]
         M = th[:, 1:] - th[:, 0, None]
         assert np.all(np.linalg.det(M) > 0)
 
@@ -873,7 +915,7 @@ class TestMsh:
         m.elm.node_number_list[:, 1] = m.elm.node_number_list[:, 2]
         m.elm.node_number_list[:, 2] = tmp
         m.fix_tr_node_ordering()
-        triangles = m.elm.elm_type == 2
+        triangles = m.elm.get_triangles()
         normal_sphere = m.elements_baricenters().value[triangles]
         normal_sphere /= np.linalg.norm(normal_sphere, axis=1)[:, None]
         dotp = np.sum(m.triangle_normals().value[triangles] * normal_sphere, axis=1)
@@ -899,11 +941,12 @@ class TestMsh:
 
     def test_fix_surface_labels(self, sphere3_msh):
         msh = copy.deepcopy(sphere3_msh)
-        msh.elm.tag1[msh.elm.elm_type == 2] -= 1000
-        msh.elm.tag2[msh.elm.elm_type == 2] -= 1000
+        tris = msh.elm.get_triangles()
+        msh.elm.tag1[tris] -= 1000
+        msh.elm.tag2[tris] -= 1000
         msh.fix_surface_labels()
-        assert np.all(msh.elm.tag1[msh.elm.elm_type == 2] > 1000)
-        assert np.all(msh.elm.tag2[msh.elm.elm_type == 2] > 1000)
+        assert np.all(msh.elm.tag1[tris] > 1000)
+        assert np.all(msh.elm.tag2[tris] > 1000)
 
     def test_calc_matsimnibs(self, sphere3_msh):
         matsimnibs = sphere3_msh.calc_matsimnibs([0.0, 0.0, -95.0], [0, 95.0, 0.0], 1)
@@ -1022,7 +1065,7 @@ class TestMsh:
         mesh = copy.deepcopy(sphere3_msh)
         nn = mesh.nodes_normals()
 
-        triangles = np.where(mesh.elm.tag1 == 1005)[0] + 1
+        triangles = mesh.elm.get_tags(1005, return_element_numbers=True)
         elm_idx = triangles[0]
         v = mesh.elm[elm_idx][0]
 
@@ -1059,7 +1102,7 @@ class TestMsh:
 
     def test_elm2node_matrix_crop(self, sphere3_msh):
         m = sphere3_msh.crop_mesh(elm_type=4)
-        M = m.elm2node_matrix(m.elm.elm_number[m.elm.tag1 == 3])
+        M = m.elm2node_matrix(m.elm.elm_number[m.elm.get_tags(3)])
         x = m.elements_baricenters().value[:, 0]
         nodes_r = np.linalg.norm(m.nodes.node_coord, axis=1)
         assert np.allclose(
@@ -1147,12 +1190,12 @@ class TestMsh:
 
     def test_find_shared_nodes(self, sphere3_msh):
         shared_nodes = sphere3_msh.find_shared_nodes([3, 4])
-        surf_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1003, :3])
+        surf_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1003), :3])
         assert np.all(shared_nodes == surf_nodes)
 
     def test_find_shared_nodes_tr(self, sphere3_msh):
         shared_nodes = sphere3_msh.find_shared_nodes([3, 1003])
-        surf_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1003, :3])
+        surf_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1003), :3])
         print(shared_nodes)
         assert np.all(shared_nodes == surf_nodes)
 
@@ -1207,26 +1250,28 @@ class TestMsh:
         m = sphere3_msh.crop_mesh(elm_type=4)
         m.reconstruct_surfaces()
         c = m.elements_baricenters()
-        assert np.allclose(np.linalg.norm(c[m.elm.tag1 == 1003], axis=1), 85, rtol=1e-2)
-        assert np.all(
-            np.isclose(np.linalg.norm(c[m.elm.tag1 == 1004], axis=1), 85, rtol=1e-2)
-            + np.isclose(np.linalg.norm(c[m.elm.tag1 == 1004], axis=1), 90, rtol=1e-2)
+        assert np.allclose(
+            np.linalg.norm(c[m.elm.get_tags(1003)], axis=1), 85, rtol=1e-2
         )
         assert np.all(
-            np.isclose(np.linalg.norm(c[m.elm.tag1 == 1005], axis=1), 90, rtol=1e-2)
-            + np.isclose(np.linalg.norm(c[m.elm.tag1 == 1005], axis=1), 95, rtol=1e-2)
+            np.isclose(np.linalg.norm(c[m.elm.get_tags(1004)], axis=1), 85, rtol=1e-2)
+            + np.isclose(np.linalg.norm(c[m.elm.get_tags(1004)], axis=1), 90, rtol=1e-2)
+        )
+        assert np.all(
+            np.isclose(np.linalg.norm(c[m.elm.get_tags(1005)], axis=1), 90, rtol=1e-2)
+            + np.isclose(np.linalg.norm(c[m.elm.get_tags(1005)], axis=1), 95, rtol=1e-2)
         )
 
     def test_reconstruct_surfaces_tag(self, sphere3_msh):
         m = sphere3_msh.crop_mesh(elm_type=4)
         m.reconstruct_surfaces(tags=[4])
-        assert ~np.any(np.isin(m.elm.tag1, [1003, 1005]))
+        assert not m.elm.get_tags([1003, 1005]).any()
 
     def test_reconstruct_unique_surface(self, sphere3_msh):
-        m2 = sphere3_msh.crop_mesh(elm_type=2)
-        m = sphere3_msh.crop_mesh(elm_type=4)
+        m2 = sphere3_msh.crop_mesh(elm_type=ElementTypes.TRIANGLE)
+        m = sphere3_msh.crop_mesh(elm_type=ElementTypes.TETRAHEDRON)
         m.reconstruct_unique_surface()
-        m = m.crop_mesh(elm_type=2)
+        m = m.crop_mesh(elm_type=ElementTypes.TRIANGLE)
         m_tags, m_cts = np.unique(m.elm.tag1, return_counts=True)
         m2_tags, m2_cts = np.unique(m2.elm.tag1, return_counts=True)
         assert m.elm.nr == m2.elm.nr
@@ -1272,7 +1317,7 @@ class TestMsh:
 
     def test_smooth_without_th(self, sphere3_msh):
         mesh = sphere3_msh.crop_mesh(elm_type=2)
-        tr_nodes = np.unique(mesh.elm[mesh.elm.tag1 == 1003, :3])
+        tr_nodes = np.unique(mesh.elm[mesh.elm.get_tags(1003), :3])
         mesh.nodes.node_coord[tr_nodes - 1] += (
             np.random.standard_normal((len(tr_nodes), 3)) * 1
         )
@@ -1283,7 +1328,7 @@ class TestMsh:
 
     def test_smooth_with_tetrahedra(self, sphere3_msh):
         mesh = copy.deepcopy(sphere3_msh)
-        tr_nodes = np.unique(mesh.elm[mesh.elm.tag1 == 1003, :3])
+        tr_nodes = np.unique(mesh.elm[mesh.elm.get_tags(1003), :3])
         mesh.nodes.node_coord[tr_nodes - 1] += (
             np.random.standard_normal((len(tr_nodes), 3)) * 1
         )
@@ -1294,7 +1339,7 @@ class TestMsh:
 
     def test_smooth_with_tag(self, sphere3_msh):
         mesh = sphere3_msh.crop_mesh(elm_type=2)
-        tr_nodes = np.unique(mesh.elm[mesh.elm.tag1 == 1003, :3])
+        tr_nodes = np.unique(mesh.elm[mesh.elm.get_tags(1003), :3])
         mesh.nodes.node_coord[tr_nodes - 1] += (
             np.random.standard_normal((len(tr_nodes), 3)) * 1
         )
@@ -1310,7 +1355,7 @@ class TestMsh:
 
     def test_smooth_quality(self, sphere3_msh):
         mesh = copy.deepcopy(sphere3_msh)
-        tr_nodes = np.unique(mesh.elm[mesh.elm.tag1 == 1003, :3])
+        tr_nodes = np.unique(mesh.elm[mesh.elm.get_tags(1003), :3])
         mesh.nodes.node_coord[tr_nodes - 1] += (
             np.random.standard_normal((len(tr_nodes), 3)) * 0.1
         )
@@ -1469,8 +1514,8 @@ class TestData:
         assert np.isclose(np.sum(vols[norm > prc[1]]), np.sum(vols) / 20, rtol=1e-1)
 
     def test_get_percentile_roi(self, sphere3_msh):
-        m = sphere3_msh.crop_mesh(elm_type=4)
-        roi = m.elm.tag1 == 3
+        m = sphere3_msh.crop_mesh(elm_type=ElementTypes.TETRAHEDRON)
+        roi = m.elm.get_tags(3)
         field = mesh_io.ElementData(np.random.rand(m.elm.nr, 3), mesh=m)
         prc = field.get_percentiles([90, 95], roi=roi)
         vols = m.elements_volumes_and_areas()[roi]
@@ -1884,13 +1929,13 @@ class TestElmData:
         elmdata = mesh_io.ElementData(
             np.tile([1.0, 0.0, 0.0], (sphere3_msh.elm.nr, 1)), mesh=sphere3_msh
         )
-        triangles = sphere3_msh.elm.elm_number[sphere3_msh.elm.tag1 == 1003]
+        triangles = sphere3_msh.elm.get_tags(1003, return_element_numbers=True)
         flux = elmdata.calc_flux(triangles)
         assert np.isclose(flux, 0, atol=1e-1)
 
     def test_calc_flux_radial(self, sphere3_msh):
         elmdata = sphere3_msh.elements_baricenters()
-        triangles = sphere3_msh.elm.elm_number[sphere3_msh.elm.tag1 == 1003]
+        triangles = sphere3_msh.elm.get_tags(1003, return_element_numbers=True)
         flux = elmdata.calc_flux(triangles)
         # Divergence theorem
         assert np.isclose(flux, 85**3 * 4 * np.pi, rtol=1e-2)
@@ -1974,7 +2019,7 @@ class TestNodeData:
             sphere3_msh.nodes.node_coord[:, 0], mesh=sphere3_msh
         )
         elm_data = node_data.node_data2elm_data()
-        triangles = np.where(sphere3_msh.elm.elm_type == 2)[0]
+        triangles = sphere3_msh.elm.get_triangles(return_indices=True)
         tr_x_baricenter = np.average(
             sphere3_msh.nodes.node_coord[
                 sphere3_msh.elm.node_number_list[triangles, :3] - 1, 0
@@ -1989,7 +2034,7 @@ class TestNodeData:
     def test_node_data2elm_data_vectorial(self, sphere3_msh):
         node_data = mesh_io.NodeData(sphere3_msh.nodes.node_coord, mesh=sphere3_msh)
         elm_data = node_data.node_data2elm_data()
-        triangles = np.where(sphere3_msh.elm.elm_type == 2)[0]
+        triangles = sphere3_msh.elm.get_triangles(return_indices=True)
         tr_baricenter = np.average(
             sphere3_msh.nodes.node_coord[
                 sphere3_msh.elm.node_number_list[triangles, :3] - 1, :
@@ -2025,7 +2070,7 @@ class TestNodeData:
             np.tile([1.0, 0.0, 0.0], (sphere3_msh.nodes.nr, 1)), mesh=sphere3_msh
         )
         nodes = np.unique(
-            sphere3_msh.elm.node_number_list[sphere3_msh.elm.tag1 == 1003, :3]
+            sphere3_msh.elm.node_number_list[sphere3_msh.elm.get_tags(1003), :3]
         )
         flux = nodedata.calc_flux(nodes)
         assert np.isclose(flux, 0, atol=1e-1)
@@ -2033,7 +2078,7 @@ class TestNodeData:
     def test_calc_flux_radial(self, sphere3_msh):
         nodedata = mesh_io.NodeData(sphere3_msh.nodes.node_coord, mesh=sphere3_msh)
         nodes = np.unique(
-            sphere3_msh.elm.node_number_list[sphere3_msh.elm.tag1 == 1003, :3]
+            sphere3_msh.elm.node_number_list[sphere3_msh.elm.get_tags(1003), :3]
         )
         flux = nodedata.calc_flux(nodes)
         # Divergence theorem
@@ -2077,7 +2122,7 @@ class TestNodeData:
     def test_normal(self, sphere3_msh):
         nd = mesh_io.NodeData(sphere3_msh.nodes.node_coord, mesh=sphere3_msh)
         outer_surface = sphere3_msh.elm.node_number_list[
-            sphere3_msh.elm.tag1 == 1005, :3
+            sphere3_msh.elm.get_tags(1005), :3
         ]
         outer_nodes = np.unique(outer_surface)
         normal = nd.normal()
@@ -2086,7 +2131,7 @@ class TestNodeData:
     def test_angles(self, sphere3_msh):
         nd = mesh_io.NodeData(sphere3_msh.nodes.node_coord, mesh=sphere3_msh)
         outer_surface = sphere3_msh.elm.node_number_list[
-            sphere3_msh.elm.tag1 == 1005, :3
+            sphere3_msh.elm.get_tags(1005), :3
         ]
         outer_nodes = np.unique(outer_surface)
         angle = nd.angle()
@@ -2095,7 +2140,7 @@ class TestNodeData:
     def test_tangent(self, sphere3_msh):
         nd = mesh_io.NodeData(sphere3_msh.nodes.node_coord, mesh=sphere3_msh)
         outer_surface = sphere3_msh.elm.node_number_list[
-            sphere3_msh.elm.tag1 == 1005, :3
+            sphere3_msh.elm.get_tags(1005), :3
         ]
         outer_nodes = np.unique(outer_surface)
         tangent = nd.tangent()

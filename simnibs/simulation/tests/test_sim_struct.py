@@ -117,9 +117,9 @@ class TestList:
         simlist.cond[4].value = 41
         simlist.mesh = sphere3_msh
         elmcond = simlist.cond2elmdata()
-        assert np.all(elmcond.value[sphere3_msh.elm.tag1 == 3] == 21)
-        assert np.all(elmcond.value[sphere3_msh.elm.tag1 == 4] == 31)
-        assert np.all(elmcond.value[sphere3_msh.elm.tag1 == 5] == 41)
+        assert np.all(elmcond.value[sphere3_msh.elm.get_tags(3)] == 21)
+        assert np.all(elmcond.value[sphere3_msh.elm.get_tags(4)] == 31)
+        assert np.all(elmcond.value[sphere3_msh.elm.get_tags(5)] == 41)
 
     def test_get_conductivity(self):
         simlist = sim_struct.SimuList()
@@ -148,18 +148,18 @@ class TestList:
         img = nibabel.Nifti1Image(v, affine)
         nibabel.save(img, simlist.fn_tensor_nifti)
         msh = copy.deepcopy(sphere3_msh)
-        msh.elm.tag1[msh.elm.tag1 == 3] = 1
+        msh.elm.tag1[msh.elm.get_tags(3)] = 1
 
         simlist.mesh = msh
         elmcond = simlist.cond2elmdata()
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 1], [0, -1, -2, -1, 3, 4, -2, 4, 5]
+            elmcond.value[sphere3_msh.elm.get_tags(1)], [0, -1, -2, -1, 3, 4, -2, 4, 5]
         )
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 4], [7, 0, 0, 0, 7, 0, 0, 0, 7]
+            elmcond.value[sphere3_msh.elm.get_tags(4)], [7, 0, 0, 0, 7, 0, 0, 0, 7]
         )
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 5], [9, 0, 0, 0, 9, 0, 0, 0, 9]
+            elmcond.value[sphere3_msh.elm.get_tags(5)], [9, 0, 0, 0, 9, 0, 0, 0, 9]
         )
         os.remove(simlist.fn_tensor_nifti)
 
@@ -193,17 +193,17 @@ class TestList:
         simlist.anisotropy_affine = affine
 
         elmcond = simlist.cond2elmdata()
-        tensor = elmcond.value[sphere3_msh.elm.tag1 == 3].reshape(-1, 3, 3)
+        tensor = elmcond.value[sphere3_msh.elm.get_tags(3)].reshape(-1, 3, 3)
         t = affine[:3, :3].dot(t).dot(affine[:3, :3])
         assert np.allclose(np.linalg.det(tensor), 2**3)
         assert np.allclose(np.linalg.eig(tensor)[1][:, 0], np.linalg.eig(t)[1][0])
         assert np.allclose(np.linalg.eig(tensor)[1][:, 1], np.linalg.eig(t)[1][1])
         assert np.allclose(np.linalg.eig(tensor)[1][:, 2], np.linalg.eig(t)[1][2])
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 4], [7, 0, 0, 0, 7, 0, 0, 0, 7]
+            elmcond.value[sphere3_msh.elm.get_tags(4)], [7, 0, 0, 0, 7, 0, 0, 0, 7]
         )
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 5], [9, 0, 0, 0, 9, 0, 0, 0, 9]
+            elmcond.value[sphere3_msh.elm.get_tags(5)], [9, 0, 0, 0, 9, 0, 0, 0, 9]
         )
 
     def test_write_to_hdf5(self):

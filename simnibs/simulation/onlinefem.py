@@ -1539,7 +1539,7 @@ class FemTargetPointCloud:
                 m_tag = msh.crop_mesh(tags=t)
 
                 # 'm_with_t' is sorted because 'elm_number' is always sorted
-                m_with_t = msh.elm.elm_number[msh.elm.tag1 == t]
+                m_with_t = msh.elm.get_tags(t, return_element_numbers=True)
 
                 # the 'elm_number' of elements in 'msh'. These elements contain points and 'tag1 == t'
                 th_with_t = th[is_t]

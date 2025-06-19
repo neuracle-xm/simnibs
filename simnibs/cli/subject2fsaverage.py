@@ -51,7 +51,7 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
 
     # indices of vertices per hemisphere
     idx = {
-        hemi: np.unique(mesh.elm.node_number_list[mesh.elm.tag1 == tag, :3] - 1)
+        hemi: np.unique(mesh.elm.node_number_list[mesh.elm.get_tags(tag), :3] - 1)
         for tag, hemi in tag2hemi.items()
     }
 

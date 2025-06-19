@@ -34,12 +34,12 @@ class TestCond2Elmdata:
     def test_isotropic(self, sphere3_msh):
         cond_list = [None, None, 1, 2, 3]
         c = simnibs.utils.cond_utils.cond2elmdata(sphere3_msh, cond_list).value
-        assert np.all(c[sphere3_msh.elm.tag1 == 3] == 1)
-        assert np.all(c[sphere3_msh.elm.tag1 == 1003] == 1)
-        assert np.all(c[sphere3_msh.elm.tag1 == 4] == 2)
-        assert np.all(c[sphere3_msh.elm.tag1 == 1004] == 2)
-        assert np.all(c[sphere3_msh.elm.tag1 == 5] == 3)
-        assert np.all(c[sphere3_msh.elm.tag1 == 1005] == 3)
+        assert np.all(c[sphere3_msh.elm.get_tags(3)] == 1)
+        assert np.all(c[sphere3_msh.elm.get_tags(1003)] == 1)
+        assert np.all(c[sphere3_msh.elm.get_tags(4)] == 2)
+        assert np.all(c[sphere3_msh.elm.get_tags(1004)] == 2)
+        assert np.all(c[sphere3_msh.elm.get_tags(5)] == 3)
+        assert np.all(c[sphere3_msh.elm.get_tags(1005)] == 3)
 
     def test_anisotropic(self, sphere3_msh, tensor):
         cond_list = [None, None, 1, 2, 3]
@@ -62,12 +62,12 @@ class TestCond2Elmdata:
             correct_intensity=False,
         )
         t = affine[:3, :3].dot(tensor).dot(affine[:3, :3])
-        assert np.allclose(elmcond.value[msh.elm.tag1 == 3], t.reshape(-1))
+        assert np.allclose(elmcond.value[msh.elm.get_tags(3)], t.reshape(-1))
         assert np.allclose(
-            elmcond.value[msh.elm.tag1 == 4], [2, 0, 0, 0, 2, 0, 0, 0, 2]
+            elmcond.value[msh.elm.get_tags(4)], [2, 0, 0, 0, 2, 0, 0, 0, 2]
         )
         assert np.allclose(
-            elmcond.value[msh.elm.tag1 == 5], [3, 0, 0, 0, 3, 0, 0, 0, 3]
+            elmcond.value[msh.elm.get_tags(5)], [3, 0, 0, 0, 3, 0, 0, 0, 3]
         )
         vol = np.linalg.eig(tensor)[0].prod() ** (1.0 / 3.0)
         scaling = (vol * 1 + vol * 2) / (2 * (vol**2))
@@ -81,10 +81,10 @@ class TestCond2Elmdata:
             max_ratio=np.inf,
             correct_intensity=True,
         )
-        assert np.allclose(elmcond.value[msh.elm.tag1 == 3], scaling * t.reshape(-1))
-        assert np.allclose(elmcond.value[msh.elm.tag1 == 4], scaling * t.reshape(-1))
+        assert np.allclose(elmcond.value[msh.elm.get_tags(3)], scaling * t.reshape(-1))
+        assert np.allclose(elmcond.value[msh.elm.get_tags(4)], scaling * t.reshape(-1))
         assert np.allclose(
-            elmcond.value[msh.elm.tag1 == 5], [3, 0, 0, 0, 3, 0, 0, 0, 3]
+            elmcond.value[msh.elm.get_tags(5)], [3, 0, 0, 0, 3, 0, 0, 0, 3]
         )
 
     def test_anisotropic_normalized(self, sphere3_msh, tensor):
@@ -100,17 +100,17 @@ class TestCond2Elmdata:
         elmcond = simnibs.utils.cond_utils.cond2elmdata(
             sphere3_msh, cond_list, v, affine, aniso_tissues=3, normalize=True
         )
-        tensor = elmcond.value[sphere3_msh.elm.tag1 == 3].reshape(-1, 3, 3)
+        tensor = elmcond.value[sphere3_msh.elm.get_tags(3)].reshape(-1, 3, 3)
         t = affine[:3, :3].dot(t).dot(affine[:3, :3])
         assert np.allclose(np.linalg.det(tensor), 2**3)
         assert np.allclose(np.linalg.eig(tensor)[1][:, 0], np.linalg.eig(t)[1][0])
         assert np.allclose(np.linalg.eig(tensor)[1][:, 1], np.linalg.eig(t)[1][1])
         assert np.allclose(np.linalg.eig(tensor)[1][:, 2], np.linalg.eig(t)[1][2])
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 4], [7, 0, 0, 0, 7, 0, 0, 0, 7]
+            elmcond.value[sphere3_msh.elm.get_tags(4)], [7, 0, 0, 0, 7, 0, 0, 0, 7]
         )
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 5], [9, 0, 0, 0, 9, 0, 0, 0, 9]
+            elmcond.value[sphere3_msh.elm.get_tags(5)], [9, 0, 0, 0, 9, 0, 0, 0, 9]
         )
 
     def test_anisotropic_zero_region(self, sphere3_msh, tensor):
@@ -125,12 +125,12 @@ class TestCond2Elmdata:
             sphere3_msh, cond_list, v, affine, aniso_tissues=3, normalize=True
         )
         assert np.allclose(
-            elmcond.value[sphere3_msh.elm.tag1 == 3], [2, 0, 0, 0, 2, 0, 0, 0, 2]
+            elmcond.value[sphere3_msh.elm.get_tags(3)], [2, 0, 0, 0, 2, 0, 0, 0, 2]
         )
         """
         elmcond = cond.cond2elmdata(sphere3_msh, cond_list, v, affine, aniso_tissues=3,
                                     normalize=False)
-        assert np.allclose(elmcond.value[sphere3_msh.elm.tag1 == 3],
+        assert np.allclose(elmcond.value[sphere3_msh.elm.get_tags(3)],
                            [2, 0, 0, 0, 2, 0, 0, 0, 2])
         """
 
@@ -153,7 +153,7 @@ class TestCond2Elmdata:
             normalize=True,
             excentricity_scaling=0.0,
         )
-        tensor = elmcond.value[sphere3_msh.elm.tag1 == 3].reshape(-1, 3, 3)
+        tensor = elmcond.value[sphere3_msh.elm.get_tags(3)].reshape(-1, 3, 3)
         t = affine[:3, :3].dot(t).dot(affine[:3, :3])
         assert np.allclose(np.linalg.det(tensor), 2**3)
         assert np.allclose(tensor, 2 * np.eye(3))

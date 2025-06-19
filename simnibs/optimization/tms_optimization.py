@@ -552,7 +552,7 @@ class TMSoptimize:
 
         baricenters = self.mesh.elements_baricenters()
 
-        th = self.mesh.elm.elm_type == 4
+        th = self.mesh.elm.get_tetrahedra()
         coil = TmsCoil.from_file(self.fnamecoil)
         dipoles = []
         moments = []

@@ -41,7 +41,7 @@ def test_prepare_forward(point_electrodes, sphere3_msh):
     radii = [85, 90, 95]
     for tag, radius in zip([1003, 1004, 1005], radii):
         tris = np.unique(
-            sphere3_msh.elm.node_number_list[sphere3_msh.elm.tag1 == tag, :3] - 1
+            sphere3_msh.elm.node_number_list[sphere3_msh.elm.get_tags(tag), :3] - 1
         )
         assert np.allclose(
             np.array(3 * [-radius]), sphere3_msh.nodes.node_coord[tris].min(0)

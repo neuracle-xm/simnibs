@@ -766,7 +766,7 @@ def interpolate_to_volume(
         for v in vol_tags:
             name = fn + "_mask_{0}".format(v) + ext
             field = np.zeros(mesh.elm.nr, dtype=np.uint8)
-            field[mesh.elm.tag1 == v] = 1
+            field[mesh.elm.get_tags(v)] = 1
             ed = ElementData(field)
             ed.mesh = mesh
             ed.to_nifti(
@@ -1889,7 +1889,7 @@ def middle_gm_interpolation(
     m = m.crop_mesh(tags=[ElementTags.WM, ElementTags.GM, ElementTags.CSF])
 
     # Set the volume to be GM. The interpolation will use only the tetrahedra in the volume.
-    th_indices = m.elm.elm_number[m.elm.tag1 == ElementTags.GM]
+    th_indices = m.elm.get_tags(ElementTags.GM, return_element_numbers=True)
 
     if not os.path.isdir(out_folder):
         os.mkdir(out_folder)

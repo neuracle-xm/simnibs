@@ -175,7 +175,7 @@ def cond2elmdata(
     except TypeError:
         aniso_tissues = [aniso_tissues]
 
-    vol_tags = np.unique(mesh.elm.tag1[mesh.elm.elm_type == 4])
+    vol_tags = np.unique(mesh.elm.tag1[mesh.elm.get_tetrahedra()])
 
     def test_numerical(v, i):
         try:
@@ -197,7 +197,7 @@ def cond2elmdata(
                     "".format(np.max(vol_tags))
                 )
             c = test_numerical(cond_list[t - 1], t - 1)
-            cond.value[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)] = c
+            cond.value[mesh.elm.get_tetrahedra(t)] = c
     # Anisotropic
     else:
         # Interpolate conductivity values
@@ -237,7 +237,7 @@ def cond2elmdata(
                 # If tissue is isotropic
                 if t not in aniso_tissues:
                     c = test_numerical(cond_list[t - 1], t - 1)
-                    cond.value[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)] = [
+                    cond.value[mesh.elm.get_tetrahedra(t)] = [
                         c,
                         0,
                         0,
@@ -252,9 +252,7 @@ def cond2elmdata(
                 # If tissue is to be normalized
                 else:
                     c = test_numerical(cond_list[t - 1], t - 1)
-                    tensors = cond.value[
-                        (mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)
-                    ]
+                    tensors = cond.value[mesh.elm.get_tetrahedra(t)]
                     tensors = tensors.reshape(-1, 3, 3)
                     tensors = _fix_zeros(tensors, c)
                     eigval, eigvec = _get_sorted_eigenv(tensors)
@@ -269,9 +267,7 @@ def cond2elmdata(
                     if excentricity_scaling is not None:
                         eigval = _adjust_excentricity(eigval, excentricity_scaling)
                     tensors = _form_tensors(eigval, eigvec)
-                    cond.value[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)] = (
-                        tensors.reshape(-1, 9) * c
-                    )
+                    cond.value[mesh.elm.get_tetrahedra(t)] = tensors.reshape(-1, 9) * c
 
         # MC / DIR type conductivities
         else:
@@ -282,7 +278,7 @@ def cond2elmdata(
                 # If tissue is isotropic
                 if t not in aniso_tissues:
                     c = test_numerical(cond_list[t - 1], t - 1)
-                    cond.value[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)] = [
+                    cond.value[mesh.elm.get_tetrahedra(t)] = [
                         c,
                         0,
                         0,
@@ -296,9 +292,7 @@ def cond2elmdata(
 
                 else:
                     c = test_numerical(cond_list[t - 1], t - 1)
-                    tensors = cond.value[
-                        (mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)
-                    ]
+                    tensors = cond.value[mesh.elm.get_tetrahedra(t)]
                     tensors = tensors.reshape(-1, 3, 3)
                     eigval, eigvec = _get_sorted_eigenv(tensors)
                     if correct_intensity:
@@ -312,10 +306,8 @@ def cond2elmdata(
                             eigval = _adjust_excentricity(eigval, excentricity_scaling)
                         tensors = _form_tensors(eigval, eigvec)
                         tensors = _fix_zeros(tensors, c)
-                        cond.value[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)] = (
-                            tensors.reshape(-1, 9)
-                        )
-                    vol_t = elm_vols[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)]
+                        cond.value[mesh.elm.get_tetrahedra(t)] = tensors.reshape(-1, 9)
+                    vol_t = elm_vols[mesh.elm.get_tetrahedra(t)]
                     mean_vol[i] = np.sum(eigval.prod(axis=1) * vol_t) / np.sum(vol_t)
 
         # Correct the intensity
@@ -336,7 +328,7 @@ def cond2elmdata(
                     eigval = s * eigval_list[i]
                     eigvec = eigvec_list[i]
                     eigval = _fix_eigv(eigval, max_cond, max_ratio, c)
-                    vol_t = elm_vols[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)]
+                    vol_t = elm_vols[mesh.elm.get_tetrahedra(t)]
                     mean_cond = np.sum(
                         eigval.prod(axis=1) ** (1.0 / 3.0) * vol_t
                     ) / np.sum(vol_t)
@@ -349,9 +341,7 @@ def cond2elmdata(
                         eigval = _adjust_excentricity(eigval, excentricity_scaling)
                     tensors = _form_tensors(eigval, eigvec)
                     tensors = _fix_zeros(tensors, c)
-                    cond.value[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)] = (
-                        tensors.reshape(-1, 9)
-                    )
+                    cond.value[mesh.elm.get_tetrahedra(t)] = tensors.reshape(-1, 9)
 
     cond.assign_triangle_values()
 

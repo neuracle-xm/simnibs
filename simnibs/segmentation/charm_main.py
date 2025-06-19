@@ -491,7 +491,7 @@ def run(
         v.write_opt(sub_files.fnamehead)
 
         logger.info("Transforming EEG positions")
-        idx = (final_mesh.elm.elm_type == 2) & (final_mesh.elm.tag1 == skin_tag)
+        idx = final_mesh.elm.get_triangles(skin_tag)
         mesh = final_mesh.crop_mesh(elements=final_mesh.elm.elm_number[idx])
 
         if not os.path.exists(sub_files.eeg_cap_folder):

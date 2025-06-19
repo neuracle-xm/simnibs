@@ -847,7 +847,7 @@ class TestGetMesh:
 
         assert mesh.elm.node_number_list.shape[0] == 4
         np.testing.assert_allclose(np.unique(mesh.elm.elm_type), [15])
-        assert np.all(mesh.elm.tag1 == TmsCoilElementTag.DIPOLES)
+        assert mesh.elm.get_tags(TmsCoilElementTag.DIPOLES).all()
         np.testing.assert_allclose(mesh.nodes.node_coord, dipole_locations)
         assert len(mesh.field) == 1
         np.testing.assert_allclose(
@@ -996,7 +996,7 @@ class TestGetMesh:
 
         assert mesh.elm.node_number_list.shape[0] == 4
         np.testing.assert_allclose(np.unique(mesh.elm.elm_type), [15])
-        assert np.all(mesh.elm.tag1 == 100 + TmsCoilElementTag.LINE_ELEMENTS)
+        assert np.all(mesh.elm.get_tags(100 + TmsCoilElementTag.LINE_ELEMENTS))
         np.testing.assert_allclose(
             mesh.nodes.node_coord,
             [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]],
@@ -1199,7 +1199,7 @@ class TestGetMesh:
 
         assert mesh.elm.node_number_list.shape[0] == 8
         np.testing.assert_allclose(np.unique(mesh.elm.elm_type), [15])
-        assert np.all(mesh.elm.tag1 == TmsCoilElementTag.SAMPLED_GRID_ELEMENTS)
+        assert np.all(mesh.elm.get_tags(TmsCoilElementTag.SAMPLED_GRID_ELEMENTS))
         np.testing.assert_allclose(mesh.nodes.node_coord, sample_locations)
 
         assert len(mesh.field) == 1

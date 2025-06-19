@@ -88,17 +88,17 @@ def mag(a, b):
 
 
 def cube_msh_all_nodes_at_tag(m, tag):
-    return np.unique(m.elm[m.elm.tag1 == tag, :3])
+    return np.unique(m.elm[m.elm.get_tags(tag), :3])
 
 
 def cube_msh_center_node_at_tag(m, tag):
-    index = np.unique(m.elm[m.elm.tag1 == tag, :3])
+    index = np.unique(m.elm[m.elm.get_tags(tag), :3])
     a = np.linalg.norm(m.nodes[index] - m.nodes.node_coord.mean(0), axis=1).argmin()
     return index[a]
 
 
 def cube_msh_center_tri_nodes_at_tag(m, tag):
-    index = m.elm[m.elm.tag1 == tag, :3]
+    index = m.elm[m.elm.get_tags(tag), :3]
     mesh = m.nodes[index]
     center_tri = np.linalg.norm(mesh.mean(1) - mesh.mean((0, 1)), axis=1).argmin()
     return index[center_tri]
@@ -296,9 +296,9 @@ class TestSolve:
 class TestAssemble:
     def test_gradient_operator(self, cube_msh):
         G = fem._gradient_operator(cube_msh)
-        z = cube_msh.nodes[cube_msh.elm.node_number_list[cube_msh.elm.elm_type == 4]][
-            :, :, 2
-        ]
+        z = cube_msh.nodes[
+            cube_msh.elm.node_number_list[cube_msh.elm.get_tetrahedra()]
+        ][:, :, 2]
         grad = np.einsum("aij,ai->aj", G, z)
         assert np.allclose(grad, np.array([0, 0, 1]))
 
@@ -387,7 +387,7 @@ class TestFEMSystem:
     def test_dirichlet_problem_sphere(self, sphere3_msh):
         m = sphere3_msh.crop_mesh(elm_type=4)
         cond = np.ones(len(m.elm.tetrahedra))
-        cond[m.elm.tag1 == 4] = 0.01
+        cond[m.elm.get_tags(4)] = 0.01
         anode = m.nodes.node_number[m.nodes.node_coord[:, 2].argmax()]
         cathode = m.nodes.node_number[m.nodes.node_coord[:, 2].argmin()]
         bcs = [fem.DirichletBC([anode], [1]), fem.DirichletBC([cathode], [-1])]
@@ -743,7 +743,7 @@ class TestLeadfield:
         )
 
         if not post_pro:
-            n_roi = np.sum(m.elm.tag1 == 5)
+            n_roi = m.elm.get_tags(5).sum()
             with h5py.File(fn_hdf5, "r") as f:
                 assert f[dataset].shape == (2, n_roi, 3)
                 assert (
@@ -792,7 +792,7 @@ class TestTMSMany:
             post_pro=post,
             n_workers=n_workers,
         )
-        roi_select = m.elm.tag1 == 3
+        roi_select = m.elm.get_tags(3)
         with h5py.File(fn_hdf5, "r") as f:
             for E in f[dataset]:
                 if post_pro:
@@ -819,7 +819,7 @@ class TestDipole:
         dipole_pos = bar[dipole_th]
         dipole_th = sphere3_msh.elm.tetrahedra[dipole_th]
 
-        surface_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1005, :3])
+        surface_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1005), :3])
         surface_nodes_pos = sphere3_msh.nodes[surface_nodes]
 
         analytical_v = analytical_solutions.potential_dipole_3layers(
@@ -827,7 +827,7 @@ class TestDipole:
         )
 
         cond = 2 * np.ones(sphere3_msh.elm.nr)
-        cond[sphere3_msh.elm.tag1 == 4] = 0.1
+        cond[sphere3_msh.elm.get_tags(4)] = 0.1
         numerical_v = fem.electric_dipole(
             sphere3_msh,
             cond,
@@ -848,10 +848,10 @@ class TestDipole:
         dip_pos = np.array([50, 0, 0], dtype=float)
         dip_mom = np.array([0, 1, 0], dtype=float)  # always interpreted as m!
 
-        surface_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1005, :3])
+        surface_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1005), :3])
 
         cond = 2 * np.ones(sphere3_msh.elm.nr)
-        cond[sphere3_msh.elm.tag1 == 4] = 0.1
+        cond[sphere3_msh.elm.get_tags(4)] = 0.1
 
         # mesh and dip_pos in mm
         v_mm = fem.electric_dipole(
@@ -876,7 +876,7 @@ class TestDipole:
         moments = [[0, 0, 1], [0, 0.5, 0.5]]
         bar = sphere3_msh.elements_baricenters()[sphere3_msh.elm.tetrahedra]
 
-        surface_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.tag1 == 1005, :3])
+        surface_nodes = np.unique(sphere3_msh.elm[sphere3_msh.elm.get_tags(1005), :3])
         surface_nodes_pos = sphere3_msh.nodes[surface_nodes]
         analytical_v = []
         dipole_pos = []
@@ -892,7 +892,7 @@ class TestDipole:
             )
 
         cond = 2 * np.ones(sphere3_msh.elm.nr)
-        cond[sphere3_msh.elm.tag1 == 4] = 0.1
+        cond[sphere3_msh.elm.get_tags(4)] = 0.1
         numerical_v = fem.electric_dipole(
             sphere3_msh, cond, dipole_pos, moments, "partial integration"
         )[:, surface_nodes - 1]

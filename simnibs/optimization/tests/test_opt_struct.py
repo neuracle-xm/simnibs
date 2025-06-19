@@ -566,7 +566,7 @@ class TestTDCStarget:
     def test_get_indexes_and_directions_radius(self, sphere_vol):
         bar = sphere_vol.elements_baricenters().value
         idx_ = np.where(
-            (np.linalg.norm(bar - bar[0], axis=1) < 20) * (sphere_vol.elm.tag1 == 4)
+            (np.linalg.norm(bar - bar[0], axis=1) < 20) * sphere_vol.elm.get_tags(4)
         )[0]
         directions = [[2.0, 0.0, 0.0]]
 
@@ -613,7 +613,7 @@ class TestTDCStarget:
             tissues=4,
         )
         d = t.as_field()
-        in_r = (np.linalg.norm(bar - bar[0], axis=1) < 20) * (sphere_vol.elm.tag1 == 4)
+        in_r = (np.linalg.norm(bar - bar[0], axis=1) < 20) * sphere_vol.elm.get_tags(4)
         assert np.allclose(d[in_r], [1.0, 0, 0])
         assert np.allclose(d[~in_r], [0, 0, 0])
 
@@ -734,8 +734,8 @@ class TestTDCSAvoid:
             tissues=[1003], weight=1e4, lf_type="element", mesh=sphere_surf
         )
         f = a.avoid_field()
-        assert np.allclose(f[sphere_surf.elm.tag1 == 1003], 1e4)
-        assert np.allclose(f[sphere_surf.elm.tag1 != 1003], 1)
+        assert np.allclose(f[sphere_surf.elm.get_tags(1003)], 1e4)
+        assert np.allclose(f[sphere_surf.elm.get_tags(1003, invert=True)], 1)
 
     def test_avoid_field_elm_radius(self, sphere_surf):
         bar = sphere_surf.elements_baricenters()[:]
@@ -761,7 +761,7 @@ class TestTDCSAvoid:
             tissues=[1003], weight=1e4, lf_type="element", mesh=sphere_surf
         )
         field = mesh_io.ElementData(np.ones((sphere_surf.elm.nr, 3)))
-        field[sphere_surf.elm.tag1 == 1003] = [2, 0, 0]
+        field[sphere_surf.elm.get_tags(1003)] = [2, 0, 0]
         assert np.isclose(a.mean_field_norm_in_region(field), 2)
 
     def test_avoid_mean_field_norm_node(self, sphere_surf):
@@ -819,8 +819,8 @@ class TestTDCSoptimize:
         t.tissues = 4
         t.weight = 1e5
         avoid_field = p._get_avoid_field()
-        assert np.allclose(avoid_field[sphere_vol.elm.tag1 == 4], 1e5)
-        assert np.allclose(avoid_field[sphere_vol.elm.tag1 != 4], 1)
+        assert np.allclose(avoid_field[sphere_vol.elm.get_tags(4)], 1e5)
+        assert np.allclose(avoid_field[sphere_vol.elm.get_tags(4, invert=True)], 1)
 
     def test_add_target(self):
         p = opt_struct.TDCSoptimize()

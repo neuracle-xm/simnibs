@@ -143,7 +143,7 @@ class GLHeadModel(QtWidgets.QOpenGLWidget):
         self.loadStage.emit(0)
         QtWidgets.QApplication.processEvents()
         mesh_struct = mesh_io.read_msh(mesh_fn)
-        if not numpy.any(mesh_struct.elm.tag1 == 1099):
+        if not mesh_struct.elm.get_tags(1099).any():
             mesh_struct = mesh_struct.relabel_internal_air()
 
         self.loadStage.emit(1)

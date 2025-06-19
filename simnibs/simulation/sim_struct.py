@@ -1019,7 +1019,7 @@ class SimuList(object):
 
     def _scalp_geo(self, m, fn_out, scalp_idx: int = ElementTags.SCALP_TH_SURFACE):
         """write out scalp surface as geo file"""
-        idx = (m.elm.tag1 == scalp_idx) & (m.elm.elm_type == 2)
+        idx = m.elm.get_triangles(scalp_idx)
         mesh_io.write_geo_triangles(
             m.elm[idx, :3] - 1, m.nodes.node_coord, fn_out, name="scalp", mode="ba"
         )
@@ -1525,7 +1525,7 @@ class POSITION(object):
             cc_distance = np.min(
                 np.linalg.norm(
                     msh.elements_baricenters()[
-                        msh.elm.tag1 == ElementTags.GM_TH_SURFACE
+                        msh.elm.get_tags(ElementTags.GM_TH_SURFACE)
                     ]
                     - self.matsimnibs[:3, 3],
                     axis=1,
@@ -1931,7 +1931,7 @@ class TDCSLIST(SimuList):
         values = []
         for t, c in zip(self.unique_channels, self.currents):
             triangles.append(
-                m.elm[m.elm.tag1 == ElementTags.SALINE_TH_SURFACE_START + t, :3]
+                m.elm[m.elm.get_tags(ElementTags.SALINE_TH_SURFACE_START + t), :3]
             )
             values.append(c * np.ones(len(triangles[-1])))
 
@@ -2754,7 +2754,7 @@ class TDCSLEADFIELD(LEADFIELD):
             logger.info("Using point electrodes")
             w_elec = self.mesh
             skin_faces = (
-                w_elec.elm[w_elec.elm.tag1 == ElementTags.SCALP_TH_SURFACE, :3] - 1
+                w_elec.elm[w_elec.elm.get_tags(ElementTags.SCALP_TH_SURFACE), :3] - 1
             )
             _, v_outside, _, _ = w_elec.partition_skin_surface()
             v_outside -= 1
@@ -3240,9 +3240,8 @@ def get_surround_pos(
     m = mesh_io.read_msh(fnamehead)
     if tissue_idx < ElementTags.TH_SURFACE_START:
         tissue_idx += ElementTags.TH_SURFACE_START
-    idx = (m.elm.elm_type == 2) & (
-        (m.elm.tag1 == tissue_idx)
-        | (m.elm.tag1 == tissue_idx - ElementTags.TH_SURFACE_START)
+    idx = m.elm.get_triangles(tissue_idx) | m.elm.get_triangles(
+        tissue_idx - ElementTags.TH_SURFACE_START
     )
     m = m.crop_mesh(elements=m.elm.elm_number[idx])
     P_centre = m.project_points_on_surface(tmp.centre)

@@ -49,7 +49,7 @@ def _remove_unconnected_triangles(mesh, roi_triangles, center, roi_nodes, triang
 
 
 def _get_nodes_in_surface(mesh, surface_tags):
-    tr_of_interest = (mesh.elm.elm_type == 2) * (np.isin(mesh.elm.tag1, surface_tags))
+    tr_of_interest = mesh.elm.get_triangles(surface_tags)
     nodes_in_surface = np.unique(mesh.elm.node_number_list[tr_of_interest, :3])
     return nodes_in_surface
 
@@ -1092,7 +1092,7 @@ def _build_electrode_on_mesh(
     )
 
     # Make the triangles
-    s = np.min(np.where(mesh.elm.elm_type == 4)[0])
+    s = mesh.elm.get_tetrahedra(return_indices=True).min()
     tr = node_dict[triangles]
     tr = np.concatenate((tr, -1 * np.ones((len(tr), 1), dtype=int)), axis=1)
 
