@@ -30,8 +30,8 @@ def percentile_99(Es):
 gpc_coeffs = regression.expand_quantity(percentile_99)
 
 print("99th Percentile")
-print("Mean Value: ", regression.mean(gpc_coeffs))
-print("Standard Deviation: ", regression.std(gpc_coeffs))
+print("Mean Value: ", regression.get_mean(gpc_coeffs))
+print("Standard Deviation: ", regression.get_std(gpc_coeffs))
 
 # Draw 1000 samples for the 99th percentile
-samples = regression.MC_sampling(gpc_coeffs, 1000)[1]
+samples = regression.get_samples(gpc_coeffs, 1000)[1]
