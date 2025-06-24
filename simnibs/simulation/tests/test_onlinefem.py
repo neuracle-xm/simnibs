@@ -144,7 +144,7 @@ class TestOnlineFEM:
         electrode_i._electrode_arrays[1].electrodes[0].node_area = n_areas[idx_node_2]
 
         # roi
-        idx_roi_elm = np.where(m.elm.tag1 == 5)[0][0:-1:100]
+        idx_roi_elm = m.elm.get_tags(5, return_indices=True)[0:-1:100]
         roi = FemTargetPointCloud(
             m,
             m.elements_baricenters().value[idx_roi_elm],
@@ -301,7 +301,7 @@ class TestOnlineFEM:
         electrode_i._electrode_arrays[1].electrodes[1].node_area = n_areas[idx_node_2_r]
 
         # roi
-        idx_roi_elm = np.where(m.elm.tag1 == 5)[0][0:-1:100]
+        idx_roi_elm = m.elm.get_tags(5, return_indices=True)[0:-1:100]
         roi = FemTargetPointCloud(
             m, m.elements_baricenters().value[idx_roi_elm], nearest_neighbor=False
         )

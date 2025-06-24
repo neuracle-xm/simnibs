@@ -6,7 +6,6 @@ import scipy
 
 from simnibs.mesh_tools import mesh_io
 from simnibs.mesh_tools.mesh_io import Elements, Msh, Nodes
-import simnibs.utils.file_finder as file_finder
 from simnibs.utils import transformations
 from simnibs.utils.mesh_element_properties import ElementTags
 
@@ -1305,21 +1304,13 @@ def fs_avr_mask_to_sub(
     npt.NDArray[np.int_]
         The index mask in subject space
     """
-    sphere_surface: Msh = mesh_io.read_gifti_surface(
-        file_finder.get_fsaverage_template(hemi, "sphere")
-    )
-    registration_surface: Msh = mesh_io.read_gifti_surface(
-        subject_files.get_surface(hemi, "sphere_reg")
-    )
+    reg = transformations.cross_subject_map("fsaverage", subject_files, hemi=hemi)
+    reg = reg[hemi]
 
-    morph = transformations.SurfaceMorph(
-        sphere_surface, registration_surface, method="nearest"
-    )
-
-    bool_mask = np.zeros((sphere_surface.nodes.nr), dtype=np.int_)
+    bool_mask = np.zeros((reg.n_vertices), dtype=np.int_)
     bool_mask[index_mask] = 1
 
-    index_mask = np.where(morph.transform(bool_mask) > 0.0001)[0]
+    index_mask = np.where(reg.resample(bool_mask) > 0.0001)[0]
 
     return index_mask
 

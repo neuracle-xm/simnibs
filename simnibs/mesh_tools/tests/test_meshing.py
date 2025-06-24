@@ -45,10 +45,7 @@ def spikyblob():
 
 def volumes(mesh):
     vols = mesh.elements_volumes_and_areas()
-    vols = [
-        np.sum(vols[(mesh.elm.tag1 == t) * (mesh.elm.elm_type == 4)])
-        for t in np.unique(mesh.elm.tag1)
-    ]
+    vols = [np.sum(vols[mesh.elm.get_tetrahedra(t)]) for t in np.unique(mesh.elm.tag1)]
     return vols
 
 
@@ -464,11 +461,11 @@ class TestMeshing:
         # volumes
         vols = m.elements_volumes_and_areas()
         assert np.isclose(
-            np.sum(vols[m.elm.tag1 == 1]), 4 / 3 * np.pi * (15**3 - 10**3), rtol=1e-1
+            vols[m.elm.get_tags(1)].sum(), 4 / 3 * np.pi * (15**3 - 10**3), rtol=1e-1
         )
         assert np.isclose(
-            np.sum(vols[m.elm.tag1 == 4]), 4 / 3 * np.pi * (20**3 - 15**3), rtol=1e-1
+            vols[m.elm.get_tags(4)].sum(), 4 / 3 * np.pi * (20**3 - 15**3), rtol=1e-1
         )
         assert np.isclose(
-            np.sum(vols[m.elm.tag1 == 3]), 4 / 3 * np.pi * (25**3 - 20**3), rtol=1e-1
+            vols[m.elm.get_tags(3)].sum(), 4 / 3 * np.pi * (25**3 - 20**3), rtol=1e-1
         )

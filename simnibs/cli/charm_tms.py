@@ -77,6 +77,7 @@ MANUAL EDITING:
     add_argument(parser, args_charm.forcerun)
     add_argument(parser, args_charm.skip_register_t2)
     add_argument(parser, args_charm.use_settings)
+    add_argument(parser, args_charm.use_fat_atlas)
     add_argument(parser, args_charm.no_neck)
     add_argument(parser, args_charm.init_transform)
     add_argument(parser, args_charm.force_qform)
@@ -147,6 +148,9 @@ def main():
     # ensure use of charm_tms.ini
     if args.usesettings is None:
         args.usesettings = os.path.join(SIMNIBSDIR, "charm_tms.ini")
+    
+    if type(args.usesettings) == list:
+        args.usesettings = args.usesettings[0]
 
     if args.skipregisterT2:
         args.registerT2 = False
@@ -154,24 +158,26 @@ def main():
     if args.initatlas or args.segment or args.surfaces:
         # run all steps except meshing as usual
         charm_main.run(
-            subject_dir,
-            args.T1,
-            args.T2,
-            args.registerT2,
-            args.initatlas,
-            args.segment,
-            args.surfaces,
-            False,
-            args.usesettings,
-            args.noneck,
-            args.inittransform,
-            args.usetransform,
-            args.forceqform,
-            args.forcesform,
-            args.fs_dir,
-            " ".join(sys.argv[1:]),
-            args.debug,
+            subject_dir=subject_dir,
+            T1=args.T1,
+            T2=args.T2,
+            registerT2=args.registerT2,
+            initatlas=args.initatlas,
+            segment=args.segment,
+            create_surfaces=args.surfaces,
+            mesh_image=False,
+            usesettings=args.usesettings,
+            useatlasv1_0=args.useatlasv1_0,
+            noneck=args.noneck,
+            init_transform=args.inittransform,
+            use_transform=args.usetransform,
+            force_qform=args.forceqform,
+            force_sform=args.forcesform,
+            fs_dir=args.fs_dir,
+            options_str=" ".join(sys.argv[1:]),
+            debug=args.debug,
         )
+
 
     if args.segment:
         # update label image: cut neck and combine labels

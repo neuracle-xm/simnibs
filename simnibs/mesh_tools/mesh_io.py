@@ -41,8 +41,10 @@ import scipy.sparse.csgraph
 import nibabel
 import h5py
 
+import cortech
+
 from simnibs.utils import file_finder
-from simnibs.utils.mesh_element_properties import ElementTags
+from simnibs.utils.mesh_element_properties import ElementTags, ElementTypes
 
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import nifti_transform
@@ -230,7 +232,7 @@ class Elements:
             self.node_number_list = np.zeros((points.shape[0], 4), dtype="int32")
             self.node_number_list[:, 0] = points.astype("int32")
             self.node_number_list[:, 1:] = -1
-            self.elm_type = np.ones((self.nr,), dtype="int32") * 15
+            self.elm_type = np.full((self.nr,), ElementTypes.POINT, dtype=np.int32)
 
         if lines is not None:
             assert lines.shape[1] == 2
@@ -238,7 +240,7 @@ class Elements:
             self.node_number_list = np.zeros((lines.shape[0], 4), dtype="int32")
             self.node_number_list[:, :2] = lines.astype("int32")
             self.node_number_list[:, 2:] = -1
-            self.elm_type = np.ones((self.nr,), dtype="int32") * 1
+            self.elm_type = np.full((self.nr,), ElementTypes.LINE, dtype=np.int32)
 
         if triangles is not None:
             assert triangles.shape[1] == 3
@@ -246,20 +248,23 @@ class Elements:
             self.node_number_list = np.zeros((triangles.shape[0], 4), dtype="int32")
             self.node_number_list[:, :3] = triangles.astype("int32")
             self.node_number_list[:, 3] = -1
-            self.elm_type = np.ones((self.nr,), dtype="int32") * 2
+            self.elm_type = np.full((self.nr,), ElementTypes.TRIANGLE, dtype=np.int32)
 
         if tetrahedra is not None:
             assert tetrahedra.shape[1] == 4
             assert np.all(tetrahedra > 0), "Node count should start at 1"
             if len(self.node_number_list) == 0:
                 self.node_number_list = tetrahedra.astype("int32")
-                self.elm_type = np.ones((self.nr,), dtype="int32") * 4
+                self.elm_type = np.full(
+                    (self.nr,), ElementTypes.TETRAHEDRON, dtype=np.int32
+                )
             else:
                 self.node_number_list = np.vstack(
                     (self.node_number_list, tetrahedra.astype("int32"))
                 )
                 self.elm_type = np.append(
-                    self.elm_type, np.ones(len(tetrahedra), dtype="int32") * 4
+                    self.elm_type,
+                    np.full(len(tetrahedra), ElementTypes.TETRAHEDRON, dtype=np.int32),
                 )
 
         if len(self.node_number_list) > 0:
@@ -274,12 +279,108 @@ class Elements:
     @property
     def triangles(self):
         """Triangle element numbers"""
-        return self.elm_number[self.elm_type == 2]
+        return self.elm_number[self.elm_type == ElementTypes.TRIANGLE]
 
     @property
     def tetrahedra(self):
         """Tetrahedra element numbers"""
-        return self.elm_number[self.elm_type == 4]
+        return self.elm_number[self.elm_type == ElementTypes.TETRAHEDRON]
+
+    def get_tags(
+        self,
+        tags: int | list[int] | tuple | np.ndarray,
+        invert: bool = False,
+        return_element_numbers: bool = False,
+        return_indices: bool = False,
+    ):
+        """Get elements with the specified tags. By default, a mask is returned
+        but this can be changed by specifying either return_element_numbers or
+        return_indices. Element numbers are 1-based, indices are 0-based
+        (regular python indices).
+
+        Parameters
+        ----------
+        tags : int | list | tuple | np.ndarray
+            Return elements with this/these tag/tags. Tags are looked up in
+            `tag1` attribute.
+        invert : bool
+            If true, return mask/indices of elements *not in `tags`.
+        return_element_numbers : bool, optional
+            If true, return the element numbers (1-based!) of the desired
+            elements (default = False).
+        return_indices : bool, optional
+            If true, return the indices (0-based!) of the desired elements
+            (default = False).
+
+        Returns
+        -------
+        elements
+            Indices or mask of elements.
+        """
+        assert not (
+            return_element_numbers and return_indices
+        ), "Can only return *either* element numbers (one-based) *or* indices (zero-based)"
+        m = np.isin(self.tag1, tags, invert=invert)
+        if return_element_numbers:
+            m = self.elm_number[m]
+        elif return_indices:
+            m = np.where(m)[0]  # could be elm_number - 1 ?
+        return m
+
+    def get_type(
+        self,
+        element_type: str,
+        tags: int | list[int] | tuple | np.ndarray | None = None,
+        invert_tags: bool = False,
+        return_element_numbers: bool = False,
+        return_indices: bool = False,
+    ):
+        """Get indices or mask of a certain type of elements. By default, a
+        mask is returned but this can be changed by specifying either
+        return_element_numbers or return_indices. Element numbers are 1-based,
+        indices are 0-based (regular python indices).
+
+        Parameters
+        ----------
+        element_type : str
+            Type of element to return. A string indicating the name of an
+            element as defined in
+            simnibs.utils.mesh_element_properties.ElementTypes, e.g., TRIANGLE
+            or TETRAHEDRON.
+        tags : int | list | tuple | np.ndarray | None, optional
+            Return only elements with this/these tag/tags (default = None,
+            i.e., all tetrahedra).
+        invert_tags : bool
+            If true, return mask/indices of elements *not in `tags`.
+        return_element_numbers : bool, optional
+            If true, return the element numbers (1-based!) of the desired
+            elements (default = False).
+        return_indices : bool, optional
+            If true, return the indices (0-based!) of the desired elements
+            (default = False).
+
+        Returns
+        -------
+        tetrahedra
+            Indices or mask of tetrahedra elements.
+        """
+        assert not (
+            return_element_numbers and return_indices
+        ), "Can only return *either* element numbers (one-based) *or* indices (zero-based)"
+        m = self.elm_type == getattr(ElementTypes, element_type)
+        m = m & self.get_tags(tags, invert=invert_tags) if tags is not None else m
+        if return_element_numbers:
+            m = self.elm_number[m]
+        elif return_indices:
+            m = np.where(m)[0]  # could be elm_number - 1 ?
+        return m
+
+    # for convenience
+    def get_triangles(self, *args, **kwargs):
+        return self.get_type("TRIANGLE", *args, **kwargs)
+
+    def get_tetrahedra(self, *args, **kwargs):
+        return self.get_type("TETRAHEDRON", *args, **kwargs)
 
     @property
     def elm_number(self):
@@ -321,7 +422,8 @@ class Elements:
         elm_with_node = np.any(np.isin(self.node_number_list, node_nr), axis=1)
 
         th_with_node = np.isin(
-            self.elm_number[elm_with_node], self.elm_number[self.elm_type == 4]
+            self.elm_number[elm_with_node],
+            self.get_tetrahedra(return_element_numbers=True),
         )
 
         return self.elm_number[elm_with_node][th_with_node]
@@ -546,7 +648,7 @@ class Elements:
             * All returned indices are 0-based !!
             * The mesh must contain only tetrahedra
         """
-        assert np.all(self.elm_type == 4)
+        assert np.all(self.get_tetrahedra())
 
         faces, th_faces, adjacency_list = self.get_faces()
         faces = np.sort(faces, axis=1) - 1
@@ -593,7 +695,7 @@ class Elements:
         n_nodes = np.max(elm) + 1
         M = scipy.sparse.csc_matrix((n_nodes, n_nodes), dtype=int)
         # Add triangles
-        tr = elm_type == 2
+        tr = elm_type == ElementTypes.TRIANGLE
         ones = np.ones(np.sum(tr), dtype=int)
         for i in range(3):
             for j in range(3):
@@ -601,7 +703,7 @@ class Elements:
                     (ones, (elm[tr, i], elm[tr, j])), shape=M.shape
                 )
         # Add Tetrahedra
-        th = elm_type == 4
+        th = elm_type == ElementTypes.TETRAHEDRON
         ones = np.ones(np.sum(th), dtype=int)
         for i in range(4):
             for j in range(4):
@@ -841,7 +943,7 @@ class Msh:
         cropped.elm.tag2 = np.copy(self.elm.tag2[idx])
         cropped.elm.elm_type = np.copy(self.elm.elm_type[idx])
         cropped.elm.node_number_list = np.copy(node_number_list)
-        cropped.elm.node_number_list[cropped.elm.elm_type == 2, 3] = -1
+        cropped.elm.node_number_list[cropped.elm.get_triangles(), 3] = -1
 
         cropped.nodes.node_coord = np.copy(node_coord)
 
@@ -894,18 +996,18 @@ class Msh:
         joined.elm.tag1 = np.hstack([joined.elm.tag1, other.elm.tag1])
         joined.elm.tag2 = np.hstack([joined.elm.tag2, other.elm.tag2])
         joined.elm.elm_type = np.hstack([joined.elm.elm_type, other.elm.elm_type])
-        lines = np.where(joined.elm.elm_type == 1)[0]
-        points = np.where(joined.elm.elm_type == 15)[0]
-        triangles = np.where(joined.elm.elm_type == 2)[0]
-        tetrahedra = np.where(joined.elm.elm_type == 4)[0]
+        lines = joined.elm.get_type("LINE", return_indices=True)
+        points = joined.elm.get_type("POINT", return_indices=True)
+        triangles = joined.elm.get_triangles(return_indices=True)
+        tetrahedra = joined.elm.get_tetrahedra(return_indices=True)
         new_elm_order = np.hstack([points, lines, triangles, tetrahedra])
         joined.elm.node_number_list = joined.elm.node_number_list[new_elm_order]
         joined.elm.tag1 = joined.elm.tag1[new_elm_order]
         joined.elm.tag2 = joined.elm.tag2[new_elm_order]
         joined.elm.elm_type = joined.elm.elm_type[new_elm_order]
-        joined.elm.node_number_list[joined.elm.elm_type == 2, 3] = -1
-        joined.elm.node_number_list[joined.elm.elm_type == 1, 2:] = -1
-        joined.elm.node_number_list[joined.elm.elm_type == 15, 1:] = -1
+        joined.elm.node_number_list[joined.elm.get_triangles(), 3] = -1
+        joined.elm.node_number_list[joined.elm.get_type("LINE"), 2:] = -1
+        joined.elm.node_number_list[joined.elm.get_type("POINT"), 1:] = -1
 
         for nd in self.nodedata:
             assert len(nd.value) == self.nodes.nr
@@ -1223,7 +1325,7 @@ class Msh:
             raise ValueError("Tags should have at least 2 elements")
         shared_nodes = None
         for t in tags:
-            nt = np.unique(self.elm[self.elm.tag1 == t])
+            nt = np.unique(self.elm[self.elm.get_tags(t)])
             # Remove the -1 that marks triangles
             if nt[0] == -1:
                 nt = nt[1:]
@@ -1692,9 +1794,9 @@ class Msh:
 
     def fix_th_node_ordering(self):
         """Fixes the node ordering of tetrahedra in-place"""
-        th = self.nodes[self.elm.node_number_list[self.elm.elm_type == 4, :]]
+        th = self.nodes[self.elm.node_number_list[self.elm.get_tetrahedra(), :]]
         M = th[:, 1:] - th[:, 0, None]
-        switch = self.elm.elm_type == 4
+        switch = self.elm.get_tetrahedra()
         switch[switch] = np.linalg.det(M) < 0
         tmp = np.copy(self.elm.node_number_list[switch, 1])
         self.elm.node_number_list[switch, 1] = self.elm.node_number_list[switch, 0]
@@ -1705,7 +1807,7 @@ class Msh:
     def fix_tr_node_ordering(self):
         """Fixes the node ordering of the triangles in-place"""
         corresponding = self.find_corresponding_tetrahedra()
-        triangles = np.where(self.elm.elm_type == 2)[0]
+        triangles = self.elm.get_triangles(return_indices=True)
 
         triangles = triangles[corresponding != -1]
         corresponding = corresponding[corresponding != -1]
@@ -1725,17 +1827,20 @@ class Msh:
 
     def fix_surface_labels(self):
         """Fixels labels of surfaces"""
-        change = (self.elm.elm_type == 2) * (self.elm.tag1 < 1000)
-        self.elm.tag1[change] += 1000
-        change = (self.elm.elm_type == 2) * (self.elm.tag2 < 1000)
-        self.elm.tag2[change] += 1000
+        tags = self.elm.tag1 < ElementTags.TH_SURFACE_START
+        change = self.elm.get_triangles() & tags
+        self.elm.tag1[change] += ElementTags.TH_SURFACE_START
+
+        tags = self.elm.tag2 < ElementTags.TH_SURFACE_START
+        change = self.elm.get_triangles() & tags
+        self.elm.tag2[change] += ElementTags.TH_SURFACE_START
 
     def fix_surface_orientation(self):
         """Ensure that the majority of triangle normals point outwards.
         If this is not the case, the orientation of all triangles will
         be inversed.
         """
-        idx_tr = self.elm.elm_type == 2
+        idx_tr = self.elm.get_triangles()
         normals = self.triangle_normals()[:]
         baricenters = self.elements_baricenters()[idx_tr]
         CoG = np.mean(baricenters, axis=0)
@@ -1758,14 +1863,16 @@ class Msh:
         rel = int(-9999) * np.ones((np.max(node_number) + 1), dtype=int)
         rel[node_number] = np.arange(1, self.nodes.nr + 1, dtype=int)
         self.elm.node_number_list = rel[self.elm.node_number_list]
-        self.elm.node_number_list[self.elm.elm_type == 2, 3] = -1
+        self.elm.node_number_list[self.elm.get_triangles(), 3] = -1
 
     def prepare_surface_tags(self):
-        triangles = self.elm.elm_type == 2
+        triangles = self.elm.get_triangles()
         surf_tags = np.unique(self.elm.tag1[triangles])
         for s in surf_tags:
-            if s < 1000:
-                self.elm.tag1[triangles * (self.elm.tag1 == s)] += 1000
+            if s < ElementTags.TH_SURFACE_START:
+                self.elm.tag1[triangles & self.elm.get_tags(s)] += (
+                    ElementTags.TH_SURFACE_START
+                )
 
     def find_corresponding_tetrahedra(self):
         """Finds the tetrahedra corresponding to each triangle
@@ -1791,26 +1898,34 @@ class Msh:
             pass
 
         # If could not find correspondence in cache
-        tr_tags = np.unique(self.elm.tag1[self.elm.elm_type == 2])
+        tr_tags = np.unique(self.elm.tag1[self.elm.get_triangles()])
         corresponding_th_indices = -np.ones(len(self.elm.triangles), dtype=int)
         for t in tr_tags:
             # look into tetrahedra with tags t, 1000-t
             to_crop = [t]
-            to_crop.append(t - 1000)
-            if t >= 1100:  # Electrodes
-                to_crop.append(t - 600)
-            if t >= 2000:
-                to_crop.append(t - 2000)
-                to_crop.append(t - 1600)
+            to_crop.append(t - ElementTags.TH_SURFACE_START)
+
+            # If is electrode rubber surface, also add saline of same electrode
+            if (
+                t >= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                and t <= ElementTags.ELECTRODE_RUBBER_TH_SURFACE_END
+            ):
+                electrode_index = t - ElementTags.ELECTRODE_RUBBER_TH_SURFACE_START
+                to_crop.append(electrode_index + ElementTags.SALINE_START)
+            # If is electrode plug surface, also add electrode rubber and saline of same electrode
+            if (
+                t >= ElementTags.ELECTRODE_PLUG_SURFACE_START
+                and t <= ElementTags.ELECTRODE_PLUG_SURFACE_END
+            ):
+                electrode_index = t - ElementTags.ELECTRODE_PLUG_SURFACE
+                to_crop.append(electrode_index + ElementTags.ELECTRODE_RUBBER_START)
+                to_crop.append(electrode_index + ElementTags.SALINE_START)
+
             # Select triangles and tetrahedra with tags
-            th_of_interest = np.where(
-                (self.elm.elm_type == 4) * np.isin(self.elm.tag1, to_crop)
-            )[0]
+            th_of_interest = self.elm.get_tetrahedra(to_crop, return_indices=True)
             if len(th_of_interest) == 0:
                 continue
-            tr_of_interest = np.where((self.elm.elm_type == 2) * (self.elm.tag1 == t))[
-                0
-            ]
+            tr_of_interest = self.elm.get_triangles(t, return_indices=True)
 
             th = self.elm.node_number_list[th_of_interest]
             faces = th[:, [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]].reshape(-1, 3)
@@ -1838,7 +1953,9 @@ class Msh:
         if np.any(corresponding_th_indices == -1):
             # add triangles at the outer boundary, irrespective of tag
             # get all tet faces, except those of "air" tetrahedra (i.e., tag1 = -1)
-            idx_th_all = np.where((self.elm.elm_type == 4) * (self.elm.tag1 != -1))[0]
+            idx_th_all = self.elm.get_tetrahedra(
+                -1, invert_tags=True, return_indices=True
+            )
             th = self.elm.node_number_list[idx_th_all]
             faces = th[:, [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]]
             faces = faces.reshape(-1, 3)
@@ -2231,7 +2348,7 @@ class Msh:
             raise ValueError("near and far poins should be arrays of size (N, 3)")
 
         indices, points = cgal.segment_triangle_intersection(
-            self.nodes[:], self.elm[self.elm.elm_type == 2, :3] - 1, near, far
+            self.nodes[:], self.elm[self.elm.get_triangles(), :3] - 1, near, far
         )
         if len(indices) > 0:
             indices[:, 1] = self.elm.triangles[indices[:, 1]]
@@ -2277,7 +2394,7 @@ class Msh:
             if AABBTree is None:
                 indices, intercpt_pos = cgal.segment_triangle_intersection(
                     self.nodes[:],
-                    self.elm[self.elm.elm_type == 2, :3] - 1,
+                    self.elm[self.elm.get_triangles(), :3] - 1,
                     points[idx, :],
                     far,
                 )
@@ -2615,7 +2732,10 @@ class Msh:
         return any_intersections
 
     def partition_skin_surface(
-        self, label_skin=ElementTags.SCALP_TH_SURFACE, assume_single_outside_component=True, tol: float = 1e-3
+        self,
+        label_skin=ElementTags.SCALP_TH_SURFACE,
+        assume_single_outside_component=True,
+        tol: float = 1e-3,
     ):
         """Return indices of vertices and faces estimated to be on the inner
         and outer skin surface (the inner part would be those inside nasal
@@ -2656,7 +2776,7 @@ class Msh:
         """
         assert tol > 0
 
-        f_orig_id = self.elm.elm_number[self.elm.tag1 == label_skin]
+        f_orig_id = self.elm.elm_number[self.elm.get_tags(label_skin)]
         faces = self.elm[f_orig_id, :3]
         verts = np.unique(faces)
         m = Msh(Nodes(self.nodes.node_coord), Elements(faces))
@@ -2697,10 +2817,11 @@ class Msh:
         # the indices are into self
         return v_in, v_out, f_in, f_out
 
-    def relabel_internal_air(self,
-                             label_skin=ElementTags.SCALP_TH_SURFACE,
-                             label_new=ElementTags.INTERNAL_AIR_TH_SURFACE
-                             ):
+    def relabel_internal_air(
+        self,
+        label_skin=ElementTags.SCALP_TH_SURFACE,
+        label_new=ElementTags.INTERNAL_AIR_TH_SURFACE,
+    ):
         """
         Relabels skin in internal air cavities to something else;
         relevant for charm meshes and TES optimization to determine valid skin region.
@@ -2719,10 +2840,71 @@ class Msh:
         """
 
         m = copy.copy(self)
-        _, _, f_in, _ = self.partition_skin_surface(label_skin)  # internal air triangles
+        # internal air triangles
+        _, _, f_in, _ = self.partition_skin_surface(label_skin)
         m.elm.tag1[f_in - 1] = label_new
         m.elm.tag2[:] = m.elm.tag1
         return m
+
+    def project_points_on_surface(
+        self,
+        points,
+        surface_tags: int | list[int] | tuple | np.ndarray | None = None,
+        distance: float | np.ndarray = 0.0,
+    ):
+        """Find the position on the surface closest to each coordinate
+
+        Parameters
+        -------
+        points: nx3 ndarray
+            Points which will be projected on the surface.
+        surface_tags: (optional)
+            Tag of the target surface. Default: None (positions will be
+            projected on closest surface)
+        distance: float or nx1 ndarray (optional)
+            Distance (normal) to the surface to be enforced. Default: 0
+            Note: negative values will move the point inside, positive values
+            outside the volume defined by the surface
+
+        Returns
+        ------
+        coords_projected: nx3 ndarray
+            coordinates projected on the surface
+        """
+        points = np.array(points)
+        if points.ndim == 1:
+            points = points.reshape((1, len(points)))
+
+        tri_mask = self.elm.get_triangles(surface_tags)
+        tri_node_list = self.elm.node_number_list[tri_mask, :3] - 1
+        tri_nodes = np.unique(tri_node_list)
+
+        # construct the surface
+        vertices = self.nodes.node_coord[tri_nodes]
+
+        old2new = np.zeros(tri_nodes[-1] + 1, dtype=np.int32)
+        old2new[tri_nodes] = np.arange(len(tri_nodes))
+        faces = old2new[tri_node_list]
+
+        surface = cortech.Surface(vertices, faces)
+        tris, _, projs, _ = surface.project_points(points)
+
+        # ensure distance (optional)
+        if not np.all(np.isclose(distance, 0.0)):
+            distance = np.array(distance)
+            if distance.ndim == 0:
+                distance = distance.reshape(1)
+
+            tri_pts = surface.as_mesh()[tris]
+
+            sideA = tri_pts[:, 1] - tri_pts[:, 0]
+            sideB = tri_pts[:, 2] - tri_pts[:, 0]
+            n = np.cross(sideA, sideB)
+            n /= np.linalg.norm(n, axis=1)[:, None]
+
+            projs += distance[:, None] * n
+
+        return projs
 
     def get_AABBTree(self):
         """
@@ -2743,7 +2925,7 @@ class Msh:
         """
 
         AABBTree = cgal.pyAABBTree()
-        AABBTree.set_data(self.nodes[:], self.elm[self.elm.elm_type == 2, :3] - 1)
+        AABBTree.set_data(self.nodes[:], self.elm[self.elm.get_triangles(), :3] - 1)
         return AABBTree
 
     def view(
@@ -3016,7 +3198,7 @@ class Msh:
         Two surfaces will be present, one at each side of the model
         Will not fix any element_data that might be associated with this mesh
         """
-        unique_tags = np.unique(self.elm.tag1[self.elm.elm_type == 4])
+        unique_tags = np.unique(self.elm.tag1[self.elm.get_tetrahedra()])
         if len(unique_tags) == 0:
             raise InvalidMeshError("Could not find any tetraheda in mesh")
         if tags is not None:
@@ -3026,11 +3208,11 @@ class Msh:
 
         tr_to_add = []
         for t in unique_tags:
-            elm_in_tag = (self.elm.tag1 == t) * (self.elm.elm_type == 4)
+            elm_in_tag = self.elm.get_tetrahedra(t)
             tr_to_add.append(self.elm.get_outside_faces(elm_in_tag))
 
         for tr, tag in zip(tr_to_add, unique_tags):
-            self.elm.add_triangles(tr, 1000 + tag)
+            self.elm.add_triangles(tr, ElementTags.TH_SURFACE_START + tag)
 
         self.fix_tr_node_ordering()
 
@@ -3062,7 +3244,7 @@ class Msh:
     #         hierarchy = (1005, 1001, 1002, 1009, 1003, 1004, 1008, 1007, 1006, 1010)
 
     #     # generate hash for all triangles, get their tags
-    #     idx_tr = np.where(self.elm.elm_type == 2)[0]
+    #     idx_tr = self.elm.get_triangles(return_indices=True)
     #     hash_tr = _hash_rows(self.elm.node_number_list[idx_tr,:3])
     #     tag_tr = self.elm.tag1[idx_tr]
 
@@ -3129,16 +3311,27 @@ class Msh:
         * will not add triangles to "air" tetrahedra (having label -1)
         """
 
-        assert np.all(self.elm.elm_type == 4)
+        assert np.all(self.elm.get_tetrahedra())
 
         if hierarchy is None:
-            hierarchy = (1, 2, 9, 3, 4, 8, 7, 6, 10, 5)
+            hierarchy = (
+                ElementTags.WM,
+                ElementTags.GM,
+                ElementTags.BLOOD,
+                ElementTags.CSF,
+                ElementTags.BONE,
+                ElementTags.SPONGY_BONE,
+                ElementTags.COMPACT_BONE,
+                ElementTags.EYE_BALLS,
+                ElementTags.MUSCLE,
+                ElementTags.SCALP,
+            )
         hierarchy = np.asarray(hierarchy)
-        if np.any(hierarchy > 1000):
-            hierarchy -= 1000
+        if np.any(hierarchy > ElementTags.TH_SURFACE_START):
+            hierarchy -= ElementTags.TH_SURFACE_START
 
-        if (add_outer_as is not None) and (add_outer_as > 1000):
-            add_outer_as -= 1000
+        if (add_outer_as is not None) and (add_outer_as > ElementTags.TH_SURFACE_START):
+            add_outer_as -= ElementTags.TH_SURFACE_START
 
         if (faces is None) or (idx_tet_faces is None) or (adj_tets is None):
             faces, idx_tet_faces, adj_tets = self.elm._get_tet_faces_and_adjacent_tets()
@@ -3184,7 +3377,9 @@ class Msh:
             tag_tri[tag_tri == -1] = add_outer_as
         idx_tri = idx_tri[:, 0]
 
-        self.elm.add_triangles(faces[idx_tri, :] + 1, 1000 + tag_tri)
+        self.elm.add_triangles(
+            faces[idx_tri, :] + 1, ElementTags.TH_SURFACE_START + tag_tri
+        )
         self.fix_tr_node_ordering()
 
     def smooth_surfaces(self, n_steps, step_size=0.3, tags=None, max_gamma=5):
@@ -3211,9 +3406,7 @@ class Msh:
         """
         assert step_size > 0 and step_size < 1
         # Surface nodes and surface node mask
-        idx = self.elm.elm_type == 2
-        if tags is not None:
-            idx *= np.isin(self.elm.tag1, tags)
+        idx = self.elm.get_triangles(tags)
         surf_nodes = np.unique(self.elm.node_number_list[idx, :3]) - 1
         nodes_mask = np.zeros(self.nodes.nr, dtype=bool)
         nodes_mask[surf_nodes] = True
@@ -3328,9 +3521,7 @@ class Msh:
         """
         assert step_size > 0 and step_size < 1
         # Surface nodes and surface node mask
-        idx = self.elm.elm_type == 2
-        if tags is not None:
-            idx *= np.isin(self.elm.tag1, tags)
+        idx = self.elm.get_triangles(tags)
         surf_nodes = np.unique(self.elm.node_number_list[idx, :3]) - 1
 
         if nodes_mask is not None:
@@ -3382,7 +3573,7 @@ class Msh:
             Gamma metric from Parthasarathy et al., 1994
         """
         vol = self.elements_volumes_and_areas()
-        th = self.elm.elm_type == 4
+        th = self.elm.get_tetrahedra()
         edge_rms = np.zeros(self.elm.nr)
         for i in range(4):
             for j in range(i + 1, 4):
@@ -3398,7 +3589,7 @@ class Msh:
 
     def surface_EC(self):
         """return euler characteristic of surfaces"""
-        idx_tr = self.elm.elm_type == 2
+        idx_tr = self.elm.get_triangles()
 
         nr_tr = np.sum(idx_tr)
         nr_node_tr = np.unique(self.elm.node_number_list[idx_tr, 0:3].flatten()).shape[
@@ -3442,7 +3633,7 @@ class Msh:
             its index equals the number of nodes in the mesh. Add indices are 1-based.
         """
         if do_checks:
-            if not np.all(self.elm.elm_type == 4):
+            if not np.all(self.elm.get_tetrahedra()):
                 raise TypeError("The mesh must only contain tetrahedra")
             if len(self.elmdata) > 0 or len(self.nodedata) > 0:
                 raise TypeError("The mesh must not contain data")
@@ -4418,7 +4609,7 @@ class ElementData(Data):
                         nd = msh_tag.elmdata[0].elm_data2node_data()
 
                         # 'msh_with_t' is sorted because 'elm_number' is always sorted
-                        msh_with_t = msh.elm.elm_number[msh.elm.tag1 == t]
+                        msh_with_t = msh.elm.elm_number[msh.elm.get_tags(t)]
 
                         # use 'is_t' to select the indices of the tetrahedra inside and with 'tag1 == t'
                         where_inside_with_t = where_inside[is_t[arg_inv]]
@@ -4520,7 +4711,7 @@ class ElementData(Data):
         v = np.atleast_2d(self.value)
         if v.shape[0] < v.shape[1]:
             v = v.T
-        v = v[msh.elm.elm_type == 4]
+        v = v[msh.elm.get_tetrahedra()]
 
         if method == "assign":
             nd = np.hstack([msh_th.nodes.node_coord, np.ones((msh_th.nodes.nr, 1))])
@@ -4844,8 +5035,8 @@ class NodeData(Data):
                 "equal to the number of elements in the mesh"
             )
 
-        triangles = np.where(msh.elm.elm_type == 2)[0]
-        tetrahedra = np.where(msh.elm.elm_type == 4)[0]
+        triangles = msh.elm.get_triangles(return_indices=True)
+        tetrahedra = msh.elm.get_tetrahedra(return_indices=True)
 
         if self.nr_comp == 1:
             elm_data = np.zeros((msh.elm.nr,), dtype=float)
@@ -4896,8 +5087,8 @@ class NodeData(Data):
         ).squeeze()
 
         gradient = np.zeros((mesh.elm.nr, 3), dtype=float)
-        gradient[mesh.elm.elm_type == 4] = th_grad
-        gradient[mesh.elm.elm_type == 2] = 0.0
+        gradient[mesh.elm.get_tetrahedra()] = th_grad
+        gradient[mesh.elm.get_triangles()] = 0.0
 
         return ElementData(gradient, "grad_" + self.field_name, mesh)
 
@@ -5467,10 +5658,10 @@ def read_msh(fn, m=None, skip_data=False):
         m = _read_msh_2(fn, m, skip_data)
 
     elif version_number == 4:
-        m = _read_msh_4(fn, m, skip_data)
+        raise IOError(f"Can not read Mesh with file version : {version_number}")
 
     else:
-        raise IOError("Unrecgnized Mesh file version : {}".format(version_number))
+        raise IOError(f"Unrecgnized Mesh file version : {version_number}")
 
     return m
 
@@ -5636,7 +5827,7 @@ def _read_msh_2(fn, m, skip_data=False):
             ]
             while current_element < elm_nr:
                 elm_type, nr, _ = np.fromfile(f, "int32", 3)
-                if elm_type == 1:
+                if elm_type == ElementTypes.LINE:
                     tmp = np.fromfile(f, "int32", nr * 5).reshape(-1, 5)
 
                     m.elm.elm_type[current_element : current_element + nr] = (
@@ -5650,7 +5841,7 @@ def _read_msh_2(fn, m, skip_data=False):
                     ] = tmp[:, 3:]
                     read[current_element : current_element + nr] = 1
 
-                elif elm_type == 2:
+                elif elm_type == ElementTypes.TRIANGLE:
                     tmp = np.fromfile(f, "int32", nr * 6).reshape(-1, 6)
 
                     m.elm.elm_type[current_element : current_element + nr] = (
@@ -5664,7 +5855,7 @@ def _read_msh_2(fn, m, skip_data=False):
                     ] = tmp[:, 3:]
                     read[current_element : current_element + nr] = 1
 
-                elif elm_type == 4:
+                elif elm_type == ElementTypes.TETRAHEDRON:
                     tmp = np.fromfile(f, "int32", nr * 7).reshape(-1, 7)
 
                     m.elm.elm_type[current_element : current_element + nr] = (
@@ -5678,7 +5869,7 @@ def _read_msh_2(fn, m, skip_data=False):
                     )
                     read[current_element : current_element + nr] = 1
 
-                elif elm_type == 15:
+                elif elm_type == ElementTypes.POINT:
                     tmp = np.fromfile(f, "int32", nr * 4).reshape(-1, 4)
 
                     m.elm.elm_type[current_element : current_element + nr] = (
@@ -5900,318 +6091,6 @@ def _read_msh_2(fn, m, skip_data=False):
     return m
 
 
-def _read_msh_4(fn, m, skip_data=False):
-    m.fn = fn
-    # file open
-    with open(fn, "rb") as f:
-        # check 1st line
-        first_line = f.readline()
-        if first_line != b"$MeshFormat\n":
-            raise IOError(fn, "must start with $MeshFormat")
-
-        # parse 2nd line
-        version_number, file_type, data_size = f.readline().decode().strip().split()
-        version_number = int(version_number[0])
-        file_type = int(file_type)
-        data_size = int(data_size)
-
-        if version_number != 4:
-            raise IOError("Can only handle v4 meshes")
-
-        if file_type == 1:
-            binary = True
-        elif file_type == 0:
-            binary = False
-        else:
-            raise IOError("File_type not recognized: {0}".format(file_type))
-
-        if data_size != 8:
-            raise IOError(
-                "data_size should be double (8), i'm reading: {0}".format(data_size)
-            )
-
-        # read next byte, if binary, to check for endianness
-        if binary:
-            endianness = struct.unpack("i", f.readline()[:4])[0]
-        else:
-            endianness = 1
-
-        if endianness != 1:
-            raise IOError("endianness is not 1, is the endian order wrong?")
-
-        # read 3rd line
-        if f.readline() != b"$EndMeshFormat\n":
-            raise IOError(fn + " expected $EndMeshFormat")
-
-        # Skip  everyting untill nodes
-        while f.readline() != b"$Nodes\n":
-            continue
-
-        # Number of nodes and number of blocks
-        if binary:
-            entity_blocks, node_nr = struct.unpack("LL", f.read(struct.calcsize("LL")))
-        else:
-            line = f.readline().strip()
-            entity_blocks, node_nr = line.decode().split()
-            entity_blocks = int(entity_blocks)
-            node_nr = int(node_nr)
-        n_read = 0
-        node_number = np.zeros(node_nr, dtype=np.int32)
-        node_coord = np.zeros((node_nr, 3), dtype=float)
-        for block in range(entity_blocks):
-            if binary:
-                _, _, parametric, n_in_block = struct.unpack(
-                    "iiii", f.read(struct.calcsize("iiii"))
-                )
-                # We need to read 4 extra bytes here
-                f.read(4)
-            else:
-                _, _, parametric, n_in_block = f.readline().decode().strip().split()
-                parametric = int(parametric)
-                n_in_block = int(n_in_block)
-            if parametric:
-                raise IOError("Can't read parametric entity!")
-            if binary:
-                dt = np.dtype([("id", np.int32, 1), ("coord", np.float64, 3)])
-                temp = np.fromfile(f, dtype=dt, count=n_in_block)
-                node_nbr_block = temp["id"]
-                node_coord_block = temp["coord"]
-            else:
-                node_nbr_block = np.zeros(n_in_block, dtype=int)
-                node_coord_block = np.zeros(3 * n_in_block, dtype=float)
-                for i in range(n_in_block):
-                    line = f.readline().decode().strip().split()
-                    node_nbr_block[i] = line[0]
-                    node_coord_block[3 * i] = line[1]
-                    node_coord_block[3 * i + 1] = line[2]
-                    node_coord_block[3 * i + 2] = line[3]
-                node_coord_block = node_coord_block.reshape(-1, 3)
-
-            node_number[n_read : n_read + n_in_block] = node_nbr_block
-            node_coord[n_read : n_read + n_in_block, :] = node_coord_block
-            n_read += n_in_block
-
-        m.nodes.node_coord = node_coord
-
-        line = f.readline()
-        if b"$EndNodes" not in line:
-            line = f.readline()
-            if b"$EndNodes" not in line:
-                raise IOError(
-                    fn
-                    + " expected $EndNodes after reading "
-                    + str(m.noedes.nr)
-                    + " nodes. Read "
-                    + line
-                )
-
-        # Read Elements
-        if f.readline() != b"$Elements\n":
-            raise IOError(fn, "expected line with $Elements")
-        if binary:
-            entity_blocks, elm_nr = struct.unpack("LL", f.read(struct.calcsize("LL")))
-        else:
-            line = f.readline().strip()
-            entity_blocks, elm_nr = line.decode().split()
-            entity_blocks = int(entity_blocks)
-            elm_nr = int(elm_nr)
-        n_read = 0
-        elm_number = np.zeros(elm_nr, dtype=np.int32)
-        m.elm.elm_type = np.zeros(elm_nr, dtype=np.int32)
-        m.elm.tag1 = np.zeros(elm_nr, dtype=np.int32)
-        m.elm.node_number_list = -np.ones((elm_nr, 4), dtype=np.int32)
-        read = np.ones(elm_nr, dtype=bool)
-        for block in range(entity_blocks):
-            if binary:
-                tag, _, elm_type, n_in_block = struct.unpack(
-                    "iiii", f.read(struct.calcsize("iiii"))
-                )
-                f.read(4)
-            else:
-                tag, _, elm_type, n_in_block = f.readline().decode().strip().split()
-                tag = int(tag)
-                elm_type = int(elm_type)
-                n_in_block = int(n_in_block)
-
-            if elm_type == 2:
-                nr_nodes_elm = 3
-            elif elm_type == 4:
-                nr_nodes_elm = 4
-            else:
-                warnings.warn(
-                    "Can't read element type: {}. Ignoring it".format(elm_type)
-                )
-                continue
-
-            if binary:
-                dt = np.dtype([("id", np.int32, 1), ("nodes", np.int32, nr_nodes_elm)])
-                temp = np.fromfile(f, dtype=dt, count=n_in_block)
-                elm_nbr_block = temp["id"]
-                elm_node_block = temp["nodes"]
-
-            else:
-                elm_nbr_block = np.zeros(n_in_block, dtype=np.int32)
-                elm_node_block = -np.ones(nr_nodes_elm * n_in_block, dtype=np.int32)
-                for i in range(n_in_block):
-                    line = f.readline().decode().strip().split()
-                    elm_nbr_block[i] = int(line[0])
-                    elm_node_block[nr_nodes_elm * i : nr_nodes_elm * (i + 1)] = [
-                        int(l) for l in line[1:]
-                    ]
-                elm_node_block = elm_node_block.reshape(-1, nr_nodes_elm)
-
-            elm_number[n_read : n_read + n_in_block] = elm_nbr_block
-            m.elm.node_number_list[n_read : n_read + n_in_block, :nr_nodes_elm] = (
-                elm_node_block
-            )
-            m.elm.tag1[n_read : n_read + n_in_block] = tag
-            m.elm.elm_type[n_read : n_read + n_in_block] = elm_type
-            read[n_read : n_read + n_in_block] = True
-            n_read += n_in_block
-
-        elm_number = elm_number[read]
-        m.elm.node_number_list = m.elm.node_number_list[read]
-        m.elm.tag1 = m.elm.tag1[read]
-        m.elm.elm_type = m.elm.elm_type[read]
-
-        order = np.argsort(elm_number)
-        elm_number = elm_number[order]
-        m.elm.node_number_list = m.elm.node_number_list[order]
-        m.elm.tag1 = m.elm.tag1[order]
-        m.elm.elm_type = m.elm.elm_type[order]
-        m.elm.tag2 = m.elm.tag1
-
-        line = f.readline()
-        if b"$EndElements" not in line:
-            line = f.readline()
-            if b"$EndElements" not in line:
-                raise IOError(
-                    fn
-                    + " expected $EndElements after reading "
-                    + str(m.elm.nr)
-                    + " elements. Read "
-                    + line
-                )
-
-        # read the header in the beginning of a data section
-        def parse_Data():
-            section = f.readline()
-            if section == b"":
-                return "EOF", "", 0, 0
-            # string tags
-            number_of_string_tags = int(f.readline().decode("ascii"))
-            assert (
-                number_of_string_tags == 1
-            ), "Invalid Mesh File: invalid number of string tags"
-            name = f.readline().decode("ascii").strip().strip('"')
-            # real tags
-            number_of_real_tags = int(f.readline().decode("ascii"))
-            assert (
-                number_of_real_tags == 1
-            ), "Invalid Mesh File: invalid number of real tags"
-            f.readline()
-            # integer tags
-            number_of_integer_tags = int(f.readline().decode("ascii"))  # usually 3 or 4
-            integer_tags = [
-                int(f.readline().decode("ascii")) for i in range(number_of_integer_tags)
-            ]
-            nr = integer_tags[2]
-            nr_comp = integer_tags[1]
-            return section.strip(), name, nr, nr_comp
-
-        def read_NodeData(t, name, nr, nr_comp, m):
-            data = NodeData(np.empty((nr, nr_comp)), name=name, mesh=m)
-            if binary:
-                dt = np.dtype([("id", np.int32, 1), ("values", np.float64, nr_comp)])
-
-                temp = np.fromfile(f, dtype=dt, count=nr)
-                node_number = np.copy(temp["id"])
-                data.value = np.copy(temp["values"])
-            else:
-                node_number = np.empty(nr, dtype="int32")
-                data.value = np.empty((nr, nr_comp), dtype="float64")
-                for ii in range(nr):
-                    line = f.readline().decode("ascii").split()
-                    node_number[ii] = int(line[0])
-                    data.value[ii, :] = [float(v) for v in line[1:]]
-
-            if f.readline() != b"$EndNodeData\n":
-                raise IOError(
-                    fn
-                    + " expected $EndNodeData after reading "
-                    + str(nr)
-                    + " lines in $NodeData"
-                )
-
-            if np.any(node_number != m.nodes.elm_number):
-                raise IOError(
-                    "Can't read NodeData field: "
-                    "it does not have one data point per node"
-                )
-
-            return data
-
-        def read_ElementData(t, name, nr, nr_comp, m):
-            if not np.all(read):
-                raise IOError(
-                    "Could not read ElementData: "
-                    "Element ordering not compact or invalid element type"
-                )
-            data = ElementData(np.empty((nr, nr_comp)), name=name, mesh=m)
-            if binary:
-                dt = np.dtype([("id", np.int32, 1), ("values", np.float64, nr_comp)])
-
-                temp = np.fromfile(f, dtype=dt, count=nr)
-                elm_number = np.copy(temp["id"])
-                data.value = np.copy(temp["values"])
-
-            else:
-                elm_number = np.empty(nr, dtype="int32")
-                data.value = np.empty([nr, nr_comp], dtype="float64")
-
-                for ii in range(nr):
-                    line = f.readline().decode("ascii").split()
-                    elm_number[ii] = int(line[0])
-                    data.value[ii, :] = [float(jj) for jj in line[1:]]
-
-            if f.readline() != b"$EndElementData\n":
-                raise IOError(
-                    fn
-                    + " expected $EndElementData after reading "
-                    + str(nr)
-                    + " lines in $ElementData"
-                )
-
-            if np.any(elm_number != m.elm.elm_number):
-                raise IOError(
-                    "Can't read ElementData field: "
-                    "it does not have one data point per element"
-                )
-
-            return data
-
-        # read sections recursively
-        def read_next_section():
-            t, name, nr, nr_comp = parse_Data()
-            if t == "EOF":
-                return
-            elif t == b"$NodeData":
-                m.nodedata.append(read_NodeData(t, name, nr, nr_comp, m))
-            elif t == b"$ElementData":
-                m.elmdata.append(read_ElementData(t, name, nr, nr_comp, m))
-            else:
-                raise IOError("Can't recognize section name:" + t)
-
-            read_next_section()
-            return
-
-        if not skip_data:
-            read_next_section()
-    m.compact_ordering(node_number)
-    return m
-
-
-# write msh to mesh file
 def write_msh(msh, file_name=None, mode="binary", mmg_fix=False):
     """Writes a gmsh 'msh' file
 
@@ -6291,22 +6170,22 @@ def write_msh(msh, file_name=None, mode="binary", mmg_fix=False):
                     + " "
                 )
 
-                if msh.elm.elm_type[ii] == 2:
+                if msh.elm.elm_type[ii] == ElementTypes.TRIANGLE:
                     line += (
                         str(msh.elm.node_number_list[ii, :3]).translate(None, "[](),")
                         + "\n"
                     )
-                elif msh.elm.elm_type[ii] == 4:
+                elif msh.elm.elm_type[ii] == ElementTypes.TETRAHEDRON:
                     line += (
                         str(msh.elm.node_number_list[ii, :]).translate(None, "[](),")
                         + "\n"
                     )
-                elif msh.elm.elm_type[ii] == 15:
+                elif msh.elm.elm_type[ii] == ElementTypes.POINT:
                     line += (
                         str(msh.elm.node_number_list[ii, :1]).translate(None, "[](),")
                         + "\n"
                     )
-                elif msh.elm.elm_type[ii] == 1:
+                elif msh.elm.elm_type[ii] == ElementTypes.LINE:
                     line += (
                         str(msh.elm.node_number_list[ii, :2]).translate(None, "[](),")
                         + "\n"
@@ -6358,7 +6237,7 @@ def write_msh(msh, file_name=None, mode="binary", mmg_fix=False):
                         axis=1,
                     ).tobytes()
                 )
-            triangles = np.where(msh.elm.elm_type == 2)[0]
+            triangles = msh.elm.get_triangles(return_indices=True)
             if len(triangles > 0):
                 triangles_header = np.array((2, len(triangles), 2), "int32")
                 triangles_number = msh.elm.elm_number[triangles].astype("int32")
@@ -6380,7 +6259,7 @@ def write_msh(msh, file_name=None, mode="binary", mmg_fix=False):
                     ).tobytes()
                 )
 
-            tetra = np.where(msh.elm.elm_type == 4)[0]
+            tetra = msh.elm.get_tetrahedra(return_indices=True)
             if len(tetra > 0):
                 tetra_header = np.array((4, len(tetra), 2), "int32")
                 tetra_number = msh.elm.elm_number[tetra].astype("int32")
@@ -6414,7 +6293,7 @@ def write_msh(msh, file_name=None, mode="binary", mmg_fix=False):
 """
 # Adds 1000 to the label of triangles, if less than 100
 def create_surface_labels(msh):
-    triangles = np.where(msh.elm.elm_type == 2)[0]
+    triangles = msh.elm.get_triangles(return_indices=True)
     triangles = np.where(msh.elm.tag1[triangles] < 1000)[0]
     msh.elm.tag1[triangles] += 1000
     msh.elm.tag2[triangles] += 1000

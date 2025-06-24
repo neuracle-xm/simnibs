@@ -355,7 +355,7 @@ def convert_old_new(subpath_old, subpath_new):
     logger.info("Transforming EEG positions")
     skin_tag = 1005
     final_mesh = mesh_io.read_msh(sf_new.fnamehead)
-    idx = (final_mesh.elm.elm_type == 2) & (final_mesh.elm.tag1 == skin_tag)
+    idx = final_mesh.elm.get_triangles(skin_tag)
     mesh = final_mesh.crop_mesh(elements=final_mesh.elm.elm_number[idx])
 
     if not os.path.exists(sf_new.eeg_cap_folder):
@@ -416,10 +416,10 @@ def convert_old_new(subpath_old, subpath_new):
 
 def parseArguments(argv):
     usage_text = textwrap.dedent("""
-                                 
+
 Converts head models created by mri2mesh or headreco for use in simnibs 4:
     convert_3_to_4 m2m_old m2m_new
-            
+
 Note:
     m2m_new can be left out, then the new folder name will be m2m_old_v4
 

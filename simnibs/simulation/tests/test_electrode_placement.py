@@ -124,9 +124,7 @@ class TestDrawElectrodes:
 
         # test if there is no volume node outside of the ROI with a smaller distance than the radius + 2*avg_l to the center.
         not_in_roi = np.full((sphere3_msh.nodes.nr), False)
-        node_in_volume = (sphere3_msh.elm.elm_type == 4) * (
-            np.isin(sphere3_msh.elm.tag1, [5])
-        )
+        node_in_volume = sphere3_msh.elm.get_tetrahedra(tags=5)
         node_in_volume = np.unique(sphere3_msh.elm.node_number_list[node_in_volume, :3])
         not_in_roi[node_in_volume - 1] = True
         not_in_roi[roi_th_nodes - 1] = False
@@ -754,8 +752,8 @@ class TestDrawElectrodes:
 
         # mesh_io.write_msh(w_elec, '~/Tests/electrode.msh')
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 2].sum(), 100 * h)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1002].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(2)].sum(), 100 * h)
+        assert np.isclose(vols[w_elec.elm.get_tags(1002)].sum(), 100)
 
         h = [5, 3]
         mesh = mesh_io.Msh()
@@ -773,10 +771,10 @@ class TestDrawElectrodes:
         )
 
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 2].sum(), 100 * 5)
-        assert np.isclose(vols[w_elec.elm.tag1 == 3].sum(), 100 * 3)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1002].sum(), 100)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1003].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(2)].sum(), 100 * 5)
+        assert np.isclose(vols[w_elec.elm.get_tags(3)].sum(), 100 * 3)
+        assert np.isclose(vols[w_elec.elm.get_tags(1002)].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(1003)].sum(), 100)
 
         plug = np.array([[2, 2], [2, -2], [-2, -2], [-2, 2]])
         w_elec = electrode_placement._build_electrode_on_mesh(
@@ -793,11 +791,11 @@ class TestDrawElectrodes:
         )
 
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 2].sum(), 100 * 5)
-        assert np.isclose(vols[w_elec.elm.tag1 == 3].sum(), 100 * 3)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1002].sum(), 100)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1003].sum(), 100)
-        assert np.isclose(vols[w_elec.elm.tag1 == 2003].sum(), 16)
+        assert np.isclose(vols[w_elec.elm.get_tags(2)].sum(), 100 * 5)
+        assert np.isclose(vols[w_elec.elm.get_tags(3)].sum(), 100 * 3)
+        assert np.isclose(vols[w_elec.elm.get_tags(1002)].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(1003)].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(2003)].sum(), 16)
 
         h = [5, 3, 1]
         middle_layer = np.array([[2, 2], [2, -2], [-2, -2], [-2, 2]])
@@ -817,10 +815,10 @@ class TestDrawElectrodes:
         )
 
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 2].sum(), 100 * 6 + (100 - 16) * 3)
-        assert np.isclose(vols[w_elec.elm.tag1 == 3].sum(), 16 * 3)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1002].sum(), 100)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1003].sum(), 16)
+        assert np.isclose(vols[w_elec.elm.get_tags(2)].sum(), 100 * 6 + (100 - 16) * 3)
+        assert np.isclose(vols[w_elec.elm.get_tags(3)].sum(), 16 * 3)
+        assert np.isclose(vols[w_elec.elm.get_tags(1002)].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(1003)].sum(), 16)
 
     """
     def test_create_polygon_from_elec(self):
@@ -876,8 +874,8 @@ class TestDrawElectrodes:
 
         #mesh_io.write_msh(w_elec, '~/Tests/electrode1.msh')
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 402].sum(), 50 * 5)
-        assert np.isclose(vols[w_elec.elm.tag1 == 2002].sum(), 50)
+        assert np.isclose(vols[w_elec.elm.get_tags(402)].sum(), 50 * 5)
+        assert np.isclose(vols[w_elec.elm.get_tags(2002)].sum(), 50)
 
         elec.shape = 'ellipse'
         elec.dimX = 8
@@ -887,8 +885,8 @@ class TestDrawElectrodes:
 
         #mesh_io.write_msh(w_elec, '~/Tests/electrode2.msh')
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 402].sum(), np.pi * 4**2 * 5, rtol=0.1)
-        assert np.isclose(vols[w_elec.elm.tag1 == 2002].sum(), np.pi * 4**2, rtol=0.1)
+        assert np.isclose(vols[w_elec.elm.get_tags(402)].sum(), np.pi * 4**2 * 5, rtol=0.1)
+        assert np.isclose(vols[w_elec.elm.get_tags(2002)].sum(), np.pi * 4**2, rtol=0.1)
 
         elec.shape = 'rect'
         elec.dimX = 10
@@ -905,7 +903,7 @@ class TestDrawElectrodes:
 
         #mesh_io.write_msh(w_elec, '~/Tests/electrode3.msh')
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 402].sum(), (100 - np.pi * 3**2) * 5, rtol=0.1)
+        assert np.isclose(vols[w_elec.elm.get_tags(402)].sum(), (100 - np.pi * 3**2) * 5, rtol=0.1)
 
         elec.holes = []
         plug = sim_struct.ELECTRODE()
@@ -919,7 +917,7 @@ class TestDrawElectrodes:
 
         vols = w_elec.elements_volumes_and_areas().value
         #mesh_io.write_msh(w_elec, '~/Tests/electrode4.msh')
-        assert np.isclose(vols[w_elec.elm.tag1 == 2002].sum(), 16, rtol=0.1)
+        assert np.isclose(vols[w_elec.elm.get_tags(2002)].sum(), 16, rtol=0.1)
 
         # Tests with 2 layers
         elec = sim_struct.ELECTRODE()
@@ -934,10 +932,10 @@ class TestDrawElectrodes:
 
         #mesh_io.write_msh(w_elec, '~/Tests/electrode5.msh')
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 2].sum(), 50 * 2)
-        assert np.isclose(vols[w_elec.elm.tag1 == 2002].sum(), 50)
-        assert np.isclose(vols[w_elec.elm.tag1 == 402].sum(), 50 * 5)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1402].sum(), 50)
+        assert np.isclose(vols[w_elec.elm.get_tags(2)].sum(), 50 * 2)
+        assert np.isclose(vols[w_elec.elm.get_tags(2002)].sum(), 50)
+        assert np.isclose(vols[w_elec.elm.get_tags(402)].sum(), 50 * 5)
+        assert np.isclose(vols[w_elec.elm.get_tags(1402)].sum(), 50)
 
         #test with sponge
         elec.sponge_x = 12
@@ -949,8 +947,8 @@ class TestDrawElectrodes:
 
         #mesh_io.write_msh(w_elec, '~/Tests/electrode6.msh')
         vols = w_elec.elements_volumes_and_areas().value
-        assert np.isclose(vols[w_elec.elm.tag1 == 2].sum(), 100 * 3)
-        assert np.isclose(vols[w_elec.elm.tag1 == 2002].sum(), 100)
-        assert np.isclose(vols[w_elec.elm.tag1 == 402].sum(), 144 * 10 + 44 * 3)
-        assert np.isclose(vols[w_elec.elm.tag1 == 1402].sum(), 144)
+        assert np.isclose(vols[w_elec.elm.get_tags(2)].sum(), 100 * 3)
+        assert np.isclose(vols[w_elec.elm.get_tags(2002)].sum(), 100)
+        assert np.isclose(vols[w_elec.elm.get_tags(402)].sum(), 144 * 10 + 44 * 3)
+        assert np.isclose(vols[w_elec.elm.get_tags(1402)].sum(), 144)
     """

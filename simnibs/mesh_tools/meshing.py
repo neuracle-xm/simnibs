@@ -384,7 +384,7 @@ def remesh(
     adj_th = mesh.elm.find_adjacent_tetrahedra()
     adj_labels = mesh.elm.tag1[adj_th - 1]
     adj_labels[adj_th == -1] = 0
-    triangles = mesh.elm.elm_type == 2
+    triangles = mesh.elm.get_triangles()
     adj_labels = adj_labels[triangles, :2]
     tr_labels = mesh.elm.tag1[triangles]
     # fix the label order so that the first is the triangle label
@@ -1194,7 +1194,7 @@ def update_tag_from_label_img(m, adj_tets, vol, affine, label_GM=None, label_CSF
         nr_diff_pre = get_nr_diff_tag(m.elm.tag1, adj_tets)
         idx_relabel = (nr_diff_pre > 1) * (best_tag != m.elm.tag1)
         if label_GM is not None:
-            idx_relabel[(m.elm.tag1 == label_CSF) * (best_tag == label_GM)] = False
+            idx_relabel[(m.elm.get_tags(label_CSF)) & (best_tag == label_GM)] = False
         m.elm.tag1[idx_relabel] = best_tag[idx_relabel]
 
         # undo relabeling for tets that got more "spiky"
@@ -1205,7 +1205,9 @@ def update_tag_from_label_img(m, adj_tets, vol, affine, label_GM=None, label_CSF
         if np.sum(idx_relabel) == np.sum(idx_undo):
             break
 
-    idx_relabel = m.elm.tag1 == 0  # set back tets relabled to 0 to their original label
+    idx_relabel = m.elm.get_tags(
+        0
+    )  # set back tets relabled to 0 to their original label
     m.elm.tag1[idx_relabel] = m.elm.tag2[idx_relabel]
     logger.info("   Relabled " + str(np.sum(m.elm.tag1 != m.elm.tag2)) + " tets")
     m.elm.tag2[:] = m.elm.tag1
@@ -1498,7 +1500,7 @@ def _fix_labels(m, label_img):
         )
     new_tags = np.copy(m.elm.tag1)
     for i, t in enumerate(indices_seg):
-        new_tags[m.elm.tag1 == i + 1] = t
+        new_tags[m.elm.get_tags(i + 1)] = t
     m.elm.tag1 = new_tags
     m.elm.tag2 = new_tags.copy()
     return m
@@ -1835,7 +1837,7 @@ def create_mesh(
         if skin_tag is not None:
             # keep boundary only at regions with label skin_tag-1000
             # to save some tetrahedra
-            skin_tet_tag = skin_tag - 1000
+            skin_tet_tag = skin_tag - ElementTags.TH_SURFACE_START
             boundary *= label_img == skin_tet_tag
             boundary = dilate(boundary, 1)
             boundary *= label_img == skin_tet_tag
@@ -2482,7 +2484,7 @@ def apply_cream_layer(label_img, size_field, distance_field, cream_thickness):
 #     indices_seg = np.unique(label_img)[1:]
 #     new_tags = np.copy(mesh.elm.tag1)
 #     for i, t in enumerate(indices_seg):
-#         new_tags[mesh.elm.tag1 == i+1] = t
+#         new_tags[mesh.elm.get_tags(i+1)] = t
 #     mesh.elm.tag1 = new_tags
 #     mesh.elm.tag2 = new_tags.copy()
 

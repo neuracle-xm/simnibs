@@ -6,6 +6,8 @@ import h5py
 import types
 import logging
 import sys
+import nibabel
+import json
 
 import numpy as np
 import scipy.spatial
@@ -14,6 +16,7 @@ from scipy.optimize import (
     Bounds,
     minimize,
     differential_evolution,
+    linear_sum_assignment,
 )
 
 from simnibs import __version__
@@ -26,7 +29,11 @@ from simnibs.utils.region_of_interest import RegionOfInterest
 from simnibs.utils.roi_result_visualization import RoiResultVisualization
 from simnibs.utils.TI_utils import get_maxTI, get_dirTI
 from simnibs.utils.file_finder import SubjectFiles, Templates
-
+from simnibs.utils.csv_reader import read_csv_positions
+from simnibs.utils.transformations import (
+    subject2mni_coords,
+    create_new_connectivity_list_point_mask,
+)
 from simnibs.utils.mesh_element_properties import ElementTags, tissue_names
 
 from .ellipsoid import Ellipsoid, subject2ellipsoid, ellipsoid2subject
@@ -88,6 +95,21 @@ class TesFlexOptimization:
             NOTE: Will be ignored for "focality" and "focality_inv" goals (see below),
             where ROI and non-ROI are combined into a single goal function value
 
+
+    Electrode Mapping Parameters
+    ---------------------------
+    map_to_net_electrodes : bool, optional, default: False
+        If True, maps optimized electrode positions to nearest positions in an EEG net.
+
+    run_mapped_electrodes_simulation : bool, optional, default: False
+        If True, runs simulation with mapped electrode positions.
+        Requires map_to_net_electrodes to be set to True.
+
+    net_electrode_file : str, optional, default: None
+        Path to CSV file containing EEG electrode positions in SimNIBS format.
+        Required if map_to_net_electrodes is True.
+
+
     Parameters (optimizer + FEM)
     ------------------------------------
     optimizer : str, optional, default: "differential_evolution"
@@ -126,6 +148,13 @@ class TesFlexOptimization:
         self._detailed_results_folder = None
         self.fn_final_sim = []
         self._prepared = False
+
+        # map to net electrodes
+        self.map_to_net_electrodes = False
+        self.run_mapped_electrodes_simulation = False
+        self.net_electrode_file = None
+        self.fn_mapped_sim = []
+        self.electrode_mapping = None
 
         # headmodel
         self.fn_mesh = None
@@ -268,11 +297,11 @@ class TesFlexOptimization:
         self._mesh_nodes_areas = self._mesh.nodes_areas()
 
         # relabel internal air
-        if not np.any(self._mesh.elm.tag1 == ElementTags.INTERNAL_AIR_TH_SURFACE):
+        if not self._mesh.elm.get_tags(ElementTags.INTERNAL_AIR_TH_SURFACE).any():
             self._mesh_relabel = self._mesh.relabel_internal_air()
         else:
             self._mesh_relabel = self._mesh
-        
+
         # make final skin surface including some additional distance
         self._skin_surface = valid_skin_region(
             self._mesh_relabel.crop_mesh(tags=1005),
@@ -609,6 +638,19 @@ class TesFlexOptimization:
             f"Constrain electrode locations:    {self.constrain_electrode_locations}",
         )
         logger.log(26, f"Polish (local optimization):      {self.polish}")
+
+        logger.log(
+            26, f"Map to net electrodes:            {self.map_to_net_electrodes}"
+        )
+        if self.map_to_net_electrodes:
+            logger.log(
+                26, f"Net electrode file:               {self.net_electrode_file}"
+            )
+            logger.log(
+                26,
+                f"Run mapped electrodes simulation: {self.run_mapped_electrodes_simulation}",
+            )
+
         logger.log(26, "Optimizer settings:")
         if self._optimizer_options_std is not None:
             for key in self._optimizer_options_std:
@@ -696,6 +738,28 @@ class TesFlexOptimization:
                             + sep(_electrode.posmat[i_row, 3])
                             + f"{_electrode.posmat[i_row, 3]:.3f}",
                         )
+
+        if self.electrode_mapping is not None:
+            logger.log(26, " ")
+            logger.log(26, "Electrode mapping results:")
+            logger.log(26, "-" * 100)
+            for i, label in enumerate(self.electrode_mapping["mapped_labels"]):
+                original_pos = self.electrode_mapping["optimized_positions"][i]
+                mapped_pos = self.electrode_mapping["mapped_positions"][i]
+                distance = self.electrode_mapping["distances"][i]
+                channel, array = self.electrode_mapping["channel_array_indices"][i]
+
+                logger.log(26, f"Electrode {i} (Channel {channel}, Array {array}):")
+                logger.log(26, f"\tMapped to:    {label}")
+                logger.log(
+                    26,
+                    f"\tOriginal pos: [{original_pos[0]:.2f}, {original_pos[1]:.2f}, {original_pos[2]:.2f}]",
+                )
+                logger.log(
+                    26,
+                    f"\tMapped pos:   [{mapped_pos[0]:.2f}, {mapped_pos[1]:.2f}, {mapped_pos[2]:.2f}]",
+                )
+                logger.log(26, f"\tDistance:     {distance:.2f} mm")
 
     def _write_detailed_results_preopt(self):
         """write out some more results prior to optimization"""
@@ -1071,98 +1135,98 @@ class TesFlexOptimization:
         self.electrode.append(electrode)
         return electrode
 
-    def add_roi(self, roi=None):
+    def map_to_nearest_net_electrodes(self, net_csv_path=None):
         """
-        Adds an ROI to the current TESoptimize
+        Maps optimized electrode positions to the nearest available positions in a
+        co-registered EEG net loaded from a CSV file.
 
         Parameters
         ----------
-        roi: RegionOfInterest object, optional, default=None
-            ROI structure.
+        net_csv_path : str, optional
+            Path to the CSV file containing electrode positions. If None, uses the default
+            EEG cap file from the subject (self._ff_subject.eeg_cap_1010).
 
         Returns
         -------
-        roi: RegionOfInterestInitializer
-            RegionOfInterestInitializer structure added to TESoptimize
-        """
-        if roi is None:
-            roi = RegionOfInterest()
-        self.roi.append(roi)
-        return roi
-
-    def to_dict(self) -> dict:
-        """Makes a dictionary storing all settings as key value pairs
-
-        Returns
-        --------------------
         dict
-            Dictionary containing settings as key value pairs
+            Dictionary containing mapping information including electrode positions,
+            labels, and distances.
         """
-        # Generate dict from instance variables (excluding variables starting with _ or __)
-        settings = {
-            key: value
-            for key, value in self.__dict__.items()
-            if not key.startswith("__")
-            and not key.startswith("_")
-            and not callable(value)
-            and not callable(getattr(value, "__get__", None))
-            and value is not None
+
+        if net_csv_path is None:
+            if not hasattr(self._ff_subject, "eeg_cap_1010"):
+                raise ValueError(
+                    "Could not find default EEG cap. Please specify a net_csv_path or ensure subject files are properly initialized."
+                )
+            net_csv_path = self._ff_subject.eeg_cap_1010
+            logger.info(f"Using default EEG cap file: {net_csv_path}")
+
+        if not os.path.isfile(net_csv_path):
+            raise FileNotFoundError(f"Electrode net file not found: {net_csv_path}")
+
+        logger.info("Loading electrode positions from CSV...")
+        type_, coordinates, _, name, _, _ = read_csv_positions(net_csv_path)
+
+        net_positions = []
+        net_labels = []
+        for t, coord, n in zip(type_, coordinates, name):
+            if t in ["Electrode", "ReferenceElectrode"]:
+                net_positions.append(coord)
+                net_labels.append(n)
+
+        net_positions = np.array(net_positions)
+        logger.info(f"Loaded {len(net_positions)} electrode positions from net")
+
+        logger.info("Extracting optimized electrode positions...")
+        ideal_coords = []
+        electrode_indices = []
+
+        for i_channel_stim in range(len(self.electrode)):
+            for i_array, electrode_array in enumerate(
+                self.electrode[i_channel_stim]._electrode_arrays
+            ):
+                actual_pos = electrode_array.electrodes[0].posmat[:3, 3].copy()
+                ideal_coords.append(actual_pos)
+                electrode_indices.append((i_channel_stim, i_array))
+
+        ideal_coords = np.array(ideal_coords)
+        logger.info(f"Extracted {len(ideal_coords)} optimized electrode positions")
+
+        logger.info("Calculating distances and finding optimal assignment...")
+        distance_matrix = np.array(
+            [[np.linalg.norm(i - j) for j in net_positions] for i in ideal_coords]
+        )
+
+        row_ind, col_ind = linear_sum_assignment(distance_matrix)
+
+        mapping_result = {
+            "optimized_positions": [ideal_coords[i] for i in row_ind],
+            "mapped_positions": [net_positions[j] for j in col_ind],
+            "mapped_labels": [net_labels[j] for j in col_ind],
+            "distances": [distance_matrix[i, j] for i, j in zip(row_ind, col_ind)],
+            "channel_array_indices": [electrode_indices[i] for i in row_ind],
         }
 
-        # Add class name as type (type is protected in python so it cannot be a instance variable)
-        settings["type"] = "TesFlexOptimization"
+        total_distance = sum(mapping_result["distances"])
+        avg_distance = total_distance / len(row_ind) if row_ind.size > 0 else 0
 
-        roi_dicts = []
-        for roi_class in self.roi:
-            roi_dicts.append(roi_class.to_dict())
-        settings["roi"] = roi_dicts
+        mapping_file = os.path.join(self.output_folder, "electrode_mapping.json")
+        with open(mapping_file, "w") as f:
+            json_data = {
+                "optimized_positions": [
+                    pos.tolist() for pos in mapping_result["optimized_positions"]
+                ],
+                "mapped_positions": [
+                    pos.tolist() for pos in mapping_result["mapped_positions"]
+                ],
+                "mapped_labels": mapping_result["mapped_labels"],
+                "distances": mapping_result["distances"],
+                "channel_array_indices": mapping_result["channel_array_indices"],
+            }
+            json.dump(json_data, f, indent=2)
 
-        electrode_dicts = []
-        for electrode_class in self.electrode:
-            electrode_dicts.append(electrode_class.to_dict())
-        settings["electrode"] = electrode_dicts
-
-        return settings
-
-    def from_dict(self, settings: dict) -> "TesFlexOptimization":
-        """Reads parameters from a dict
-
-        Parameters
-        ----------
-        settings: dict
-            Dictionary containing parameter as key value pairs
-        """
-
-        for key, value in self.__dict__.items():
-            if (
-                key.startswith("__")
-                or key.startswith("_")
-                or callable(value)
-                or callable(getattr(value, "__get__", None))
-            ):
-                continue
-            setattr(self, key, settings.get(key, value))
-
-        self.roi = []
-        if "roi" in settings:
-            roi_dicts = settings["roi"]
-            if isinstance(roi_dicts, dict):
-                roi_dicts = [roi_dicts]
-            for roi_dict in roi_dicts:
-                self.roi.append(RegionOfInterest(roi_dict))
-
-        self.electrode = []
-        if "electrode" in settings:
-            electrode_dicts = settings["electrode"]
-            if isinstance(electrode_dicts, dict):
-                electrode_dicts = [electrode_dicts]
-            for elec_dict in electrode_dicts:
-                if elec_dict["type"] == "ElectrodeArrayPair":
-                    self.electrode.append(ElectrodeArrayPair().from_dict(elec_dict))
-                elif elec_dict["type"] == "CircularArray":
-                    self.electrode.append(CircularArray().from_dict(elec_dict))
-
-        return self
+        logger.info(f"Mapping data saved to: {mapping_file}")
+        return mapping_result
 
     def run(self, cpus=None, save_mat=True):
         """
@@ -1185,17 +1249,21 @@ class TesFlexOptimization:
         self._set_logger()
         self._n_cpu = cpus
 
-        if cpus is not None:
+        if self.run_mapped_electrodes_simulation and not self.map_to_net_electrodes:
+            raise ValueError(
+                "When run_mapped_electrodes_simulation=True, map_to_net_electrodes must also be set to True"
+            )
+
+        if not self._prepared:
+            self._prepare()
+
+        if not cpus is None:
             from numba import set_num_threads
 
             set_num_threads(int(cpus))
             from numba import get_num_threads
 
             logger.info(f"Numba reports {get_num_threads()} threads available")
-
-        # prepare optimization
-        if not self._prepared:
-            self._prepare()
 
         # save structure in .mat format
         if save_mat:
@@ -1344,7 +1412,99 @@ class TesFlexOptimization:
                 for i in fn_vis:
                     mesh_io.open_in_gmsh(i, True)
 
-        # append optimization results to summary
+        # Map electrodes to nearest positions in EEG net and run simulation if enabled
+        #########################################################################################################
+        if self.map_to_net_electrodes:
+            logger.info(
+                f"Mapping optimized electrode positions to {self.net_electrode_file or 'default cap'}"
+            )
+            self.electrode_mapping = self.map_to_nearest_net_electrodes(
+                self.net_electrode_file
+            )
+
+            if self.run_mapped_electrodes_simulation:
+                logger.info("Running simulation with mapped electrodes...")
+
+                mapped_sim_folder = os.path.join(
+                    self.output_folder, "mapped_electrodes_simulation"
+                )
+                os.makedirs(mapped_sim_folder, exist_ok=True)
+
+                self.fn_mapped_sim = []
+
+                mapped_electrodes = []
+                for i_channel_stim in range(self.n_channel_stim):
+                    mapped_electrode = copy.deepcopy(self.electrode[i_channel_stim])
+
+                    for i, (channel, array) in enumerate(
+                        self.electrode_mapping["channel_array_indices"]
+                    ):
+                        if channel == i_channel_stim:
+                            mapped_pos = self.electrode_mapping["mapped_positions"][i]
+                            label = self.electrode_mapping["mapped_labels"][i]
+                            logger.info(
+                                f"Setting up electrode at position {label}: {mapped_pos}"
+                            )
+
+                            electrode_array = mapped_electrode._electrode_arrays[array]
+
+                            def update_posmat(posmat, new_pos):
+                                if posmat is not None:
+                                    new_posmat = np.eye(4)
+                                    new_posmat[:3, :3] = posmat[:3, :3].copy()
+                                    new_posmat[:3, 3] = new_pos
+                                    return new_posmat
+                                return None
+
+                            for obj in [*electrode_array.electrodes, electrode_array]:
+                                obj.posmat = update_posmat(obj.posmat, mapped_pos)
+                                obj.center = (
+                                    mapped_pos.copy()
+                                    if hasattr(obj, "center")
+                                    else mapped_pos.tolist()
+                                )
+
+                    mapped_electrodes.append(mapped_electrode)
+
+                for i_channel_stim in range(self.n_channel_stim):
+                    logger.info(
+                        f"Running simulation for mapped channel {i_channel_stim}..."
+                    )
+                    s = create_tdcs_session_from_array(
+                        electrode_array=mapped_electrodes[i_channel_stim],
+                        fnamehead=self._mesh.fn,
+                        pathfem=os.path.join(
+                            mapped_sim_folder, f"mapped_sim_{i_channel_stim}"
+                        ),
+                    )
+                    self.fn_mapped_sim.append(s.run()[0])
+
+                base_file_name = os.path.splitext(
+                    os.path.basename(self._ff_subject.fnamehead)
+                )[0]
+                base_file_name += "_tes_mapped_opt"
+
+                logger.info(
+                    "Creating visualizations for mapped electrode simulations..."
+                )
+                fn_vis_mapped, m_head_mapped, m_surf_mapped = write_visualization(
+                    mapped_sim_folder,
+                    base_file_name,
+                    self.roi,
+                    self.fn_mapped_sim,
+                    self.e_postproc,
+                    self.goal,
+                )
+
+                logger.log(26, "=" * 100)
+                logger.log(26, "RESULTS FOR SIMULATION WITH MAPPED ELECTRODES:")
+                logger.log(26, make_summary_text(m_surf_mapped, m_head_mapped))
+                logger.log(26, "=" * 100)
+
+                if self.open_in_gmsh:
+                    for i in fn_vis_mapped:
+                        mesh_io.open_in_gmsh(i, True)
+
         self._log_summary_postopt()
 
         # write results details (final fields via onlineFEM with dirichlet_corrections as txt and hdf5)
@@ -1352,6 +1512,99 @@ class TesFlexOptimization:
             self._write_detailed_results_postopt(self.optim_funvalue)
 
         self._finish_logger()
+
+    def add_roi(self, roi=None):
+        """
+        Adds an ROI to the current TESoptimize
+
+        Parameters
+        ----------
+        roi: RegionOfInterest object, optional, default=None
+            ROI structure.
+
+        Returns
+        -------
+        roi: RegionOfInterestInitializer
+            RegionOfInterestInitializer structure added to TESoptimize
+        """
+        if roi is None:
+            roi = RegionOfInterest()
+        self.roi.append(roi)
+        return roi
+
+    def to_dict(self) -> dict:
+        """Makes a dictionary storing all settings as key value pairs
+
+        Returns
+        --------------------
+        dict
+            Dictionary containing settings as key value pairs
+        """
+        # Generate dict from instance variables (excluding variables starting with _ or __)
+        settings = {
+            key: value
+            for key, value in self.__dict__.items()
+            if not key.startswith("__")
+            and not key.startswith("_")
+            and not callable(value)
+            and not callable(getattr(value, "__get__", None))
+            and value is not None
+        }
+
+        # Add class name as type (type is protected in python so it cannot be a instance variable)
+        settings["type"] = "TesFlexOptimization"
+
+        roi_dicts = []
+        for roi_class in self.roi:
+            roi_dicts.append(roi_class.to_dict())
+        settings["roi"] = roi_dicts
+
+        electrode_dicts = []
+        for electrode_class in self.electrode:
+            electrode_dicts.append(electrode_class.to_dict())
+        settings["electrode"] = electrode_dicts
+
+        return settings
+
+    def from_dict(self, settings: dict) -> "TesFlexOptimization":
+        """Reads parameters from a dict
+
+        Parameters
+        ----------
+        settings: dict
+            Dictionary containing parameter as key value pairs
+        """
+
+        for key, value in self.__dict__.items():
+            if (
+                key.startswith("__")
+                or key.startswith("_")
+                or callable(value)
+                or callable(getattr(value, "__get__", None))
+            ):
+                continue
+            setattr(self, key, settings.get(key, value))
+
+        self.roi = []
+        if "roi" in settings:
+            roi_dicts = settings["roi"]
+            if isinstance(roi_dicts, dict):
+                roi_dicts = [roi_dicts]
+            for roi_dict in roi_dicts:
+                self.roi.append(RegionOfInterest(roi_dict))
+
+        self.electrode = []
+        if "electrode" in settings:
+            electrode_dicts = settings["electrode"]
+            if isinstance(electrode_dicts, dict):
+                electrode_dicts = [electrode_dicts]
+            for elec_dict in electrode_dicts:
+                if elec_dict["type"] == "ElectrodeArrayPair":
+                    self.electrode.append(ElectrodeArrayPair().from_dict(elec_dict))
+                elif elec_dict["type"] == "CircularArray":
+                    self.electrode.append(CircularArray().from_dict(elec_dict))
+
+        return self
 
     def goal_fun(self, parameters):
         """
@@ -1557,7 +1810,8 @@ class TesFlexOptimization:
 
             # project nasion to skin surface and determine normal vector
             con_skin = (
-                self._mesh.elm.node_number_list[self._mesh.elm.tag1 == 1005,][:, :3] - 1
+                self._mesh.elm.node_number_list[self._mesh.elm.get_tags(1005),][:, :3]
+                - 1
             )
             tri_skin_center = np.mean(self._mesh.nodes.node_coord[con_skin,], axis=1)
             idx_min = np.argmin(np.linalg.norm(tri_skin_center - Nz, axis=1))

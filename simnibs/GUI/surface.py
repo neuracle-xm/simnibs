@@ -98,11 +98,7 @@ class Surface:
         self.surf2msh_triangles = np.empty(0, dtype="int")
 
         for label in labels:
-            label_triangles.append(
-                np.where(
-                    np.logical_and(mesh.elm.elm_type == 2, mesh.elm.tag1 == label)
-                )[0]
-            )
+            label_triangles.append(mesh.elm.get_triangles(label, return_indices=True))
 
         if len(label_triangles) == 0:
             raise ValueError("No triangles with tags: " + str(labels) + " found")

@@ -611,7 +611,7 @@ class TmsCoil(TcdElement):
                     idx_hlp = np.zeros((casing.nodes.nr, 1), dtype=bool)
                     idx_hlp[idx_inside] = True
                     idx_hlp = np.any(np.squeeze(idx_hlp[casing.elm[:, :3] - 1]), axis=1)
-                    casing.elm.tag1[idx_hlp & (casing.elm.tag1 == 0)] = 1
+                    casing.elm.tag1[idx_hlp & casing.elm.get_tags(0)] = 1
 
                 mesh_io.write_geo_triangles(
                     casing.elm.node_number_list - 1,

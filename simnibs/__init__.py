@@ -1,17 +1,18 @@
 import os
-import sys
 
 SIMNIBSDIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+
 
 from ._version import __version__
 from .mesh_tools import mesh_io
 from .mesh_tools.mesh_io import read_msh
 from .utils import transformations, file_finder, region_of_interest
+from simnibs.utils.file_finder import SubjectFiles
 from .utils.transformations import (
     mni2subject_coilpos,
     mni2subject_coords,
     subject2mni_coords,
-    subject_atlas,
+    atlas2subject,
 )
 from .utils.file_finder import *
 from .utils.nnav import localite, softaxic, brainsight, ant

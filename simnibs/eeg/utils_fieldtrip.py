@@ -8,7 +8,7 @@ from scipy.io import loadmat
 import simnibs
 from simnibs.utils.csv_reader import write_csv_positions
 from simnibs.utils.file_finder import SubjectFiles
-from simnibs.utils.transformations import make_cross_subject_morph
+from simnibs.utils.transformations import cross_subject_map
 
 from simnibs.mesh_tools.mesh_io import load_subject_surfaces
 
@@ -22,7 +22,8 @@ from_m = {k: 1 / v for k, v in to_m.items()}
 
 
 def setup_source_space(
-    m2m_dir: Path, str,
+    m2m_dir: Path,
+    str,
     subsampling: int | None = None,
     morph_to_fsaverage: int | None = 5,
 ):
@@ -64,9 +65,7 @@ def setup_source_space(
     src_from = make_sourcemodel(src_from, normals)
 
     if morph_to_fsaverage:
-        morphs = make_cross_subject_morph(
-            m2m, "fsaverage", subsampling, morph_to_fsaverage
-        )
+        morphs = cross_subject_map(m2m, "fsaverage", subsampling, morph_to_fsaverage)
         mmaps = {h: v.morph_mat for h, v in morphs.items()}
     else:
         mmaps = None

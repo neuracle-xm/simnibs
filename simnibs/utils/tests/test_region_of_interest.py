@@ -1028,7 +1028,7 @@ class TestApplySphereMask:
         )
 
         roi_mesh = roi.get_roi_mesh()
-        assert np.all(roi_mesh.elm.tag1[roi_mesh.elm.elm_type == 4] == 3)
+        assert np.all(roi_mesh.elm.tag1[roi_mesh.elm.get_tetrahedra()] == 3)
 
     def test_apply_full_sphere_mask(self, sphere3_msh: Msh):
         roi = RegionOfInterest()
@@ -1042,7 +1042,7 @@ class TestApplySphereMask:
         )
 
         roi_mesh = roi.get_roi_mesh()
-        assert np.all(roi_mesh.elm.tag1[roi_mesh.elm.elm_type == 4] == 4)
+        assert np.all(roi_mesh.elm.tag1[roi_mesh.elm.get_tetrahedra()] == 4)
 
 
 class TestToFromDict:

@@ -49,7 +49,7 @@ def test_get_atlas(atlas_name, hemi):
                 assert not np.any(mask[:163842])
 
 
-@pytest.mark.parametrize("region", file_finder.HEMISPHERES + ["lhh"])
+@pytest.mark.parametrize("region", list(file_finder.HEMISPHERES) + ["lhh"])
 @pytest.mark.parametrize("surface", file_finder.fs_surfaces + ["spheree"])
 @pytest.mark.parametrize("resolution", file_finder.fs_resolutions + [20])
 def test_get_fsaverage_template(region, surface, resolution):

@@ -1,22 +1,19 @@
+import glob
+import itertools
 import logging
 import os
+import re
 import shutil
 import time
-import nibabel as nib
-import glob
-import re
-import numpy as np
 
+import nibabel as nib
+import numpy as np
 import samseg
 
 from simnibs import SIMNIBSDIR
-from simnibs.segmentation import charm_utils, simnibs_segmentation_utils
 from simnibs import __version__
 from simnibs import utils
 from simnibs.utils.simnibs_logger import logger
-from simnibs.utils import file_finder
-from simnibs.utils import transformations
-from simnibs.utils.transformations import crop_vol
 from simnibs.mesh_tools.meshing import create_mesh
 from simnibs.mesh_tools.mesh_io import (
     load_freesurfer_surfaces,
@@ -25,10 +22,11 @@ from simnibs.mesh_tools.mesh_io import (
     write_msh,
     ElementData,
 )
-from simnibs.utils import cond_utils
-from simnibs.utils import html_writer
-from simnibs.segmentation import brain_surface
+from simnibs.utils import cond_utils, file_finder, html_writer, transformations
+from simnibs.utils.threading import run_in_multiprocessing_pool
+from simnibs.segmentation import brain_surface, charm_utils, simnibs_segmentation_utils
 from simnibs.utils.mesh_element_properties import ElementTags
+
 
 
 def run(
@@ -305,8 +303,8 @@ def run(
         im_tmp = nib.load(sub_files.reference_volume)
         scode = im_tmp.get_sform(coded=True)[1]
         qcode = im_tmp.get_qform(coded=True)[1]
-        upsampled_image = nib.load(sub_files.T1_upsampled)
-        affine_upsampled = upsampled_image.affine
+        t1w_upsampled = nib.load(sub_files.T1_upsampled)
+        affine_upsampled = t1w_upsampled.affine
         upsampled_tissues = nib.Nifti1Image(cleaned_upsampled_tissues, affine_upsampled)
 
         # Set the tissue labeling codes and matrices
@@ -315,16 +313,16 @@ def run(
         nib.save(upsampled_tissues, sub_files.tissue_labeling_upsampled)
 
         # Set the upsampled image codes and matrices correctly
-        upsampled_image.set_qform(affine_upsampled, qcode)
-        upsampled_image.set_sform(affine_upsampled, scode)
-        nib.save(upsampled_tissues, sub_files.T1_upsampled)
+        t1w_upsampled.set_qform(affine_upsampled, qcode)
+        t1w_upsampled.set_sform(affine_upsampled, scode)
+        nib.save(t1w_upsampled, sub_files.T1_upsampled)
 
         # And also for the T2 if needed
         if len(bias_corrected_image_names) > 1:
-            upsampled_image = nib.load(sub_files.T2_upsampled)
-            upsampled_image.set_qform(affine_upsampled, qcode)
-            upsampled_image.set_sform(affine_upsampled, scode)
-            nib.save(upsampled_tissues, sub_files.T2_upsampled)
+            t2w_upsampled = nib.load(sub_files.T2_upsampled)
+            t2w_upsampled.set_qform(affine_upsampled, qcode)
+            t2w_upsampled.set_sform(affine_upsampled, scode)
+            nib.save(t2w_upsampled, sub_files.T2_upsampled)
 
         del cleaned_upsampled_tissues
 
@@ -345,6 +343,9 @@ def run(
 
             fs_sub = file_finder.FreeSurferSubject(fs_dir)
             logger.info(f"FreeSurfer subject directory is {fs_sub.root.resolve()}")
+
+            # cortex = cortech.Cortex.from_freesurfer_subject_dir(fs_dir)
+            # central = cortex.estimate_layers("equivolume", 0.5)
 
             surfaces = {
                 "white": load_freesurfer_surfaces(fs_sub, "white", coord="ras"),
@@ -376,12 +377,14 @@ def run(
                 surface_settings["topofit_contrast"],
                 surface_settings["topofit_resolution"],
                 surface_settings["topofit_device"],
-            )
-            hemispheres = hemispheres[0]
+            )[0]
 
-            # we could consider
-            # - remove self-intersections
-            # - decouple white and pial surface
+            for h, hemi in hemispheres.items():
+                m = make_surface_mesh(hemi.white.vertices, hemi.white.faces + 1)
+                write_gifti_surface(m, sub_files.surfaces["white"][h], element_tag=ElementTags.from_string("white", h))
+
+                m = make_surface_mesh(hemi.pial.vertices, hemi.pial.faces + 1)
+                write_gifti_surface(m, sub_files.surfaces["pial"][h], element_tag=ElementTags.from_string("pial", h))
 
             logger.info("Estimating the central gray matter surface")
 
@@ -391,19 +394,16 @@ def run(
                 surface_settings["central_surface_method"],
             )
 
-            for h, s in hemispheres.items():
-                m = make_surface_mesh(s.white.vertices, s.white.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["white"][h], element_tag=ElementTags.from_string("white", h))
-
-                m = make_surface_mesh(s.pial.vertices, s.pial.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["pial"][h], element_tag=ElementTags.from_string("pial", h))
-
-                m = make_surface_mesh(central[h].vertices, central[h].faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["central"][h], element_tag=ElementTags.from_string("central", h))
+            for hemi, surface in central.items():
+                m = make_surface_mesh(surface.vertices, surface.faces + 1)
+                write_gifti_surface(m, sub_files.surfaces["central"][hemi], element_tag=ElementTags.from_string("central", h))
 
             logger.info("Generating spherical registrations")
-            brain_surface.spherical_registration_cat_parallel(
-                sub_files, surface_settings["spherical_registration_process_pool"]
+
+            _ = run_in_multiprocessing_pool(
+                surface_settings["spherical_registration_process_pool"],
+                brain_surface.spherical_registration_cat,
+                itertools.product([sub_files], file_finder.HEMISPHERES),
             )
 
         if surface_settings["update_segmentation_from_surfaces"]:
@@ -430,7 +430,7 @@ def run(
             np.uint16
         )  # Cast to uint16, otherwise meshing complains
         label_affine = label_image.affine
-        label_buffer, label_affine, _ = crop_vol(
+        label_buffer, label_affine, _ = transformations.crop_vol(
             label_buffer, label_affine, label_buffer > 0, thickness_boundary=5
         )
         # reduce memory consumption a bit
@@ -488,14 +488,14 @@ def run(
         )
         logger.info("Relabeling internal air boundaries")
         final_mesh = final_mesh.relabel_internal_air()
-        
+
         logger.info("Writing mesh")
         write_msh(final_mesh, sub_files.fnamehead)
         v = final_mesh.view(cond_list=cond_utils.standard_cond(), add_logo=True)
         v.write_opt(sub_files.fnamehead)
 
         logger.info("Transforming EEG positions")
-        idx = (final_mesh.elm.elm_type == 2) & (final_mesh.elm.tag1 == skin_tag)
+        idx = final_mesh.elm.get_triangles(skin_tag)
         mesh = final_mesh.crop_mesh(elements=final_mesh.elm.elm_number[idx])
 
         if not os.path.exists(sub_files.eeg_cap_folder):

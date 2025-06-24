@@ -42,7 +42,8 @@ class TestSurfaceSetup:
 
     def test_triangle_dict(self, sphere3_surf, sphere3_msh):
         assert np.all(
-            sphere3_surf.surf2msh_triangles == np.where(sphere3_msh.elm.tag1 == 1005)[0]
+            sphere3_surf.surf2msh_triangles
+            == sphere3_msh.elm.get_tags(1005, return_indices=True)
         )
 
     def test_tiangle_area(self, sphere3_surf):

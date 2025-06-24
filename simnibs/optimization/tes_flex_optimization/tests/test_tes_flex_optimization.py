@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pytest
 import scipy
+import random
 
 from pathlib import Path
 from copy import deepcopy
@@ -22,7 +23,17 @@ from simnibs.optimization.tes_flex_optimization.electrode_layout import (
 from simnibs.optimization.tes_flex_optimization.ellipsoid import Ellipsoid
 from simnibs.utils.file_finder import Templates
 from simnibs.utils.region_of_interest import RegionOfInterest
+from simnibs.optimization.tes_flex_optimization.electrode_layout import (
+    ElectrodeArrayPair,
+)
 from simnibs.utils.mesh_element_properties import ElementTags
+
+
+@pytest.fixture(autouse=True)
+def set_random_seed():
+    """Set random seed for all tests"""
+    random.seed(42)
+    np.random.seed(42)
 
 
 class TestToFromDict:
@@ -30,6 +41,7 @@ class TestToFromDict:
         opt = TesFlexOptimization()
         opt.subpath = "m2m_ernie"
         opt.output_folder = "tes_optimze_4x1tes_focality"
+        opt.seed = 42  # Add seed for reproducibility
 
         """ Set up goal function """
         opt.goal = "focality"
@@ -244,6 +256,7 @@ class TestToFromDict:
     @pytest.mark.slow
     def test_compute_goal(self, tmp_path: Path, example_dataset):
         opt = TesFlexOptimization()
+        opt.seed = 42  # Add seed for reproducibility
 
         # path of m2m folder containing the headmodel
         opt.subpath = os.path.join(example_dataset, "m2m_ernie")
@@ -351,7 +364,7 @@ class TestToFromDict:
         mesh = read_msh(os.path.join(example_dataset, "m2m_ernie", "ernie.msh"))
 
         # relabel internal air
-        if not np.any(mesh.elm.tag1 == ElementTags.INTERNAL_AIR_TH_SURFACE):
+        if not mesh.elm.get_tags(ElementTags.INTERNAL_AIR_TH_SURFACE).any():
             mesh_relabel = mesh.relabel_internal_air()
         else:
             mesh_relabel = mesh
@@ -748,7 +761,7 @@ class Test_Write_Visualization:
 class Test_Make_Summary_Text:
     def test_m_head(self, sphere3_msh: mesh_io.Msh):
         m_head = sphere3_msh.crop_mesh(elm_type=4)
-        m_head.elm.tag1[m_head.elm.tag1 == 4] = 2
+        m_head.elm.tag1[m_head.elm.get_tags(4)] = 2
         m_head.elm.tag2 = m_head.elm.tag1
 
         m_surf = None
@@ -759,7 +772,7 @@ class Test_Make_Summary_Text:
         m_head.add_element_field(np.ones(m_head.elm.nr), "max_TO")
         m_head.add_element_field(np.ones(m_head.elm.nr), "magnE")
         m_head.add_element_field(np.ones(m_head.elm.nr), "average__magnE")
-        m_head.add_element_field(m_head.elm.tag1 == 2, "ROI")
+        m_head.add_element_field(m_head.elm.get_tags(2), "ROI")
         m_head.add_element_field(np.ones(m_head.elm.nr), "ROI_1")
         m_head.add_element_field(np.ones(m_head.elm.nr), "non-ROI")
         m_head.add_element_field(np.ones(m_head.elm.nr), " ROI_2")
@@ -805,7 +818,7 @@ class Test_Make_Summary_Text:
 
     def test_m_head_and_m_surf(self, sphere3_msh: mesh_io.Msh):
         m_head = sphere3_msh.crop_mesh(elm_type=4)
-        m_head.elm.tag1[m_head.elm.tag1 == 4] = 2
+        m_head.elm.tag1[m_head.elm.get_tags(4)] = 2
         m_head.elm.tag2 = m_head.elm.tag1
 
         m_surf = sphere3_msh.crop_mesh(elm_type=2)
@@ -827,3 +840,133 @@ class Test_Make_Summary_Text:
         assert summary_txt.count("max_TO") == 0
         assert summary_txt.count("|ROI_1 ") == 1
         assert summary_txt.count("|non-ROI ") == 1
+
+
+class TestElectrodeMapping:
+    """Tests for the electrode mapping functionality"""
+
+    @pytest.fixture
+    def simple_optimization(self, tmp_path):
+        """Create a simple TesFlexOptimization setup for testing"""
+        output_dir = tmp_path / "test_output"
+        output_dir.mkdir(exist_ok=True)
+
+        opt = TesFlexOptimization()
+        opt.fnamehead = str(tmp_path / "mock_ernie.msh")
+        opt.output_folder = str(output_dir)
+        opt.subpath = str(tmp_path / "mock_m2m_ernie")
+        opt.seed = 42
+        opt.goal = "mean"
+
+        # Set up electrode array
+        electrode = ElectrodeArrayPair()
+        electrode.radius = [4]
+        electrode.center = [[0, 0]]
+        electrode.current = [0.002, -0.002]
+        electrode._prepare()
+        opt.electrode = [electrode]
+
+        # Set up ROI
+        roi = opt.add_roi()
+        roi.method = "surface"
+        roi.surface_type = "central"
+        roi.roi_sphere_center_space = "subject"
+        roi.roi_sphere_center = [0, 0, 0]
+        roi.roi_sphere_radius = 5
+
+        # Mock optimization results
+        opt.electrode_pos_opt = [
+            [np.array([1.0, -1.5, 0.0]), np.array([1.2, 1.7, 0.0])]
+        ]
+
+        # Set up position matrices
+        for i_channel_stim in range(len(opt.electrode)):
+            for i_array, electrode_array in enumerate(
+                opt.electrode[i_channel_stim]._electrode_arrays
+            ):
+                for electrode in electrode_array.electrodes:
+                    if i_array == 0:
+                        electrode.posmat = np.array(
+                            [
+                                [1.0, 0.0, 0.0, -60.0],
+                                [0.0, 1.0, 0.0, 70.0],
+                                [0.0, 0.0, 1.0, 35.0],
+                                [0.0, 0.0, 0.0, 1.0],
+                            ]
+                        )
+                    else:
+                        electrode.posmat = np.array(
+                            [
+                                [1.0, 0.0, 0.0, 80.0],
+                                [0.0, 1.0, 0.0, 40.0],
+                                [0.0, 0.0, 1.0, -5.0],
+                                [0.0, 0.0, 0.0, 1.0],
+                            ]
+                        )
+
+        # Create mock EEG net file
+        eeg_positions_dir = output_dir / "eeg_positions"
+        eeg_positions_dir.mkdir(exist_ok=True)
+        net_file = eeg_positions_dir / "mock_eeg_net.csv"
+
+        with open(net_file, "w") as f:
+            f.write("Electrode,-58.0,75.0,37.0,F5\n")
+            f.write("Electrode,79.0,41.0,9.0,FT8\n")
+            f.write("Electrode,0.0,0.0,100.0,Cz\n")
+
+        opt.net_electrode_file = str(net_file)
+        return opt
+
+    @pytest.mark.slow
+    def test_map_to_nearest_net_electrodes(self, simple_optimization):
+        """Test mapping electrodes to the nearest positions in an EEG net"""
+        opt = simple_optimization
+        opt.map_to_net_electrodes = True
+
+        def mock_prepare():
+            pass
+
+        opt._prepare = mock_prepare
+
+        mapping_result = opt.map_to_nearest_net_electrodes(opt.net_electrode_file)
+
+        # Verify mapping structure
+        assert isinstance(mapping_result, dict)
+        assert all(
+            key in mapping_result
+            for key in [
+                "optimized_positions",
+                "mapped_positions",
+                "mapped_labels",
+                "distances",
+                "channel_array_indices",
+            ]
+        )
+
+        # Verify mapping results
+        assert len(mapping_result["mapped_labels"]) == 2
+        assert mapping_result["mapped_labels"][0] == "F5"
+        assert mapping_result["mapped_labels"][1] == "FT8"
+
+        # Verify positions
+        np.testing.assert_allclose(
+            mapping_result["mapped_positions"][0], [-58.0, 75.0, 37.0], rtol=1e-5
+        )
+        np.testing.assert_allclose(
+            mapping_result["mapped_positions"][1], [79.0, 41.0, 9.0], rtol=1e-5
+        )
+
+        # Verify distances
+        expected_distance_1 = np.linalg.norm(
+            np.array([-60.0, 70.0, 35.0]) - np.array([-58.0, 75.0, 37.0])
+        )
+        expected_distance_2 = np.linalg.norm(
+            np.array([80.0, 40.0, -5.0]) - np.array([79.0, 41.0, 9.0])
+        )
+
+        np.testing.assert_allclose(
+            mapping_result["distances"][0], expected_distance_1, rtol=1e-5
+        )
+        np.testing.assert_allclose(
+            mapping_result["distances"][1], expected_distance_2, rtol=1e-5
+        )

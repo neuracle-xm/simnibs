@@ -28,7 +28,6 @@ import scipy.spatial
 
 from simnibs.utils.mesh_element_properties import ElementTags
 from simnibs.mesh_tools.mesh_io import _hash_rows
-from simnibs.utils.transformations import project_points_on_surface
 
 
 def _remove_unconnected_triangles(mesh, roi_triangles, center, roi_nodes, triangles):
@@ -50,7 +49,7 @@ def _remove_unconnected_triangles(mesh, roi_triangles, center, roi_nodes, triang
 
 
 def _get_nodes_in_surface(mesh, surface_tags):
-    tr_of_interest = (mesh.elm.elm_type == 2) * (np.isin(mesh.elm.tag1, surface_tags))
+    tr_of_interest = mesh.elm.get_triangles(surface_tags)
     nodes_in_surface = np.unique(mesh.elm.node_number_list[tr_of_interest, :3])
     return nodes_in_surface
 
@@ -66,7 +65,7 @@ def _get_transform(
     """Finds the transformation to make"""
     center = np.array(center, dtype=float)
 
-    c = project_points_on_surface(mesh, center, surface_tags=mesh_surface).flatten()
+    c = mesh.project_points_on_surface(center, surface_tags=mesh_surface).flatten()
 
     if nodes_roi is None:
         nodes_in_surface = _get_nodes_in_surface(mesh, mesh_surface)
@@ -100,8 +99,8 @@ def _get_transform(
         while np.linalg.norm(c - y_ref) < 1e-5:
             # _, y_ref_idx = kd_tree.query(y_axis + alpha * (y_axis - center))
             # y_ref = mesh.nodes.node_coord[nodes_in_surface - 1][y_ref_idx]
-            y_ref = project_points_on_surface(
-                mesh, y_axis + alpha * (y_axis - center), surface_tags=mesh_surface
+            y_ref = mesh.project_points_on_surface(
+                y_axis + alpha * (y_axis - center), surface_tags=mesh_surface
             ).flatten()
             alpha += 1.0
             nr_iter += 1
@@ -1093,7 +1092,7 @@ def _build_electrode_on_mesh(
     )
 
     # Make the triangles
-    s = np.min(np.where(mesh.elm.elm_type == 4)[0])
+    s = mesh.elm.get_tetrahedra(return_indices=True).min()
     tr = node_dict[triangles]
     tr = np.concatenate((tr, -1 * np.ones((len(tr), 1), dtype=int)), axis=1)
 
@@ -1164,8 +1163,8 @@ def _create_polygon_from_elec(
             if elec.pos_ydir is not None and len(elec.pos_ydir) == 2:
                 raise NotImplementedError("Relative y axis not implemented yet")
         elif len(center) == 3:
-            center = project_points_on_surface(
-                mesh, center, surface_tags=skin_tag
+            center = mesh.project_points_on_surface(
+                center, surface_tags=skin_tag
             ).flatten()
         else:
             raise ValueError(
@@ -1180,8 +1179,8 @@ def _create_polygon_from_elec(
         if pos_y:
             y_axis = np.array(elec.pos_ydir, dtype=float)
             if len(y_axis) == 3:
-                y_axis = project_points_on_surface(
-                    mesh, y_axis, surface_tags=skin_tag
+                y_axis = mesh.project_points_on_surface(
+                    y_axis, surface_tags=skin_tag
                 ).flatten()
         else:
             y_axis = None

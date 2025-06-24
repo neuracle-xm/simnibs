@@ -280,7 +280,7 @@ class TestEMagOptimization:
         )
         roi = FemTargetPointCloud(
             sphere3_msh,
-            center=sphere3_msh.elements_baricenters()[sphere3_msh.elm.tag1 == 4],
+            center=sphere3_msh.elements_baricenters()[sphere3_msh.elm.get_tags(4)],
         )
         try:
             optimize_e_mag(
@@ -300,7 +300,7 @@ class TestEMagOptimization:
             element.deformations = []
 
         with pytest.raises(ValueError):
-            optimize_e_mag(coil, sphere3_msh, sphere3_msh.elm.tag1 == 4, coil_affine)
+            optimize_e_mag(coil, sphere3_msh, sphere3_msh.elm.get_tags(4), coil_affine)
 
     def test_no_casings(
         self, small_functional_3_element_coil: TmsCoil, sphere3_msh: Msh
@@ -313,7 +313,7 @@ class TestEMagOptimization:
             element.casing = None
 
         with pytest.raises(ValueError):
-            optimize_e_mag(coil, sphere3_msh, sphere3_msh.elm.tag1 == 4, coil_affine)
+            optimize_e_mag(coil, sphere3_msh, sphere3_msh.elm.get_tags(4), coil_affine)
 
     @pytest.mark.slow
     def test_simple_optimization(
@@ -327,7 +327,7 @@ class TestEMagOptimization:
         )
         roi = FemTargetPointCloud(
             sphere3_msh,
-            center=sphere3_msh.elements_baricenters()[sphere3_msh.elm.tag1 == 4],
+            center=sphere3_msh.elements_baricenters()[sphere3_msh.elm.get_tags(4)],
         )
         (before, after, affine_after, e_mag, opt_ret, penalties) = optimize_e_mag(
             small_functional_3_element_coil, sphere3_msh, roi, coil_affine

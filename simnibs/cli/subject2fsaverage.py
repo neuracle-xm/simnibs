@@ -5,14 +5,14 @@ import warnings
 
 import numpy as np
 
-# import simnibs
+
 from simnibs.utils.file_finder import SubjectFiles
-from simnibs.utils.transformations import SurfaceMorph
+from simnibs.utils.transformations import cross_subject_map
 from simnibs.mesh_tools import mesh_io
 from simnibs.cli.utils import args_general
 
 
-def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
+def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
     """Map data from cortical surface vertices of a subject to fsaverage space.
 
     Parameters
@@ -35,7 +35,7 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
     m2m = SubjectFiles(subpath=m2m_dir)
 
     mesh = mesh_io.read_msh(filename_mesh)
-    mesh = mesh.crop_mesh([1, 2])
+    mesh = mesh.crop_mesh([LH_TAG, RH_TAG])
 
     filename_mesh = Path(filename_mesh)
     out = (
@@ -46,15 +46,12 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
     if not out.parent.exists():
         out.mkdir()
 
-    sub_sph = mesh_io.load_subject_surfaces(m2m, "sphere.reg")
-    fsavg_sph = mesh_io.load_fsaverage_template("sphere", fsaverage_res)
     fsavg_surf = mesh_io.load_fsaverage_template("central", fsaverage_res)
-
-    morph = {h: SurfaceMorph(sub_sph[h], fsavg_sph[h]) for h in m2m.hemispheres}
+    reg = cross_subject_map(m2m, "fsaverage", subsampling_to=fsaverage_res)
 
     # indices of vertices per hemisphere
     idx = {
-        hemi: np.unique(mesh.elm.node_number_list[mesh.elm.tag1 == tag, :3] - 1)
+        hemi: np.unique(mesh.elm.node_number_list[mesh.elm.get_tags(tag), :3] - 1)
         for tag, hemi in tag2hemi.items()
     }
 
@@ -63,14 +60,16 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res=None):
     for nodedata in mesh.nodedata:  # Only node data is supported
         data = np.concatenate(
             [
-                morph[hemi].transform(nodedata.value[idx[hemi]])
+                reg[hemi].resample(nodedata.value[idx[hemi]])
                 for hemi in tag2hemi.values()
             ]
         )
         values.append(data)
         names.append(nodedata.field_name)
     if len(mesh.elmdata) > 1:
-        warnings.warn("Element data present in mesh file. This will not be mapped to fsaverage space.")
+        warnings.warn(
+            "Element data present in mesh file. This will not be mapped to fsaverage space."
+        )
 
     tags = np.concatenate(
         (
@@ -98,7 +97,8 @@ def parse_args(argv):
     )
     args_general.subid.add_to(parser)
     parser.add_argument(
-        "mesh", help="Name of a mesh file containing data defined on the mesh nodes to map to fsaverage (e.g., optimization results)."
+        "mesh",
+        help="Name of a mesh file containing data defined on the mesh nodes to map to fsaverage (e.g., optimization results).",
     )
     parser.add_argument(
         "--out",

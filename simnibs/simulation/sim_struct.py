@@ -35,6 +35,8 @@ from scipy.spatial.transform import Rotation as R
 import nibabel
 import h5py
 
+import cortech
+
 import simnibs.utils.cond_utils
 from simnibs.utils.cond_utils import COND
 from simnibs.utils.mesh_element_properties import ElementTags
@@ -47,7 +49,6 @@ from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.file_finder import SubjectFiles
 from simnibs.utils.matlab_read import try_to_read_matlab_field, remove_None
 from simnibs.utils.csv_reader import read_csv_positions, _get_eeg_positions
-from simnibs.utils.transformations import project_points_on_surface
 from . import fem
 from . import electrode_placement
 from simnibs import __version__
@@ -191,10 +192,10 @@ class SESSION(object):
 
         if not self.tissues_in_niftis:
             self.tissues_in_niftis = [2]
-            
+
         if type(self.tissues_in_niftis) == int:
             self.tissues_in_niftis = [self.tissues_in_niftis]
-        
+
         self.pathfem = os.path.abspath(os.path.expanduser(self.pathfem))
         logger.info(f"Head Mesh:          {self.fnamehead}")
         logger.info(f"Subject Path:       {self.subpath}")
@@ -317,11 +318,11 @@ class SESSION(object):
                         open_in_gmsh=self.open_in_gmsh,
                         f_geo=f_geo,
                     )
-        
+
         keep_tissues = None
         if type(self.tissues_in_niftis) == list:
             keep_tissues = self.tissues_in_niftis
-        
+
         if self.map_to_vol:
             logger.info("Mapping to volume")
             out_folder = os.path.join(dir_name, "subject_volumes")
@@ -1018,7 +1019,7 @@ class SimuList(object):
 
     def _scalp_geo(self, m, fn_out, scalp_idx: int = ElementTags.SCALP_TH_SURFACE):
         """write out scalp surface as geo file"""
-        idx = (m.elm.tag1 == scalp_idx) & (m.elm.elm_type == 2)
+        idx = m.elm.get_triangles(scalp_idx)
         mesh_io.write_geo_triangles(
             m.elm[idx, :3] - 1, m.nodes.node_coord, fn_out, name="scalp", mode="ba"
         )
@@ -1524,7 +1525,7 @@ class POSITION(object):
             cc_distance = np.min(
                 np.linalg.norm(
                     msh.elements_baricenters()[
-                        msh.elm.tag1 == ElementTags.GM_TH_SURFACE
+                        msh.elm.get_tags(ElementTags.GM_TH_SURFACE)
                     ]
                     - self.matsimnibs[:3, 3],
                     axis=1,
@@ -1930,7 +1931,7 @@ class TDCSLIST(SimuList):
         values = []
         for t, c in zip(self.unique_channels, self.currents):
             triangles.append(
-                m.elm[m.elm.tag1 == ElementTags.SALINE_TH_SURFACE_START + t, :3]
+                m.elm[m.elm.get_tags(ElementTags.SALINE_TH_SURFACE_START + t), :3]
             )
             values.append(c * np.ones(len(triangles[-1])))
 
@@ -2753,20 +2754,15 @@ class TDCSLEADFIELD(LEADFIELD):
             logger.info("Using point electrodes")
             w_elec = self.mesh
             skin_faces = (
-                w_elec.elm[w_elec.elm.tag1 == ElementTags.SCALP_TH_SURFACE, :3] - 1
+                w_elec.elm[w_elec.elm.get_tags(ElementTags.SCALP_TH_SURFACE), :3] - 1
             )
             _, v_outside, _, _ = w_elec.partition_skin_surface()
             v_outside -= 1
 
             pts = np.array([e.centre for e in self.electrode])
-            surf = dict(points=w_elec.nodes.node_coord, tris=skin_faces)
-            pttris = transformations._get_nearest_triangles_on_surface(
-                pts, surf, 3, v_outside
-            )
-            tris, weights, projs, _ = transformations._project_points_to_surface(
-                pts, surf, pttris
-            )
-            electrode_surfaces = surf["tris"][tris] + 1  # back to 1 indexing...
+            surface = cortech.Surface(w_elec.nodes.node_coord, skin_faces)
+            tris, weights, projs, _ = surface.project_points(pts, subset=v_outside)
+            electrode_surfaces = surface.faces[tris] + 1  # back to 1 indexing...
             current = weights[1:]
             input_type = "nodes"
             weigh_by_area = False
@@ -3244,13 +3240,11 @@ def get_surround_pos(
     m = mesh_io.read_msh(fnamehead)
     if tissue_idx < ElementTags.TH_SURFACE_START:
         tissue_idx += ElementTags.TH_SURFACE_START
-    idx = (m.elm.elm_type == 2) & (
-        (m.elm.tag1 == tissue_idx)
-        | (m.elm.tag1 == tissue_idx - ElementTags.TH_SURFACE_START)
+    idx = m.elm.get_triangles(tissue_idx) | m.elm.get_triangles(
+        tissue_idx - ElementTags.TH_SURFACE_START
     )
     m = m.crop_mesh(elements=m.elm.elm_number[idx])
-    # P_centre = m.find_closest_element(tmp.centre)
-    P_centre = project_points_on_surface(m, tmp.centre)
+    P_centre = m.project_points_on_surface(tmp.centre)
     idx = np.sum((m.nodes[:] - P_centre) ** 2, 1) <= (np.max(radius_surround) + 10) ** 2
     m = m.crop_mesh(nodes=m.nodes.node_number[idx])
     idx = m.elm.connected_components()
@@ -3314,8 +3308,7 @@ def get_surround_pos(
 
         # project skin points into XZ-plane that contains the arc
         Pts = (M_to_world @ arc).T
-        # Pts[:, :3] = m.find_closest_element(Pts[:, :3])
-        Pts[:, :3] = project_points_on_surface(m, Pts[:, :3])
+        Pts[:, :3] = m.project_points_on_surface(Pts[:, :3])
         Pts = M_from_world @ Pts.T
 
         # fit individual arc
@@ -3345,8 +3338,7 @@ def get_surround_pos(
                 1.0,
             )
         )
-        # P_surround.append(m.find_closest_element((M_to_world @ tmp).T[:3]))
-        P_surround.append(project_points_on_surface(m, (M_to_world @ tmp).T[:3]))
+        P_surround.append(m.project_points_on_surface((M_to_world @ tmp).T[:3]))
 
         if DEBUG:
             surround_fit.append(

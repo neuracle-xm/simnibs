@@ -6,6 +6,7 @@ import nibabel as nib
 import nibabel.processing
 import os
 import scipy.sparse
+import shutil
 from scipy.spatial import cKDTree, ConvexHull
 from scipy.ndimage import label, binary_dilation
 import time
@@ -16,11 +17,16 @@ from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import normalize
 
+import brainsynth
 from brainsynth.dataset import PredictionDataset
 from brainnet.prediction import PretrainedModels
 from brainnet.prediction.brainnet_predict import PredictionStep
 
 from cortech import Surface, Hemisphere
+
+
+import torch
+from brainnet.mesh.topology import StandardTopology  # DeepSurferTopology
 
 
 class SimNIBSDataset(PredictionDataset):
@@ -123,18 +129,19 @@ def central_surface_estimation(hemispheres, fraction=0.5, method="equivolume"):
 #     return sphere_reg
 
 
-def spherical_registration_cat_parallel(m2m, n_processes: int = 2):
-    """Run the spherical registration for left and right hemispheres in
-    parallel.
+def spherical_registration_cat(
+    m2m: file_finder.SubjectFiles, hemi: str, surf2sphere_subsampling: bool = True
+):
+    """Compute spherical registration using CAT.
+
+    hemi : str {lh, rh}
+        Hemisphere to process.
+    surf2sphere_subsampling : bool
+        If true, subsample the white matter surface before mapping to sphere.
+        This speeds up the surface-to-sphere mapping step. The spherical
+        representation is then upsampled to the original resolution.
+
     """
-    fun = functools.partial(spherical_registration_cat, m2m)
-    with Pool(processes=n_processes) as pool:
-        pool.map(fun, m2m.hemispheres)
-
-
-def spherical_registration_cat(m2m, hemi):
-    """Compute spherical registration using CAT."""
-
     cat_surf2sphere = file_finder.path2bin("CAT_Surf2Sphere")
     cat_warpsurf = file_finder.path2bin("CAT_WarpSurf")
 
@@ -146,19 +153,82 @@ def spherical_registration_cat(m2m, hemi):
     fsavg_white = os.path.join(fsavg_dir, f"{hemi}.white.gii")
     fsavg_sphere = os.path.join(fsavg_dir, f"{hemi}.sphere.gii")
 
-    # sphere creation (sphere)
-    s = time.perf_counter()
-    cmd = f"{cat_surf2sphere} {white} {sphere} 10"
-    spawn_process(cmd.split())
-    time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-    logger.info(f"Time for sphere generation ({hemi})      : {time_elapsed}")
+    if surf2sphere_subsampling:
+        res = 5
+        sph_map_white = white.with_name(f"{white.stem}.{res}{white.suffix}")
+        topo = StandardTopology.recursive_subdivision(res)[-1]
 
-    # registration to fsaverage (sphere.reg)
+        # Subsample white
+        s = Surface.from_gifti(white)
+        s = Surface(s.vertices[: topo.n_vertices], topo.faces.numpy())
+        s.save(sph_map_white)
+
+    else:
+        # use original resolution
+        sph_map_white = white
+
+    # Map to sphere (create {hemi}.sphere)
+    try:
+        s = time.perf_counter()
+        cmd = f"{cat_surf2sphere} {sph_map_white} {sphere} 10"
+        spawn_process(cmd.split())
+        time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
+        logger.info(f"Time to generate sphere ({hemi})      : {time_elapsed}")
+    except Exception as e:
+        raise e
+    else:
+        if surf2sphere_subsampling:
+            # upsample sphere
+            s = Surface.from_gifti(sphere)
+            v = topo.subdivide_vertices(torch.tensor(s.vertices).T).T.numpy()
+            f = topo.subdivide_faces().numpy()
+            m = mesh_io.make_surface_mesh(v, f + 1)
+            mesh_io.write_gifti_surface(m, str(sphere))
+            # s = Surface(v, s.faces)
+            # s.save(sphere)
+    finally:
+        # clean up
+        if surf2sphere_subsampling:
+            sph_map_white.unlink()
+
+    # Register to fsaverage ({hemi}.sphere.reg)
     s = time.perf_counter()
     cmd = f"{cat_warpsurf} -steps 2 -avg -i {white} -is {sphere} -t {fsavg_white} -ts {fsavg_sphere} -ws {sphere_reg}"
     spawn_process(cmd.split())
     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-    logger.info(f"Time for spherical registration ({hemi}) : {time_elapsed}")
+    logger.info(f"Time to register sphere ({hemi}) : {time_elapsed}")
+
+
+# def map_to_sphere_and_register(m2m, hemi):
+#     """Compute spherical registration using CAT."""
+
+#     cat_warpsurf = file_finder.path2bin("CAT_WarpSurf")
+
+#     white = m2m.get_surface(hemi, "white")
+#     sphere_reg = m2m.surfaces["sphere.reg"][hemi]
+
+#     fsavg_dir = file_finder.templates.freesurfer_templates
+#     fsavg_white = os.path.join(fsavg_dir, f"{hemi}.white.gii")
+#     fsavg_sphere = os.path.join(fsavg_dir, f"{hemi}.sphere.gii")
+
+#     # Copy the *sphere* representation of the surface. We do not use this here
+#     # but function that subsamples the surfaces to an arbitrary number of
+#     # vertices relies on this (the vertices are more evently distributed on the
+#     # sphere in "sphere" compared to "sphere.reg")
+#     shutil.copy(brainsynth.resources.surfaces[hemi, "sphere"], m2m.surfaces["sphere"])
+
+#     # Directly map the cortical vertices to the sphere using the one-to-one
+#     # correspondence we have, because the surfaces are estimated by deforming
+#     # the template. Hence, we use the spherically registered *template* as
+#     # "sphere"
+#     sphere = brainsynth.resources.surfaces[hemi, "sphere.reg"]
+
+#     # registration to fsaverage (sphere.reg)
+#     s = time.perf_counter()
+#     cmd = f"{cat_warpsurf} -steps 2 -avg -i {white} -is {sphere} -t {fsavg_white} -ts {fsavg_sphere} -ws {sphere_reg}"
+#     spawn_process(cmd.split())
+#     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
+#     logger.info(f"Time for spherical registration ({hemi}) : {time_elapsed}")
 
 
 def segment_triangle_intersect(vertices, faces, segment_start, segment_end):

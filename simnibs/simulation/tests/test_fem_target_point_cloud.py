@@ -31,5 +31,5 @@ class TestRegionOfInterest:
         mesh = mesh_io.read_msh(fn_mesh)
         roi = FemTargetPointCloud(
             mesh,
-            mesh.elements_baricenters()[(mesh.elm.tag1 == 3) | (mesh.elm.tag1 == 4)],
+            mesh.elements_baricenters()[mesh.elm.get_tags(3) | mesh.elm.get_tags(4)],
         )

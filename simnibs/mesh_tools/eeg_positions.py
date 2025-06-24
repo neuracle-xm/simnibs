@@ -27,6 +27,7 @@ import csv  # csv is in the standard library
 
 from simnibs.utils.mesh_element_properties import ElementTags
 
+
 class Surface:
     def __init__(self, mesh, labels):
         """
@@ -99,11 +100,7 @@ class Surface:
         self.surf2msh_triangles = np.empty(0, dtype="int")
 
         for label in labels:
-            label_triangles.append(
-                np.where(
-                    np.logical_and(mesh.elm.elm_type == 2, mesh.elm.tag1 == label)
-                )[0]
-            )
+            label_triangles.append(mesh.elm.get_triangles(label, return_indices=True))
 
         if len(label_triangles) == 0:
             raise ValueError("No triangles with tags: " + str(labels) + " found")
@@ -382,9 +379,9 @@ def FindPositions(Nazion, Inion, LPA, RPA, mesh, NE_cap=False):
     eeg: EEG
         EEG structure with the electrode positions
     """
-    
+
     surf = Surface(mesh, [ElementTags.SCALP_TH_SURFACE])
-    
+
     eeg = EEG(surf)
     eeg.pos["Nz"] = np.array(Nazion, "float")
     eeg.pos["Iz"] = np.array(Inion, "float")
@@ -488,9 +485,7 @@ def findCz(eeg):
     central_point = (
         eeg.pos["LPA"] + eeg.pos["RPA"] + eeg.pos["Nz"] + eeg.pos["Iz"]
     ) * 0.25
-    direction = np.cross(
-        eeg.pos["LPA"] - eeg.pos["RPA"], eeg.pos["Iz"] - eeg.pos["Nz"]
-    )
+    direction = np.cross(eeg.pos["LPA"] - eeg.pos["RPA"], eeg.pos["Iz"] - eeg.pos["Nz"])
     direction /= np.linalg.norm(direction)
     # Iz-Nz is just a size estimate
     out_point = (
