@@ -6,6 +6,8 @@ from mock import Mock, patch
 
 import pytest
 
+import pygpc
+from collections import OrderedDict
 from ... import SIMNIBSDIR
 from .. import gpc as simnibs_gpc
 from .. import sim_struct
@@ -27,15 +29,15 @@ def cube_msh():
 
 @pytest.fixture(scope='module')
 def gpc_regression_instance():
-    pdftype = ['beta', 'normal']
-    pdfshape = [[1, 0], [1, 2]]
-    limits = [[-2, None], [2, None]]
-    poly_idx = np.array([[0, 0], [1, 0], [0, 1]])
-    coords_norm = np.array([[0.5, 0.2], [0.1, 0.9]])
-    regobj = simnibs_gpc.gPC_regression([1, 2],
-                                        pdftype, pdfshape,
-                                        limits, poly_idx,
-                                        coords_norm, 'TMS')
+    random_vars = [0, 1, 2]
+    pdftype = ['beta', 'uniform', 'normal']
+    pdfparas = [[3,3,-2,2],[-1, 1], [0,2]]
+    poly_idx = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+    coords_norm = np.array([[0.5, 0.2, 0.2], [0.1, 0.9, 0.6], [0.1, 0.3, 0.6]])
+    model = pygpc.testfunctions.Dummy()
+    parameters = simnibs_gpc.prep_parameters(random_vars=random_vars, pdf_types=pdftype, pdf_paras=pdfparas)
+    problem = pygpc.Problem(model, parameters)
+    regobj = simnibs_gpc.gPC_regression(problem,0,poly_idx,coords_norm,'TMS')
     return regobj
 
 class TestHDF5:
@@ -57,17 +59,19 @@ class TestHDF5:
 
 class TestgPC_Regression:
     def test_gPC_Regression_initialization(self, gpc_regression_instance):
-        pdftype = ['beta', 'normal']
-        pdfshape = [[1, 0], [1, 2]]
-        limits = [[-2, None], [2, None]]
-        poly_idx = np.array([[0, 0], [1, 0], [0, 1]])
-        coords_norm = np.array([[0.5, 0.2], [0.1, 0.9]])
-        assert gpc_regression_instance.pdftype == pdftype
-        assert gpc_regression_instance.pdfshape == pdfshape
-        assert gpc_regression_instance.limits == limits
-        np.testing.assert_equal(gpc_regression_instance.poly_idx, poly_idx)
-        np.testing.assert_equal(gpc_regression_instance.grid.coords_norm, coords_norm)
-        np.testing.assert_almost_equal(gpc_regression_instance.grid.coords, coords_norm*2)
+        parameters = {'cond_0': {'pdf_type':'beta', 'pdf_shape': [3,3], 'pdf_limits':[-2,2]},
+                      'cond_1': {'pdf_type':'beta', 'pdf_shape': [1,1], 'pdf_limits':[-1,1]},
+                      'cond_2': {'pdf_type':'norm', 'pdf_shape': [0,2]}}
+        poly_idx = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        coords_norm = np.array([[0.5, 0.2, 0.2], [0.1, 0.9, 0.6], [0.1, 0.3, 0.6]])
+        np.testing.assert_equal(gpc_regression_instance.multi_indices, poly_idx)
+        np.testing.assert_equal(gpc_regression_instance.coords_norm, coords_norm)
+        for key, props in parameters.items():
+            param = gpc_regression_instance.problem.parameters_random[key]
+            assert param.pdf_type == props['pdf_type']
+            np.testing.assert_equal(param.pdf_shape, props['pdf_shape'])
+            if param.pdf_type != 'norm':
+                np.testing.assert_equal(param.pdf_limits, props['pdf_limits'])
 
     def test_save_hdf5(self, gpc_regression_instance):
         if os.path.isfile('test.hdf5'):
@@ -75,14 +79,14 @@ class TestgPC_Regression:
 
         gpc_regression_instance.save_hdf5('test.hdf5')
         with h5py.File('test.hdf5', 'r') as f:
-            assert np.all(f['gpc_object/random_vars'][()] == [b"1", b"2"])
-            assert np.all(f['gpc_object/pdftype'][()] == [b"beta", b"normal"])
-            assert np.allclose(f['gpc_object/pdfshape'][()], np.array([[1, 0],[1, 2]]))
-            assert np.allclose(f['gpc_object/limits'], np.array([[-2, -1e10], [2, 1e10]]))
+            assert np.all(f['gpc_object/random_vars'][()] == [b"0", b"1", b"2"])
+            assert np.all(f['gpc_object/pdftype'][()] == [b"beta", b"beta", b"norm"])
+            assert np.allclose(f['gpc_object/pdfshape'][()], np.array([[3, 3], [1, 1], [0, 2]]))
+            assert np.allclose(f['gpc_object/limits'], np.array([[-2.0, 2.0], [-1, 1], [-1e10, 1e10]]))
             assert np.allclose(f['gpc_object/poly_idx'],
-                               np.array(np.array([[0, 0], [1, 0], [0, 1]])))
+                               np.array(np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])))
             assert np.allclose(f['gpc_object/grid/coords_norm'],
-                               np.array([[0.5, 0.2], [0.1, 0.9]]))
+                               np.array([[0.5, 0.2, 0.2], [0.1, 0.9, 0.6], [0.1, 0.3, 0.6]]))
 
         os.remove('test.hdf5')
 
@@ -91,15 +95,16 @@ class TestgPC_Regression:
             os.remove('test.hdf5')
         gpc_regression_instance.save_hdf5('test.hdf5')
         gpc_regression = simnibs_gpc.gPC_regression.read_hdf5('test.hdf5')
-        assert gpc_regression.random_vars == [1, 2]
-        assert gpc_regression_instance.pdftype == gpc_regression.pdftype
-        assert gpc_regression_instance.pdfshape == gpc_regression.pdfshape
-        assert gpc_regression_instance.limits == gpc_regression.limits
-        assert np.allclose(gpc_regression_instance.poly_idx,
-                           gpc_regression.poly_idx)
-        assert np.allclose(gpc_regression_instance.grid.coords_norm,
-                           gpc_regression.grid.coords_norm)
-
+        for key, props in gpc_regression.problem.parameters_random.items():
+            param = gpc_regression_instance.problem.parameters_random[key]
+            assert param.pdf_type == props.pdf_type
+            np.testing.assert_equal(param.pdf_shape, props.pdf_shape)
+            if param.pdf_type != 'norm':
+                np.testing.assert_equal(param.pdf_limits, props.pdf_limits)
+        np.testing.assert_equal(gpc_regression_instance.multi_indices,
+                                gpc_regression.multi_indices)
+        np.testing.assert_equal(gpc_regression_instance.coords_norm,
+                                gpc_regression.coords_norm)
         os.remove('test.hdf5')
 
     def test_postprocessing(self, gpc_regression_instance, sphere3):
@@ -113,13 +118,13 @@ class TestgPC_Regression:
         # Define regression object.
         # The random variable is the conductivity of the layer 3
         # Uniform distribution, between 0 and 10
+        model = pygpc.testfunctions.Dummy()
+        parameters = OrderedDict()
+        parameters['cond_3'] = pygpc.Beta([1,1],[0,10])
+        problem = pygpc.Problem(model, parameters)
         gpc_reg = \
-            simnibs_gpc.gPC_regression([3],
-                                       ['beta'], [[1], [1]],
-                                       [[0], [10]], [[0], [1]],
-                                       coords_norm, 'TCS',
-                                       data_file=fn)
-        gpc_reg.regularization_factors = [0]
+            simnibs_gpc.gPC_regression(problem,[0],[[0],[1]],coords_norm,
+                                       'TCS', data_file=fn)
         # Create potentials
         pot = np.tile(msh.nodes.node_coord[None, :, 0],
                       (coords_norm.shape[0], 1))
@@ -149,8 +154,8 @@ class TestgPC_Regression:
                                mean_E_expected)
             assert np.allclose(mean_J[msh.elm.tag1==5],
                                10 * mean_E_expected)
-            coeffs = gpc_reg.expand(gpc_reg.grid.coords ** 2, return_error=False)
-            mean = gpc_reg.mean(coeffs)
+            coeffs, _ = gpc_reg.expand(gpc_reg.grid.coords ** 2)
+            mean = gpc_reg.get_mean(coeffs)
             assert np.allclose(mean_J[msh.elm.tag1==3],
                                mean * -np.array([1, 0, 0]) * 1e3)
             dsets = f['mesh_roi/elmdata/'].keys()
@@ -251,8 +256,9 @@ class TestSampler:
     def test_update_poslist(self, sampler_args):
         mesh, poslist, fn_hdf5, roi = sampler_args
         S = simnibs_gpc.gPCSampler(mesh, poslist, fn_hdf5, roi)
-        random_vars = [0.35]
-        poslist = S._update_poslist(random_vars)
+        parameters = OrderedDict()
+        parameters["cond_3"] = 0.35
+        poslist = S._update_poslist(parameters)
         assert np.isclose(poslist.cond[2].value, 0.35)
         assert np.isclose(poslist.cond[3].value, 1)
         assert np.isclose(poslist.cond[4].value, 10)
@@ -302,49 +308,20 @@ class TestSampler:
         S = simnibs_gpc.TDCSgPCSampler(
             mesh, poslist, fn_hdf5, [1101, 1102], [-1, 1], roi)
 
-        if extra_qoi:
-            S.qoi_function = extra_qoi + S.qoi_function
-
-        E1 = S.run_simulation([1])
+        parameters = OrderedDict()
+        parameters['cond_3'] = 1
+        E1 = S.run_simulation(parameters)
         assert E1.shape == (3 * np.sum(mesh.elm.tag1 == 3), )
         assert np.allclose(E1.reshape(-1, 3), [-1e3, 0, 0])
 
-        S.run_simulation([2])
+        parameters['cond_3'] = 2
+        S.run_simulation(parameters)
         with h5py.File(fn_hdf5, 'r') as f:
             assert np.allclose(f['random_var_samples'][()], [[1], [2]])
             assert np.allclose(f['mesh_roi/data_matrices/v_samples'][0, :], v_roi)
             assert np.allclose(f['mesh_roi/data_matrices/v_samples'][1, :],-v_roi)
             assert np.allclose(f['mesh_roi/data_matrices/E_samples'][0, :],[-1e3, 0., 0.])
             assert np.allclose(f['mesh_roi/data_matrices/E_samples'][1, :],[1e3, 0., 0.])
-
-    @patch.object(simnibs_gpc, 'fem')
-    def test_tdcs_run(self, mock_fem, sampler_args):
-        mesh, poslist, fn_hdf5, roi = sampler_args
-        v = mesh.nodes.node_coord[:, 0]
-        v_roi = mesh.crop_mesh(roi).nodes.node_coord[:, 0]
-
-        mock_fem.tdcs.side_effect = [
-            mesh_io.NodeData(v, mesh=mesh),
-            mesh_io.NodeData(-v, mesh=mesh)]
-
-        S = simnibs_gpc.TDCSgPCSampler(
-            mesh, poslist, fn_hdf5, [1101, 1102], [-1, 1], roi)
-
-        S.qoi_function['rand'] = lambda v, rand: rand
-
-        E1 = S.run_simulation([1])
-        assert E1.shape == (3 * np.sum(mesh.elm.tag1 == 3), )
-        assert np.allclose(E1.reshape(-1, 3), [-1e3, 0, 0])
-
-        S.run_simulation([2])
-        with h5py.File(fn_hdf5, 'r') as f:
-            assert np.allclose(f['random_var_samples'][()], [[1], [2]])
-            assert np.allclose(f['mesh_roi/data_matrices/v_samples'][0, :], v_roi)
-            assert np.allclose(f['mesh_roi/data_matrices/v_samples'][1, :],-v_roi)
-            assert np.allclose(f['mesh_roi/data_matrices/E_samples'][0, :],[-1e3, 0., 0.])
-            assert np.allclose(f['mesh_roi/data_matrices/E_samples'][1, :],[1e3, 0., 0.])
-            assert np.allclose(f['mesh_roi/data_matrices/rand_samples'][:],[[1], [2]])
-
 
     def test_tms_set_up(self, sampler_args):
         mesh, poslist, fn_hdf5, roi = sampler_args
@@ -377,7 +354,7 @@ class TestSampler:
 
 
 
-'''
+
 class TestRunGPC:
     def test_prep_gpc(self):
         cond = [sim_struct.COND(), sim_struct.COND(), sim_struct.COND(), sim_struct.COND(), sim_struct.COND()]
@@ -389,43 +366,16 @@ class TestRunGPC:
         cond[4].distribution_parameters = [0.2, 0.3]
         simlist = sim_struct.SimuList()
         simlist.cond = cond
-        simlist.anisotropy_distribution_type = 'normal'
-        simlist.anisotropy_distribution_parameters = [0, 1]
-        random_vars, pdf_type, pdfshape, limits = simnibs_gpc.prep_gpc(simlist)
-        assert np.all(random_vars == ['excentricity', 1, 3, 5])
-        assert np.all(pdf_type == ['normal', 'beta', 'beta', 'normal'])
-        assert np.all(pdfshape == [[0, 1, 2, 0.2], [1, 1, 3, 0.3]])
-        assert np.all(limits == [[None, 0.2, 0.3, None], [None, 0.3, 0.4, None]])
- 
+        parameters_ref = {'cond_1': {'pdf_type':'beta', 'pdf_shape': [1, 1], 'pdf_limits':[0.2, 0.3]},
+                          'cond_3': {'pdf_type':'beta', 'pdf_shape': [2, 3], 'pdf_limits':[0.3, 0.4]},
+                          'cond_5': {'pdf_type':'norm', 'pdf_shape': [0.2, 0.3]}}
+        parameters, random_vars = simnibs_gpc.prep_gpc(simlist)
+        assert np.all(random_vars == [1, 3, 5])
+        for key, props in parameters_ref.items():
+            param = parameters[key]
+            assert param.pdf_type == props['pdf_type']
+            np.testing.assert_equal(param.pdf_shape, props['pdf_shape'])
+            if param.pdf_type != 'norm':
+                np.testing.assert_equal(param.pdf_limits, props['pdf_limits'])
 
-    @patch.object(simnibs_gpc, 'pygpc')
-    @patch.object(simnibs_gpc, 'gPC_regression')
-    def test_run_gpc(self,mock_gpc_regression,  mock_pygpc):
-        poslist = sim_struct.POSLIST()
-        poslist.cond[0].distribution_type = 'uniform'
-        poslist.cond[0].distribution_parameters = [0.2, 0.3]
-        poslist.cond[1].distribution_type = 'beta'
-        poslist.cond[1].distribution_parameters = [2, 3, 0.3, 0.4]
-        poslist.cond[2].distribution_type = 'normal'
-        poslist.cond[2].distribution_parameters = [0.2, 0.3]
-        poslist.pos = [sim_struct.POSITION()]
-        
-        reg_mock = Mock(simnibs_gpc.pygpc.reg)
-        reg_mock.poly_idx = None
-        reg_mock.grid = Mock(simnibs_gpc.pygpc.grid)
-        reg_mock.grid.coords_norm = None
-        mock_pygpc.run_reg_adaptive.return_value = (reg_mock, None)
 
-        simnibs_gpc.run_tms_gpc(poslist, 'test_msh.msh', 'test_simu', tissues=[1, 3], eps=1e-4)
-
-        mock_pygpc.run_reg_adaptive.assert_called_with(
-               ['beta', 'beta', 'normal'],
-               [[1, 2, 0.2], [1, 3, 0.3]],
-               [[0.2, 0.3, None], [0.3, 0.4, None]],
-               poslist._run_gpc_simulation,
-               args=([1, 2, 3], 'test_msh.msh', 'test_simu_0001', 0, [1, 3]),
-               order_start=0,
-               order_end=10,
-               eps=1e-4,
-               print_out=True) 
-'''
