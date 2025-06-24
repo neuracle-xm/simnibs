@@ -3,6 +3,22 @@ from enum import IntEnum
 
 
 class ElementTags(IntEnum):
+    @classmethod
+    def from_string(cls, surface_name, hemisphere=None):
+        names = {
+            "gray": "GM_SURFACE",
+            "pial": "GM_SURFACE",
+            "white": "WM_SURFACE",
+            "sphere.reg": "SPHERE_REG",
+            "central": "CENTRAL_GM"
+        }
+        surface_name = names.get(surface_name.lower(), surface_name)
+        tag_name = surface_name
+        if hemisphere is not None:
+            tag_name = f"{hemisphere}_{surface_name}"
+        return cls[tag_name.upper()]
+
+
     TH_START = 0
     WM = 1
     GM = 2
@@ -83,6 +99,7 @@ class ElementTags(IntEnum):
     RH_CENTRAL_LAYER_6 = RH_CENTRAL_SURFACE_START + 104
     RH_CENTRAL_SURFACE_END = 8999
 
+    UNKNOWN_SURFACE = 9999
 
 class CentralLayerDepths:
     CENTRAL_LAYER_1 = 0.06

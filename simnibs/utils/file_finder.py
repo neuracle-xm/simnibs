@@ -25,6 +25,7 @@ import re
 import numpy as np
 import nibabel
 from simnibs import SIMNIBSDIR
+from simnibs.utils.mesh_element_properties import ElementTags
 
 __all__ = [
     "templates",
@@ -33,6 +34,18 @@ __all__ = [
     "SubjectFiles",
     "coil_models",
 ]
+
+SURFACE_FILE_NAME_TO_ELEMENT_TAG = {
+    "lh.sphere.reg.gii": ElementTags.LH_SPHERE_REG,
+    "lh.sphere.gii": ElementTags.LH_SPHERE,
+    "lh.pial.gii": ElementTags.LH_WM_SURFACE,
+    "lh.central.gii": ElementTags.LH_CENTRAL_GM,
+    "rh.sphere.reg.gii": ElementTags.RH_SPHERE_REG,
+    "rh.sphere.gii": ElementTags.RH_SPHERE,
+    "rh.pial.gii": ElementTags.RH_WM_SURFACE,
+    "rh.central.gii": ElementTags.RH_CENTRAL_GM,
+}
+ELEMENT_TAG_TO_SURFACE_FILE_NAME = {v: k for k, v in SURFACE_FILE_NAME_TO_ELEMENT_TAG.items()}
 
 # This defines hemisphere names as well as their order!
 HEMISPHERES = ["lh", "rh"]
@@ -547,6 +560,10 @@ class SubjectFiles:
 
         """
         return os.path.join(self.eeg_cap_folder, cap_name)
+
+    def get_surface_from_element_tag(self, element_tag, subsampling=None):
+        subsampling = self._parse_subsampling(subsampling)
+        return Path(self.surface_folder) / subsampling / ELEMENT_TAG_TO_SURFACE_FILE_NAME[element_tag]
 
     def get_surface(self, hemi, surface, subsampling=None):
         """Get surface files, e.g., central, pial, sphere, sphere.reg"""

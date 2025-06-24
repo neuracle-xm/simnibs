@@ -53,6 +53,7 @@ from simnibs.utils.file_finder import (
     path2bin,
     SubjectFiles,
     FreeSurferSubject,
+    SURFACE_FILE_NAME_TO_ELEMENT_TAG
 )
 from . import cython_msh
 from . import cgal
@@ -6930,13 +6931,19 @@ def write_freesurfer_surface(msh, fn, write_standard_header: bool = True):
         nibabel.freesurfer.io.write_geometry(fn, vertices, faces, stamp)
 
 
-def read_gifti_surface(fn):
+def read_gifti_surface(fn, element_tag: ElementTags | None = None):
     """Reads a gifti surface
 
     Parameters
     -----------
     fn: str
         File name
+
+    element_tag: ElementTags
+        if the element_tag is passed to this function, the mesh element will have that tag.
+        otherwise, the tag is taken from the metadata if the metadata has the "ElementTag" metadata.
+        if it is not in the metadata, we check if the filename is know to be a specific surface.
+        if that also fails, the tag is set to ElementTags.UNKNOWN_SURFACE
 
     Returns
     ---------
@@ -6950,10 +6957,22 @@ def read_gifti_surface(fn):
     nodes = np.array(
         s.get_arrays_from_intent("NIFTI_INTENT_POINTSET")[0].data, dtype=float
     )
-    return make_surface_mesh(nodes, faces + 1)
+    mesh = make_surface_mesh(nodes, faces + 1)
+    if element_tag is not None:
+        mesh_element_tag = element_tag
+    elif "ElementTag" in s.meta:
+        mesh_element_tag = ElementTags(s.meta["ElementTag"])
+    elif os.path.basename(fn) in SURFACE_FILE_NAME_TO_ELEMENT_TAG.keys():
+        mesh_element_tag = SURFACE_FILE_NAME_TO_ELEMENT_TAG[os.path.basename(fn)]
+    else:
+        mesh_element_tag = ElementTags.UNKNOWN_SURFACE
+
+    mesh.elm.tag1[:] = mesh_element_tag
+    mesh.elm.tag2[:] = mesh_element_tag
+    return mesh
 
 
-def write_gifti_surface(msh, fn, ref_image=None):
+def write_gifti_surface(msh, fn, ref_image=None, element_tag : ElementTags | None = None):
     """Writes mesh surfaces as a gifti file
 
     Parameters
@@ -7015,6 +7034,8 @@ def write_gifti_surface(msh, fn, ref_image=None):
     faces_da.coordsys = None
 
     image = nibabel.gifti.GiftiImage(header=header, darrays=[verts_da, faces_da])
+    if element_tag is not None:
+        image.meta['ElementTag'] = int(element_tag)
     # image = nibabel.GiftiImage(
     #     header=header,
     #     darrays=[verts_da, faces_da]

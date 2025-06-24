@@ -28,6 +28,7 @@ from simnibs.mesh_tools.mesh_io import (
 from simnibs.utils import cond_utils
 from simnibs.utils import html_writer
 from simnibs.segmentation import brain_surface
+from simnibs.utils.mesh_element_properties import ElementTags
 
 
 def run(
@@ -362,7 +363,9 @@ def run(
 
             for surface, v in surfaces.items():
                 for hemi, mesh in v.items():
-                    write_gifti_surface(mesh, sub_files.get_surface(hemi, surface))
+                    surface_tag = ElementTags.from_string(surface, hemi)
+                    surface_file = sub_files.get_surface_from_element_tag(surface_tag)
+                    write_gifti_surface(mesh, surface_file, element_tag=surface_tag)
 
         else:
             logger.info("Estimating cortical surfaces")
@@ -390,13 +393,13 @@ def run(
 
             for h, s in hemispheres.items():
                 m = make_surface_mesh(s.white.vertices, s.white.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["white"][h])
+                write_gifti_surface(m, sub_files.surfaces["white"][h], element_tag=ElementTags.from_string("white", h))
 
                 m = make_surface_mesh(s.pial.vertices, s.pial.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["pial"][h])
+                write_gifti_surface(m, sub_files.surfaces["pial"][h], element_tag=ElementTags.from_string("pial", h))
 
                 m = make_surface_mesh(central[h].vertices, central[h].faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["central"][h])
+                write_gifti_surface(m, sub_files.surfaces["central"][h], element_tag=ElementTags.from_string("central", h))
 
             logger.info("Generating spherical registrations")
             brain_surface.spherical_registration_cat_parallel(
