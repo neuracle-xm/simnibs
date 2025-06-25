@@ -77,35 +77,45 @@ class ElementTags(IntEnum):
 
     LH_SURFACE_START = 5000
     LH_WM_SURFACE = LH_SURFACE_START + WM
-    LH_GM_SURFACE = LH_SURFACE_START + GM
+    LH_PIAL_SURFACE = LH_SURFACE_START + GM
+    LH_CENTRAL_SURFACE = LH_SURFACE_START + GM + 1 
     LH_SPHERE = LH_SURFACE_START + 100
     LH_SPHERE_REG = LH_SURFACE_START + 101
-    LH_SURFACE_END = 5999
+    LH_SURFACE_END = 5499
 
-    LH_CENTRAL_SURFACE_START = 6000
-    LH_CENTRAL_GM = LH_CENTRAL_SURFACE_START + GM
-    LH_CENTRAL_LAYER_1 = LH_CENTRAL_SURFACE_START + 100
-    LH_CENTRAL_LAYER_23 = LH_CENTRAL_SURFACE_START + 101
-    LH_CENTRAL_LAYER_4 = LH_CENTRAL_SURFACE_START + 102
-    LH_CENTRAL_LAYER_5 = LH_CENTRAL_SURFACE_START + 103
-    LH_CENTRAL_LAYER_6 = LH_CENTRAL_SURFACE_START + 104
-    LH_CENTRAL_SURFACE_END = 6999
+    LH_LAYER_START = 5500
+    LH_LAYER_1 = LH_LAYER_START + 100
+    LH_LAYER_2_3 = LH_LAYER_START + 101
+    LH_LAYER_4 = LH_LAYER_START + 102
+    LH_LAYER_5 = LH_LAYER_START + 103
+    LH_LAYER_6 = LH_LAYER_START + 104
+    LH_BORDER_1_2 = LH_LAYER_START + 200
+    LH_BORDER_2_3 = LH_LAYER_START + 201
+    LH_BORDER_3_4 = LH_LAYER_START + 202
+    LH_BORDER_5_6 = LH_LAYER_START + 203
+    LH_BORDER_6_WM = LH_LAYER_START + 204
+    LH_LAYER_END = 5999
 
     RH_SURFACE_START = 7000
     RH_WM_SURFACE = RH_SURFACE_START + WM
-    RH_GM_SURFACE = RH_SURFACE_START + GM
+    RH_PIAL_SURFACE = RH_SURFACE_START + GM
+    RH_CENTRAL_SURFACE = RH_SURFACE_START + GM + 1 
     RH_SPHERE = RH_SURFACE_START + 100
     RH_SPHERE_REG = RH_SURFACE_START + 101
-    RH_SURFACE_END = 7999
+    RH_SURFACE_END = 7499
 
-    RH_CENTRAL_SURFACE_START = 8000
-    RH_CENTRAL_GM = RH_CENTRAL_SURFACE_START + GM
-    RH_CENTRAL_LAYER_1 = RH_CENTRAL_SURFACE_START + 100
-    RH_CENTRAL_LAYER_23 = RH_CENTRAL_SURFACE_START + 101
-    RH_CENTRAL_LAYER_4 = RH_CENTRAL_SURFACE_START + 102
-    RH_CENTRAL_LAYER_5 = RH_CENTRAL_SURFACE_START + 103
-    RH_CENTRAL_LAYER_6 = RH_CENTRAL_SURFACE_START + 104
-    RH_CENTRAL_SURFACE_END = 8999
+    RH_LAYER_START = 7500
+    RH_LAYER_1 = RH_LAYER_START + 100
+    RH_LAYER_2_3 = RH_LAYER_START + 101
+    RH_LAYER_4 = RH_LAYER_START + 102
+    RH_LAYER_5 = RH_LAYER_START + 103
+    RH_LAYER_6 = RH_LAYER_START + 104
+    RH_BORDER_1_2 = RH_LAYER_START + 200
+    RH_BORDER_2_3 = RH_LAYER_START + 201
+    RH_BORDER_3_4 = RH_LAYER_START + 202
+    RH_BORDER_5_6 = RH_LAYER_START + 203
+    RH_BORDER_6_WM = RH_LAYER_START + 204
+    RH_LAYER_END = 7999
 
     UNKNOWN_SURFACE = 9999
 
@@ -118,42 +128,42 @@ class CentralLayerDepths:
 
 
 central_cortical_layer_depths: dict[int, float] = {
-    ElementTags.LH_CENTRAL_LAYER_1: CentralLayerDepths.CENTRAL_LAYER_1,
-    ElementTags.RH_CENTRAL_LAYER_1: CentralLayerDepths.CENTRAL_LAYER_1,
-    ElementTags.LH_CENTRAL_LAYER_23: CentralLayerDepths.CENTRAL_LAYER_23,
-    ElementTags.RH_CENTRAL_LAYER_23: CentralLayerDepths.CENTRAL_LAYER_23,
-    ElementTags.LH_CENTRAL_LAYER_4: CentralLayerDepths.CENTRAL_LAYER_4,
-    ElementTags.RH_CENTRAL_LAYER_4: CentralLayerDepths.CENTRAL_LAYER_4,
-    ElementTags.LH_CENTRAL_LAYER_5: CentralLayerDepths.CENTRAL_LAYER_5,
-    ElementTags.RH_CENTRAL_LAYER_5: CentralLayerDepths.CENTRAL_LAYER_5,
-    ElementTags.LH_CENTRAL_LAYER_6: CentralLayerDepths.CENTRAL_LAYER_6,
-    ElementTags.RH_CENTRAL_LAYER_6: CentralLayerDepths.CENTRAL_LAYER_6,
+    ElementTags.LH_LAYER_1: CentralLayerDepths.CENTRAL_LAYER_1,
+    ElementTags.RH_LAYER_1: CentralLayerDepths.CENTRAL_LAYER_1,
+    ElementTags.LH_LAYER_23: CentralLayerDepths.CENTRAL_LAYER_23,
+    ElementTags.RH_LAYER_23: CentralLayerDepths.CENTRAL_LAYER_23,
+    ElementTags.LH_LAYER_4: CentralLayerDepths.CENTRAL_LAYER_4,
+    ElementTags.RH_LAYER_4: CentralLayerDepths.CENTRAL_LAYER_4,
+    ElementTags.LH_LAYER_5: CentralLayerDepths.CENTRAL_LAYER_5,
+    ElementTags.RH_LAYER_5: CentralLayerDepths.CENTRAL_LAYER_5,
+    ElementTags.LH_LAYER_6: CentralLayerDepths.CENTRAL_LAYER_6,
+    ElementTags.RH_LAYER_6: CentralLayerDepths.CENTRAL_LAYER_6,
 }
 
 central_cortical_layer_names: dict[int, str] = {
-    ElementTags.LH_CENTRAL_LAYER_1: "central_cl_1",
-    ElementTags.RH_CENTRAL_LAYER_1: "central_cl_1",
-    ElementTags.LH_CENTRAL_LAYER_23: "central_cl_23",
-    ElementTags.RH_CENTRAL_LAYER_23: "central_cl_23",
-    ElementTags.LH_CENTRAL_LAYER_4: "central_cl_4",
-    ElementTags.RH_CENTRAL_LAYER_4: "central_cl_4",
-    ElementTags.LH_CENTRAL_LAYER_5: "central_cl_5",
-    ElementTags.RH_CENTRAL_LAYER_5: "central_cl_5",
-    ElementTags.LH_CENTRAL_LAYER_6: "central_cl_6",
-    ElementTags.RH_CENTRAL_LAYER_6: "central_cl_6",
+    ElementTags.LH_LAYER_1: "central_cl_1",
+    ElementTags.RH_LAYER_1: "central_cl_1",
+    ElementTags.LH_LAYER_23: "central_cl_23",
+    ElementTags.RH_LAYER_23: "central_cl_23",
+    ElementTags.LH_LAYER_4: "central_cl_4",
+    ElementTags.RH_LAYER_4: "central_cl_4",
+    ElementTags.LH_LAYER_5: "central_cl_5",
+    ElementTags.RH_LAYER_5: "central_cl_5",
+    ElementTags.LH_LAYER_6: "central_cl_6",
+    ElementTags.RH_LAYER_6: "central_cl_6",
 }
 
 central_cortical_layer_tags: list[int] = [
-    ElementTags.LH_CENTRAL_LAYER_1,
-    ElementTags.RH_CENTRAL_LAYER_1,
-    ElementTags.LH_CENTRAL_LAYER_23,
-    ElementTags.RH_CENTRAL_LAYER_23,
-    ElementTags.LH_CENTRAL_LAYER_4,
-    ElementTags.RH_CENTRAL_LAYER_4,
-    ElementTags.LH_CENTRAL_LAYER_5,
-    ElementTags.RH_CENTRAL_LAYER_5,
-    ElementTags.LH_CENTRAL_LAYER_6,
-    ElementTags.RH_CENTRAL_LAYER_6,
+    ElementTags.LH_LAYER_1,
+    ElementTags.RH_LAYER_1,
+    ElementTags.LH_LAYER_23,
+    ElementTags.RH_LAYER_23,
+    ElementTags.LH_LAYER_4,
+    ElementTags.RH_LAYER_4,
+    ElementTags.LH_LAYER_5,
+    ElementTags.RH_LAYER_5,
+    ElementTags.LH_LAYER_6,
+    ElementTags.RH_LAYER_6,
 ]
 
 tissue_tags: list[int] = [

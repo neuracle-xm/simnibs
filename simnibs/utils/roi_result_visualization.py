@@ -100,16 +100,16 @@ class RoiResultVisualization:
                             surface_names_to_surface[surface_name] = roi._mesh
                             surface_names_to_surface[surface_name].elm.tag1[
                                 roi._surface_divide_elements :
-                            ] = ElementTags.LH_CENTRAL_GM
+                            ] = ElementTags.LH_CENTRAL_SURFACE
                             surface_names_to_surface[surface_name].elm.tag2[
                                 roi._surface_divide_elements :
-                            ] = ElementTags.LH_CENTRAL_GM
+                            ] = ElementTags.LH_CENTRAL_SURFACE
                             surface_names_to_surface[surface_name].elm.tag1[
                                 : roi._surface_divide_elements
-                            ] = ElementTags.RH_CENTRAL_GM
+                            ] = ElementTags.RH_CENTRAL_SURFACE
                             surface_names_to_surface[surface_name].elm.tag2[
                                 : roi._surface_divide_elements
-                            ] = ElementTags.RH_CENTRAL_GM
+                            ] = ElementTags.RH_CENTRAL_SURFACE
                     case "custom":
                         surface_name = f"surface_{i}"
                         if roi.surface_path is not None:

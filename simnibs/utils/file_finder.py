@@ -39,11 +39,11 @@ SURFACE_FILE_NAME_TO_ELEMENT_TAG = {
     "lh.sphere.reg.gii": ElementTags.LH_SPHERE_REG,
     "lh.sphere.gii": ElementTags.LH_SPHERE,
     "lh.pial.gii": ElementTags.LH_WM_SURFACE,
-    "lh.central.gii": ElementTags.LH_CENTRAL_GM,
+    "lh.central.gii": ElementTags.LH_CENTRAL_SURFACE,
     "rh.sphere.reg.gii": ElementTags.RH_SPHERE_REG,
     "rh.sphere.gii": ElementTags.RH_SPHERE,
     "rh.pial.gii": ElementTags.RH_WM_SURFACE,
-    "rh.central.gii": ElementTags.RH_CENTRAL_GM,
+    "rh.central.gii": ElementTags.RH_CENTRAL_SURFACE,
 }
 ELEMENT_TAG_TO_SURFACE_FILE_NAME = {v: k for k, v in SURFACE_FILE_NAME_TO_ELEMENT_TAG.items()}
 
