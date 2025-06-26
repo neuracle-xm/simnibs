@@ -11,20 +11,20 @@ class ElementTypes(IntEnum):
 
 class ElementTags(IntEnum):
     @classmethod
-    def from_string(cls, surface_name, hemisphere=None):
-        names = {
-            "gray": "GM_SURFACE",
-            "pial": "GM_SURFACE",
-            "white": "WM_SURFACE",
-            "sphere.reg": "SPHERE_REG",
-            "central": "CENTRAL_GM"
+    def from_string(cls, surface_name:str, hemisphere:str|None=None):
+        tag_from_name = {
+            ("gray", "lh"): cls.LH_PIAL_SURFACE,
+            ("gray", "rh"): cls.RH_PIAL_SURFACE,
+            ("pial", "lh"): cls.LH_PIAL_SURFACE,
+            ("pial", "rh"): cls.RH_PIAL_SURFACE,
+            ("white", "lh"): cls.LH_WM_SURFACE,
+            ("white", "rh"): cls.RH_WM_SURFACE,
+            ("sphere.reg", "lh"): cls.LH_SPHERE_REG,
+            ("sphere.reg", "rh"): cls.RH_SPHERE_REG,
+            ("central", "lh"): cls.LH_CENTRAL_SURFACE,
+            ("central", "rh"): cls.RH_CENTRAL_SURFACE,
         }
-        surface_name = names.get(surface_name.lower(), surface_name)
-        tag_name = surface_name
-        if hemisphere is not None:
-            tag_name = f"{hemisphere}_{surface_name}"
-        return cls[tag_name.upper()]
-
+        return tag_from_name[(surface_name.lower(), hemisphere.lower())]
 
     TH_START = 0
     WM = 1
