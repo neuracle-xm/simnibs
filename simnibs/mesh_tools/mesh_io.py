@@ -6840,7 +6840,7 @@ def read_gifti_surface(fn, element_tag: ElementTags | None = None):
     if element_tag is not None:
         mesh_element_tag = element_tag
     elif "ElementTag" in s.meta:
-        mesh_element_tag = ElementTags(s.meta["ElementTag"])
+        mesh_element_tag = ElementTags(int(s.meta["ElementTag"]))
     elif os.path.basename(fn) in SURFACE_FILE_NAME_TO_ELEMENT_TAG.keys():
         mesh_element_tag = SURFACE_FILE_NAME_TO_ELEMENT_TAG[os.path.basename(fn)]
     else:

@@ -130,8 +130,8 @@ class CentralLayerDepths:
 central_cortical_layer_depths: dict[int, float] = {
     ElementTags.LH_LAYER_1: CentralLayerDepths.CENTRAL_LAYER_1,
     ElementTags.RH_LAYER_1: CentralLayerDepths.CENTRAL_LAYER_1,
-    ElementTags.LH_LAYER_23: CentralLayerDepths.CENTRAL_LAYER_23,
-    ElementTags.RH_LAYER_23: CentralLayerDepths.CENTRAL_LAYER_23,
+    ElementTags.LH_LAYER_2_3: CentralLayerDepths.CENTRAL_LAYER_23,
+    ElementTags.RH_LAYER_2_3: CentralLayerDepths.CENTRAL_LAYER_23,
     ElementTags.LH_LAYER_4: CentralLayerDepths.CENTRAL_LAYER_4,
     ElementTags.RH_LAYER_4: CentralLayerDepths.CENTRAL_LAYER_4,
     ElementTags.LH_LAYER_5: CentralLayerDepths.CENTRAL_LAYER_5,
@@ -143,8 +143,8 @@ central_cortical_layer_depths: dict[int, float] = {
 central_cortical_layer_names: dict[int, str] = {
     ElementTags.LH_LAYER_1: "central_cl_1",
     ElementTags.RH_LAYER_1: "central_cl_1",
-    ElementTags.LH_LAYER_23: "central_cl_23",
-    ElementTags.RH_LAYER_23: "central_cl_23",
+    ElementTags.LH_LAYER_2_3: "central_cl_23",
+    ElementTags.RH_LAYER_2_3: "central_cl_23",
     ElementTags.LH_LAYER_4: "central_cl_4",
     ElementTags.RH_LAYER_4: "central_cl_4",
     ElementTags.LH_LAYER_5: "central_cl_5",
@@ -156,8 +156,8 @@ central_cortical_layer_names: dict[int, str] = {
 central_cortical_layer_tags: list[int] = [
     ElementTags.LH_LAYER_1,
     ElementTags.RH_LAYER_1,
-    ElementTags.LH_LAYER_23,
-    ElementTags.RH_LAYER_23,
+    ElementTags.LH_LAYER_2_3,
+    ElementTags.RH_LAYER_2_3,
     ElementTags.LH_LAYER_4,
     ElementTags.RH_LAYER_4,
     ElementTags.LH_LAYER_5,
