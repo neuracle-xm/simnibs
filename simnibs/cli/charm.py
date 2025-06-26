@@ -46,8 +46,10 @@ VISUAL CHECK OF RESULTS:
 RUN ONLY PARTS OF CHARM:
     charm subID T1 T2 --registerT2  (registration of T2 to T1)
     charm subID {T1} --initatlas  (initial affine registration of atlas to MR images)
-    charm subID --segment  (make label image, reconstruct surfaces, register to fsaverage and MNI)
-    charm subID --mesh  (create head mesh from label images)
+    charm subID --segment   (make label image; register to MNI space)
+    charm subID --surfaces  (create cortical surfaces; update label image;
+                             register to fsaverage)
+    charm subID --mesh      (create head mesh from label image)
 
     Note: Parts can be concatenated, e.g. charm subID --initatlas --segment
 
@@ -57,8 +59,11 @@ MANUAL EDITING:
 
     """
     )
+    description = "Create a headmodel from one or more MRI scans."
 
-    parser = argparse.ArgumentParser(prog="charm", usage=usage_text)
+    parser = argparse.ArgumentParser(
+        prog="charm", usage=usage_text, description=description
+    )
 
     add_argument(parser, args_charm.subid)  # NB
     add_argument(parser, args_general.version)
