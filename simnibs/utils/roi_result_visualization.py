@@ -117,10 +117,10 @@ class RoiResultVisualization:
                         if surface_name not in surface_names_to_surface:
                             surface_names_to_surface[surface_name] = roi._mesh
                             surface_names_to_surface[surface_name].elm.tag1[:] = (
-                                ElementTags.RH_CENTRAL_SURFACE_END + i
+                                ElementTags.UNKNOWN_SURFACE + 1 + i
                             )
                             surface_names_to_surface[surface_name].elm.tag2[:] = (
-                                ElementTags.RH_CENTRAL_SURFACE_END + i
+                                ElementTags.UNKNOWN_SURFACE + 1 + i
                             )
                     case _:
                         raise NotImplementedError()
