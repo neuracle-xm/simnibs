@@ -364,7 +364,7 @@ def run(
 
             for surface, v in surfaces.items():
                 for hemi, mesh in v.items():
-                    surface_tag = ElementTags.from_string(surface, hemi)
+                    surface_tag = ElementTags.from_surface_file_name(surface, hemi)
                     surface_file = sub_files.get_surface_from_element_tag(surface_tag)
                     write_gifti_surface(mesh, surface_file, element_tag=surface_tag)
 
@@ -381,10 +381,10 @@ def run(
 
             for h, hemi in hemispheres.items():
                 m = make_surface_mesh(hemi.white.vertices, hemi.white.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["white"][h], element_tag=ElementTags.from_string("white", h))
+                write_gifti_surface(m, sub_files.surfaces["white"][h], element_tag=ElementTags.from_surface_file_name("white", h))
 
                 m = make_surface_mesh(hemi.pial.vertices, hemi.pial.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["pial"][h], element_tag=ElementTags.from_string("pial", h))
+                write_gifti_surface(m, sub_files.surfaces["pial"][h], element_tag=ElementTags.from_surface_file_name("pial", h))
 
             logger.info("Estimating the central gray matter surface")
 
@@ -396,7 +396,7 @@ def run(
 
             for hemi, surface in central.items():
                 m = make_surface_mesh(surface.vertices, surface.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["central"][hemi], element_tag=ElementTags.from_string("central", h))
+                write_gifti_surface(m, sub_files.surfaces["central"][hemi], element_tag=ElementTags.from_surface_file_name("central", h))
 
             logger.info("Generating spherical registrations")
 

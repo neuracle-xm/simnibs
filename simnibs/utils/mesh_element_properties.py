@@ -11,7 +11,7 @@ class ElementTypes(IntEnum):
 
 class ElementTags(IntEnum):
     @classmethod
-    def from_string(cls, surface_name:str, hemisphere:str|None=None):
+    def from_surface_file_name(cls, surface_name:str, hemisphere:str):
         tag_from_name = {
             ("gray", "lh"): cls.LH_PIAL_SURFACE,
             ("gray", "rh"): cls.RH_PIAL_SURFACE,
