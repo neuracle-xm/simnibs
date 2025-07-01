@@ -47,10 +47,10 @@ html_source = """
 <div>
 {scan_text} {settings_text}
 Please check the quality of the final segmentation in the viewer below. In case
-of doubt, also check the quality of the inital registration between the input scan 
+of doubt, also check the quality of the inital registration between the input scan
 and the atlas to see whether this step needs improvement. The SimNIBS tutorial
-gives examples on how to fix the initial registration if needed. 
-The viewer also allows checking the registration between the T1- and T2-weighted scans. 
+gives examples on how to fix the initial registration if needed.
+The viewer also allows checking the registration between the T1- and T2-weighted scans.
 Finally, if you use charm and/or SimNIBS in your study, please include citations
 to the papers listed under the "References"-section.
 </div>
@@ -115,6 +115,21 @@ Thielscher, A., et al., "Field modeling for transcranial magnetic stimulation:
 a useful tool to understand the physiological effects of TMS?",
 IEEE EMBS 2015, Milano, Italy </a>
 </div>
+<p> If you used the cortical surface reconstruction pipeline from SimNIBS
+(default since version 4.6), please cite
+<a href="https://doi.org/10.48550/arXiv.2505.14017">
+Nielsen, J. D., et al., "End-to-end Cortical Surface Reconstruction from
+Clinical Magnetic Resonance Images", arXiv 2025
+</a>
+</p>
+<p> If you used the probabilistic atlas which includes fat (default since
+version 4.6), please cite
+<a href="">
+Diedrichsen, M., et al., "Modeling subcutaneous fat improves skull segmentation
+for individualized volume conductor head models", IEEE EMBC 2025, Copenhagen,
+Denmark
+</a>
+</p>
 </body>
 </html>
 """
