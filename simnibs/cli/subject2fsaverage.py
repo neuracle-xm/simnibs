@@ -5,14 +5,20 @@ import warnings
 
 import numpy as np
 
-
+from simnibs.utils.mesh_element_properties import ElementTags
 from simnibs.utils.file_finder import SubjectFiles
 from simnibs.utils.transformations import cross_subject_map
 from simnibs.mesh_tools import mesh_io
 from simnibs.cli.utils import args_general
 
 
-def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
+def main(
+    m2m_dir,
+    filename_mesh,
+    out: Path | str | None = None,
+    fsaverage_res: int = 7,
+    tag: str = "CENTRAL_SURFACE",
+):
     """Map data from cortical surface vertices of a subject to fsaverage space.
 
     Parameters
@@ -26,10 +32,12 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
         _description_, by default None
     fsaverage : _type_, optional
         _description_, by default None
+    tag : str
+        Tag of the surface to use. LH_ and RH_ will be prepended (default = CENTRAL_SURFACE)
     """
-    # hardcoded but should probably be from mesh properties stuff...
-    LH_TAG = 1
-    RH_TAG = 2
+    LH_TAG = getattr(ElementTags, f"LH_{tag}")
+    RH_TAG = getattr(ElementTags, f"RH_{tag}")
+
     tag2hemi = {LH_TAG: "lh", RH_TAG: "rh"}
 
     m2m = SubjectFiles(subpath=m2m_dir)
@@ -51,8 +59,8 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
 
     # indices of vertices per hemisphere
     idx = {
-        hemi: np.unique(mesh.elm.node_number_list[mesh.elm.get_tags(tag), :3] - 1)
-        for tag, hemi in tag2hemi.items()
+        h: np.unique(mesh.elm.node_number_list[mesh.elm.get_tags(t), :3] - 1)
+        for t, h in tag2hemi.items()
     }
 
     values = []
@@ -71,11 +79,9 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
             "Element data present in mesh file. This will not be mapped to fsaverage space."
         )
 
+    # Set the tags of the fsaverage mesh to be the same as those of the input
     tags = np.concatenate(
-        (
-            np.full_like(fsavg_surf["lh"].elm.tag1, LH_TAG),
-            np.full_like(fsavg_surf["rh"].elm.tag1, RH_TAG),
-        )
+        [np.full_like(fsavg_surf[h].elm.tag1, t) for t, h in tag2hemi.items()]
     )
     merged = fsavg_surf["lh"].join_mesh(fsavg_surf["rh"])
     merged.elm.tag1 = tags
@@ -88,11 +94,9 @@ def main(m2m_dir, filename_mesh, out=None, fsaverage_res: int = 7):
 
 def parse_args(argv):
     description = "Map data defined on mesh nodes from subject space to fsaverage space. This function requires an existing CHARM run (m2m directory) for the subject on whose cortical surface(s) the data is defined."
-    usage = "subject2fsaverage /path/to/m2m_subID /path/to/mesh.msh"
     parser = argparse.ArgumentParser(
         "subject2fsaverage",
-        usage,
-        description,
+        description=description,
         # formatter_class=argparse.RawTextHelpFormatter
     )
     args_general.subid.add_to(parser)
@@ -106,10 +110,17 @@ def parse_args(argv):
     )
     args_general.fsaverage.add_to(parser)
 
+    tag_help = (
+        "Tag in the mesh file to use. LH_ and RH_ will be prepended. "
+        "See simnibs.utils.mesh_element_properties.ElementTags for names "
+        "(default = CENTRAL_SURFACE)."
+    )
+    parser.add_argument("-t", "--tag", default="CENTRAL_SURFACE", help=tag_help)
+
     return parser.parse_args(argv[1:])
 
 
 if __name__ == "__main__":
     args = parse_args(sys.argv)
 
-    main(args.subid, args.mesh, args.out, args.fsaverage)
+    main(args.subid, args.mesh, args.out, args.fsaverage, args.tag)

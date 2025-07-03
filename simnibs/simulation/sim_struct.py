@@ -2794,34 +2794,41 @@ class TDCSLEADFIELD(LEADFIELD):
             interp_id = []
             if isinstance(self.interpolation, str):
                 if self.interpolation == "middle gm":
+                    s_type = "central"
                     sub_files = SubjectFiles(self.fnamehead, self.subpath)
                     for hemi in sub_files.hemispheres:
                         interp_to.append(
-                            mesh_io.read(
+                            mesh_io.read_gifti_surface(
                                 sub_files.get_surface(
-                                    hemi, "central", self.interpolation_subsampling
-                                )
+                                    hemi, s_type, self.interpolation_subsampling
+                                ),
+                                getattr(
+                                    ElementTags,
+                                    f"{hemi.upper()}_{s_type.upper()}_SURFACE",
+                                ),
                             )
                         )
                         interp_id.append(hemi)
                 else:
                     raise ValueError('Invalid string argument to "interpolation".')
             elif isinstance(self.interpolation, (tuple, list)):
-                for f in self.interpolation:
+                for i, f in enumerate(self.interpolation, 1):
                     if os.path.isfile(f):
-                        interp_to.append(mesh_io.read(f))
+                        # set unique (but arbitrary) tag for each mesh
+                        m = mesh_io.read(f)
+                        if np.all(m.elm.tag1 == 0) and np.all(m.elm.tag2 == 0):
+                            m.elm.tag1 = np.full_like(m.elm.tag1, i)
+                            m.elm.tag2 = m.elm.tag1.copy()
+                        interp_to.append(m)
                         interp_id.append(f)
                     else:
-                        logger.warning("{} does not exist.".format(f))
+                        logger.warning(f"{f} does not exist.")
             else:
                 raise ValueError(
                     '"interpolation" must be either None, str, list, or tuple.'
                 )
 
             # Join meshes
-            for i, m in enumerate(interp_to):
-                m.elm.tag1 = (i + 1) * np.ones(m.elm.nr)
-                m.elm.tag2 = m.elm.tag1.copy()
             mesh_lf = interp_to[0]
             for m in interp_to[1:]:
                 mesh_lf = mesh_lf.join_mesh(m)
