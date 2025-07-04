@@ -2802,10 +2802,6 @@ class TDCSLEADFIELD(LEADFIELD):
                                 sub_files.get_surface(
                                     hemi, s_type, self.interpolation_subsampling
                                 ),
-                                getattr(
-                                    ElementTags,
-                                    f"{hemi.upper()}_{s_type.upper()}_SURFACE",
-                                ),
                             )
                         )
                         interp_id.append(hemi)
@@ -2816,7 +2812,10 @@ class TDCSLEADFIELD(LEADFIELD):
                     if os.path.isfile(f):
                         # set unique (but arbitrary) tag for each mesh
                         m = mesh_io.read(f)
-                        if np.all(m.elm.tag1 == 0) and np.all(m.elm.tag2 == 0):
+                        invalid_tags = (0, ElementTags.UNKNOWN_SURFACE)
+                        invalid_tag1 = np.all(np.isin(m.elm.tag1, invalid_tags))
+                        invalid_tag2 = np.all(np.isin(m.elm.tag2, invalid_tags))
+                        if invalid_tag1 and invalid_tag2:
                             m.elm.tag1 = np.full_like(m.elm.tag1, i)
                             m.elm.tag2 = m.elm.tag1.copy()
                         interp_to.append(m)
