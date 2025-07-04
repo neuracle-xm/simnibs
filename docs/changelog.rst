@@ -8,6 +8,7 @@ Changelog
   * More accurate reconstructions of cortical surfaces (white matter and gray matter/pial) by charm, using a :ref:`new deep learning approach <publications>`.
   * tissue interfaces to internal air cavities have now their own tissue number (prevents placement of electrodes on these interfaces)
   * Update to numpy 2
+  * im- and export of coil positions to ANT visor2 added
 
 NOTES & Known issues: Same as for version 4.5.0
 

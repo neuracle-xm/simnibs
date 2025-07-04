@@ -120,10 +120,10 @@ Export from SimNIBS
     tmslist = sim_struct.TMSLIST()
     tmslist.add_position()
     # ... define (multiple) positions ...
-    localite().write(tmlist, fn, out_coord_space='LPS')
+    localite().write(tmslist, fn, out_coord_space='LPS')
 
     ### export from POSITION
-    pos = sim_struct.POSITOIN()
+    pos = sim_struct.POSITION()
     pos.matsimnibs = ...
     localite().write(pos, fn) # out_coord_space default is 'RAS'
 

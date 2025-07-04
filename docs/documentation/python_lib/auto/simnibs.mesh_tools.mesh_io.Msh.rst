@@ -49,6 +49,7 @@
       ~Msh.open_in_gmsh
       ~Msh.partition_skin_surface
       ~Msh.prepare_surface_tags
+      ~Msh.project_points_on_surface
       ~Msh.pts_inside_surface
       ~Msh.read_hdf5
       ~Msh.reconstruct_surfaces
