@@ -88,16 +88,22 @@ class localite:
                 # get date from xml filename
                 # timestamp = regex.findall(r"InstrumentMarker(\d*).xml", fn)[0]
                 timestamp = re.findall(r"InstrumentMarker(\d*).xml", fn)[0]
-                timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%f")
-                timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                try:
+                    timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%f")
+                    timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                except:
+                    pass
             elif "TriggerMarker" in fn:
                 markertype = "TriggerMarker"
 
                 # get date from xml filename
                 # timestamp = regex.findall(r"TriggerMarkers_Coil\d_(\d*).xml", fn)[0]
                 timestamp = re.findall(r"TriggerMarkers_Coil\d_(\d*).xml", fn)[0]
-                timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%f")
-                timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                try:
+                    timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%f")
+                    timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                except:
+                    pass
             else:
                 raise ValueError(
                     f"'markertype' not provided and cannot guess from filename ({fn})."
