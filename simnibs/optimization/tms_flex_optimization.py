@@ -615,6 +615,8 @@ class TmsFlexOptimization:
         if self.run_simulation and self.open_in_gmsh:
             for vis_msh_file_name in vis_msh_file_names:
                 mesh_io.open_in_gmsh(vis_msh_file_name, True)
+                
+        return opt_matsimnibs
 
     def to_dict(self) -> dict:
         """Makes a dictionary storing all settings as key value pairs
