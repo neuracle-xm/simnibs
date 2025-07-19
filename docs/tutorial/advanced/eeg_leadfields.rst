@@ -103,7 +103,7 @@ Finally, prepare it for EEG.
 
 .. code-block:: console
 
-    prepare_eeg_forward fieldtrip sub fem_sub/sub_leadfield_eeg_montage.hdf5 --fsaverage 40
+    prepare_eeg_forward fieldtrip sub fem_sub/sub_leadfield_eeg_montage.hdf5 --fsaverage 6
 
 We should now have the following files in the `fem_sub` directory
 
