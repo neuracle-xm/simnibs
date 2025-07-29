@@ -3698,38 +3698,44 @@ class Msh:
         """
         import pyvista as pv
 
-        surface = self.crop_mesh(elm_type=ElementTypes.TRIANGLE)
-        volume = self.crop_mesh(elm_type=ElementTypes.TETRAHEDRON)
-
         # TODO allow tags not present in ElementTags?
+        # TODO allow POINT and LINE?
 
         mb = pv.MultiBlock()
 
-        # TRIANGLES
-        for t in np.unique(surface.elm.tag1):
-            m = surface.crop_mesh(tags=t)
-            v = m.nodes.node_coord
-            f = m.elm.node_number_list[:, :3] - 1
-            grid = pv.make_tri_mesh(v, f)
-            for data in m.nodedata:
-                grid[data.field_name] = data.value
-            for data in m.elmdata:
-                grid[data.field_name] = data.value
-            mb[ElementTags(t).name] = grid
+        # triangles as PolyData
+        if ElementTypes.TRIANGLE in self.elm.elm_type:
+            block_name = ElementTypes(ElementTypes.TRIANGLE).name
+            mb[block_name] = pv.MultiBlock()
+            cropped = self.crop_mesh(elm_type=ElementTypes.TRIANGLE)
+            for t in np.unique(cropped.elm.tag1):
+                m = cropped.crop_mesh(tags=t)
+                v = m.nodes.node_coord
+                f = m.elm.node_number_list[:, :3] - 1
+                grid = pv.make_tri_mesh(v, f)
+                for data in m.nodedata:
+                    grid[data.field_name] = data.value
+                for data in m.elmdata:
+                    grid[data.field_name] = data.value
+                mb[block_name][ElementTags(t).name] = grid
 
-        # TETRAHEDRA
-        for t in np.unique(volume.elm.tag1):
-            m = volume.crop_mesh(tags=t)
-            v = m.nodes.node_coord
-            f = m.elm.node_number_list - 1
-            cells = np.concatenate((np.full((m.elm.nr, 1), 4), f), axis=1)
-            cell_type = np.full(m.elm.nr, pv.CellType.TETRA, dtype=np.uint8)
-            grid = pv.UnstructuredGrid(cells.ravel(), cell_type, v)
-            for data in m.nodedata:
-                grid[data.field_name] = data.value
-            for data in m.elmdata:
-                grid[data.field_name] = data.value
-            mb[ElementTags(t).name] = grid
+        # tetrahedra as UnstructuredGrid
+        if ElementTypes.TETRAHEDRON in self.elm.elm_type:
+            block_name = ElementTypes(ElementTypes.TETRAHEDRON).name
+            mb[block_name] = pv.MultiBlock()
+            cropped = self.crop_mesh(elm_type=ElementTypes.TETRAHEDRON)
+            for t in np.unique(cropped.elm.tag1):
+                m = cropped.crop_mesh(tags=t)
+                v = m.nodes.node_coord
+                f = m.elm.node_number_list - 1
+                cells = np.concatenate((np.full((m.elm.nr, 1), 4), f), axis=1)
+                cell_type = np.full(m.elm.nr, pv.CellType.TETRA, dtype=np.uint8)
+                grid = pv.UnstructuredGrid(cells.ravel(), cell_type, v)
+                for data in m.nodedata:
+                    grid[data.field_name] = data.value
+                for data in m.elmdata:
+                    grid[data.field_name] = data.value
+                mb[block_name][ElementTags(t).name] = grid
 
         return mb
 
