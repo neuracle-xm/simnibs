@@ -9,24 +9,18 @@ import time
 import nibabel as nib
 import numpy as np
 import samseg
+import cortech
 
 from simnibs import SIMNIBSDIR
 from simnibs import __version__
 from simnibs import utils
 from simnibs.utils.simnibs_logger import logger
 from simnibs.mesh_tools.meshing import create_mesh
-from simnibs.mesh_tools.mesh_io import (
-    load_freesurfer_surfaces,
-    write_gifti_surface,
-    make_surface_mesh,
-    write_msh,
-    ElementData,
-)
+from simnibs.mesh_tools.mesh_io import write_gifti_surface, write_msh, ElementData
 from simnibs.utils import cond_utils, file_finder, html_writer, transformations
 from simnibs.utils.threading import run_in_multiprocessing_pool
 from simnibs.segmentation import brain_surface, charm_utils, simnibs_segmentation_utils
 from simnibs.utils.mesh_element_properties import ElementTags
-
 
 
 def run(
@@ -338,66 +332,45 @@ def run(
 
         os.makedirs(sub_files.surface_folder, exist_ok=True)
 
-        if fs_dir:
-            logger.info("Using surfaces from FreeSurfer")
-
-            fs_sub = file_finder.FreeSurferSubject(fs_dir)
-            logger.info(f"FreeSurfer subject directory is {fs_sub.root.resolve()}")
-
-            # cortex = cortech.Cortex.from_freesurfer_subject_dir(fs_dir)
-            # central = cortex.estimate_layers("equivolume", 0.5)
-
-            surfaces = {
-                "white": load_freesurfer_surfaces(fs_sub, "white", coord="ras"),
-                "sphere": load_freesurfer_surfaces(fs_sub, "sphere"),
-                "sphere.reg": load_freesurfer_surfaces(fs_sub, "sphere.reg"),
-            }
-            surfaces["pial"] = _load_freesurfer_pial_surface(fs_sub)
-
-            logger.info("Estimating the central gray matter surface")
-            surfaces["central"] = {
-                h: brain_surface.estimate_central_surface(
-                    surfaces["white"][h], surfaces["pial"][h]
-                )
-                for h in sub_files.hemispheres
-            }
-
-            for surface, v in surfaces.items():
-                for hemi, mesh in v.items():
-                    surface_tag = ElementTags.from_surface_file_name(surface, hemi)
-                    surface_file = sub_files.get_surface_from_element_tag(surface_tag)
-                    write_gifti_surface(mesh, surface_file, element_tag=surface_tag)
-
-        else:
+        if fs_dir is None:
             logger.info("Estimating cortical surfaces")
 
-            hemispheres = brain_surface.cortical_surface_estimation(
+            cortex = brain_surface.cortical_surface_estimation(
                 [sub_files],
                 "topofit",
                 surface_settings["topofit_contrast"],
                 surface_settings["topofit_resolution"],
                 surface_settings["topofit_device"],
-            )[0]
+            )[0]  # only one subject
+        else:
+            logger.info("Loading surfaces from existing FreeSurfer run")
+            logger.info(f"FreeSurfer subject directory is {fs_dir}")
 
-            for h, hemi in hemispheres.items():
-                m = make_surface_mesh(hemi.white.vertices, hemi.white.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["white"][h], element_tag=ElementTags.from_surface_file_name("white", h))
-
-                m = make_surface_mesh(hemi.pial.vertices, hemi.pial.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["pial"][h], element_tag=ElementTags.from_surface_file_name("pial", h))
-
-            logger.info("Estimating the central gray matter surface")
-
-            central = brain_surface.central_surface_estimation(
-                hemispheres,
-                surface_settings["central_surface_fraction"],
-                surface_settings["central_surface_method"],
+            cortex = cortech.Cortex.from_freesurfer_subject_dir(
+                fs_dir, sphere="sphere", registration="sphere.reg"
             )
+            for hemi in cortex:
+                hemi.white.to_scanner_ras()
+                hemi.pial.to_scanner_ras()
 
-            for hemi, surface in central.items():
-                m = make_surface_mesh(surface.vertices, surface.faces + 1)
-                write_gifti_surface(m, sub_files.surfaces["central"][hemi], element_tag=ElementTags.from_surface_file_name("central", h))
+        logger.info("Estimating the central gray matter surface")
+        central = cortex.estimate_layers(
+            surface_settings["central_surface_method"],
+            surface_settings["central_surface_fraction"],
+            return_surface=True,
+        )
 
+        for hemi in cortex:
+            kw = dict(sub_files=sub_files, hemi=hemi.name)
+            _write_gifti(hemi.white, name="white", **kw)
+            _write_gifti(hemi.pial, name="pial", **kw)
+            _write_gifti(getattr(central, hemi.name), name="central", **kw)
+            if hemi.sphere is not None:
+                _write_gifti(hemi.sphere, name="sphere", **kw)
+            if hemi.has_registration():
+                _write_gifti(hemi.registration, name="sphere.reg", **kw)
+
+        if not cortex.lh.has_registration():  # only check lh
             logger.info("Generating spherical registrations")
 
             _ = run_in_multiprocessing_pool(
@@ -758,24 +731,15 @@ def _read_transform(transform_file):
     return RAS2LPS @ transform @ RAS2LPS
 
 
-def _load_freesurfer_pial_surface(fs_sub):
-    # The pial surfaces (?h.pial) are symlinks to either ?h.pial.T1 or
-    # ?h.pial.T2 depending on whether the `-T2pial` flag was used when
-    # invoking recon-all. Symlinks created in WSL on Windows do not
-    # seem to work currently, hence this workaround
-    try:
-        m = load_freesurfer_surfaces(fs_sub, "pial", coord="ras")
-    except OSError:  # invalid argument
-        try:
-            m = load_freesurfer_surfaces(fs_sub, "pial.T2", coord="ras")
-        except FileNotFoundError:  # -T2pial was not used
-            m = load_freesurfer_surfaces(fs_sub, "pial.T1", coord="ras")
-    return m
-
-
 def _fs_lut_labels_to_fs_lut_values(labels_dict: dict[str, list[str]]):
     values, labels, _ = charm_utils.read_freesurfer_lut(
         file_finder.templates.labeling_LUT
     )
     mapper = dict(zip(labels, values))
     return {k: [mapper[i] for i in v] for k, v in labels_dict.items()}
+
+
+def _write_gifti(surface, sub_files, name, hemi):
+    tag = ElementTags.from_surface_file_name(name, hemi)
+    filename = sub_files.get_surface_from_element_tag(tag)
+    write_gifti_surface(surface, filename, element_tag=tag)
