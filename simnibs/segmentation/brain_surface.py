@@ -1,32 +1,26 @@
-import functools
 import itertools
-from multiprocessing import Pool
-import numpy as np
-import nibabel as nib
-import nibabel.processing
 import os
+import time
+
+import nibabel as nib
+import numpy as np
 import scipy.sparse
-import shutil
 from scipy.spatial import cKDTree, ConvexHull
 from scipy.ndimage import label, binary_dilation
-import time
+import torch
+
+import cortech
+
+from brainsynth.dataset import PredictionDataset
+from brainnet.mesh.topology import StandardTopology
+from brainnet.prediction import PretrainedModels
+from brainnet.prediction.brainnet_predict import PredictionStep
 
 from simnibs.mesh_tools import mesh_io
 from simnibs.utils import file_finder
 from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import normalize
-
-import brainsynth
-from brainsynth.dataset import PredictionDataset
-from brainnet.prediction import PretrainedModels
-from brainnet.prediction.brainnet_predict import PredictionStep
-
-from cortech import Surface, Hemisphere
-
-
-import torch
-from brainnet.mesh.topology import StandardTopology  # DeepSurferTopology
 
 
 class SimNIBSDataset(PredictionDataset):
@@ -91,41 +85,15 @@ def cortical_surface_estimation(
         hemispheres = {}
         for hemi, surfaces in y_pred.items():
             for surface, vertices in surfaces.items():
-                y_pred[hemi][surface] = Surface(
+                y_pred[hemi][surface] = cortech.Surface(
                     vertices, predict_step.topology[hemi].faces.cpu().numpy()
                 )
-            hemispheres[hemi] = Hemisphere(y_pred[hemi]["white"], y_pred[hemi]["pial"])
+            hemispheres[hemi] = cortech.Hemisphere(
+                hemi, y_pred[hemi]["white"], y_pred[hemi]["pial"]
+            )
         predictions.append(hemispheres)
-    return predictions
 
-
-def central_surface_estimation(hemispheres, fraction=0.5, method="equivolume"):
-    return {
-        k: Surface(
-            v.estimate_layers(method, fraction, curv_kwargs=dict(smooth_iter=10)),
-            v.white.faces,
-        )
-        for k, v in hemispheres.items()
-    }
-
-
-# Spherical Registration
-
-# def make_sphere_reg(hemispheres=None):
-#     """This simply reads the spherical registration file from `deepsurfer` and
-#     applies a correction to the right hemisphere."""
-#     if hemispheres is None:
-#         hemispheres = ("lh", "rh")
-
-#     filename_sphere_reg = ds.system.resource('template/sphere-reg.srf')
-
-#     sphere_reg = {}
-#     sphere_reg["lh"] = mesh_io.read_freesurfer_surface(filename_sphere_reg)
-#     # the mesh is the same for both hemispheres, only flipped in x
-#     sphere_reg["rh"] = mesh_io.read_freesurfer_surface(filename_sphere_reg)
-#     sphere_reg["rh"].nodes.node_coord *= (-1, 1, 1)
-
-#     return sphere_reg
+    return [cortech.Cortex(**pred) for pred in predictions]
 
 
 def spherical_registration_cat(
@@ -158,10 +126,9 @@ def spherical_registration_cat(
         topo = StandardTopology.recursive_subdivision(res)[-1]
 
         # Subsample white
-        s = Surface.from_gifti(white)
-        s = Surface(s.vertices[: topo.n_vertices], topo.faces.numpy())
+        s = cortech.Surface.from_file(white)
+        s = cortech.Surface(s.vertices[: topo.n_vertices], topo.faces.numpy())
         s.save(sph_map_white)
-
     else:
         # use original resolution
         sph_map_white = white
@@ -172,13 +139,13 @@ def spherical_registration_cat(
         cmd = f"{cat_surf2sphere} {sph_map_white} {sphere} 10"
         spawn_process(cmd.split())
         time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-        logger.info(f"Time to generate sphere ({hemi})      : {time_elapsed}")
+        logger.info(f"Time to generate sphere ({hemi}) : {time_elapsed}")
     except Exception as e:
         raise e
     else:
         if surf2sphere_subsampling:
             # upsample sphere
-            s = Surface.from_gifti(sphere)
+            s = cortech.Surface.from_file(sphere)
             v = topo.subdivide_vertices(torch.tensor(s.vertices).T).T.numpy()
             f = topo.subdivide_faces().numpy()
             m = mesh_io.make_surface_mesh(v, f + 1)
@@ -412,24 +379,6 @@ def labclose(image, n):
     image = image > 0.5
     tmp = close(image, n)
     return ~lab(~tmp)
-
-
-def estimate_central_surface(white: mesh_io.Msh, pial: mesh_io.Msh):
-    """For now, exploit the node-to-node correspondance between white and pial
-    surfaces and just do an average to obtain the central surface.
-
-    Parameters
-    ----------
-    white : mesh_io.Msh
-    pial : mesh_io.Msh
-
-    Returns
-    -------
-    mesh_io.Msh
-        The estimated central surface.
-    """
-    vertices = 0.5 * (white.nodes.node_coord + pial.nodes.node_coord)
-    return mesh_io.Msh(mesh_io.Nodes(vertices), white.elm)
 
 
 def subsample_surfaces(m2m_dir, n_points: int) -> dict:
