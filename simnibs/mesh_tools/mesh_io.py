@@ -23,7 +23,6 @@ import tempfile
 import os
 import struct
 import copy
-import datetime
 import warnings
 import gc
 import hashlib
@@ -55,7 +54,7 @@ from simnibs.utils.file_finder import (
     path2bin,
     SubjectFiles,
     FreeSurferSubject,
-    SURFACE_FILE_NAME_TO_ELEMENT_TAG
+    SURFACE_FILE_NAME_TO_ELEMENT_TAG,
 )
 from . import cython_msh
 from . import cgal
@@ -795,9 +794,13 @@ class Elements:
         return s
 
 
-def make_surface_mesh(vertices, faces):
+def make_surface_mesh(vertices, faces, tag: int | None = None):
     """Convenience function for constructing a triangulated surface mesh."""
-    return Msh(Nodes(vertices), Elements(faces))
+    m = Msh(Nodes(vertices), Elements(faces))
+    if tag is not None:
+        m.elm.tag1[:] = tag
+        m.elm.tag2[:] = tag
+    return m
 
 
 class Msh:
@@ -6824,17 +6827,13 @@ def read_freesurfer_surface(fn, apply_transform: bool = False):
         Mesh structure
 
     """
-    vertex_coords, faces, meta = nibabel.freesurfer.io.read_geometry(
-        fn, read_metadata=True
-    )
-
+    surface = cortech.Surface.from_file(fn)
     if apply_transform:
-        vertex_coords = vertex_coords + meta["cras"]
+        surface.to_scanner_ras()
+    return make_surface_mesh(surface.vertices, surface.faces + 1)
 
-    return make_surface_mesh(vertex_coords, faces + 1)
 
-
-def write_freesurfer_surface(msh, fn, write_standard_header: bool = True):
+def write_freesurfer_surface(msh, fn):
     """Writes a FreeSurfer surface
     Only the surfaces (triangles) are writen to the FreeSurfer surface file
 
@@ -6844,35 +6843,13 @@ def write_freesurfer_surface(msh, fn, write_standard_header: bool = True):
         Mesh structure
     fn: str
         output file name
-    write_standard_header : bool, optional
-        If True, writes the standard header. If False, writes no header, by default True
     """
-
-    m = msh.crop_mesh(elm_type=2)
+    m = msh.crop_mesh(elm_type=ElementTypes.TRIANGLE)
     faces = m.elm.node_number_list[:, :3] - 1
     vertices = m.nodes.node_coord
 
-    stamp = (
-        f"Created by {os.getenv('USER')} on {str(datetime.datetime.now())} with SimNIBS"
-    )
-
-    if write_standard_header:
-        affine = np.array([[-1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]])
-        voxelsize = np.array([1.0, 1.0, 1.0])
-        volume_info = {
-            "head": [2, 0, 20],
-            "valid": "1",
-            "filename": "fake.nii.gz",
-            "volume": [256, 256, 256],
-            "voxelsize": voxelsize,
-            "xras": affine[0, :],
-            "yras": affine[1, :],
-            "zras": affine[2, :],
-            "cras": [0, 0, 0],
-        }
-        nibabel.freesurfer.io.write_geometry(fn, vertices, faces, stamp, volume_info)
-    else:
-        nibabel.freesurfer.io.write_geometry(fn, vertices, faces, stamp)
+    surface = cortech.Surface(vertices, faces, "scanner")
+    surface.save(fn)
 
 
 def read_gifti_surface(fn, element_tag: ElementTags | None = None):
@@ -6894,29 +6871,29 @@ def read_gifti_surface(fn, element_tag: ElementTags | None = None):
     msh: Msh()
         mesh structure with geometrical information
     """
-    s = nibabel.load(fn)
-    faces = np.array(
-        s.get_arrays_from_intent("NIFTI_INTENT_TRIANGLE")[0].data, dtype=int
-    )
-    nodes = np.array(
-        s.get_arrays_from_intent("NIFTI_INTENT_POINTSET")[0].data, dtype=float
-    )
-    mesh = make_surface_mesh(nodes, faces + 1)
+    gii = nibabel.load(fn)
+    surface = cortech.Surface.from_gifti(gii)
+    surface.to_scanner_ras()
+
     if element_tag is not None:
         mesh_element_tag = element_tag
-    elif "ElementTag" in s.meta:
-        mesh_element_tag = ElementTags(int(s.meta["ElementTag"]))
+    elif "ElementTag" in gii.meta:
+        mesh_element_tag = ElementTags(int(gii.meta["ElementTag"]))
     elif os.path.basename(fn) in SURFACE_FILE_NAME_TO_ELEMENT_TAG.keys():
         mesh_element_tag = SURFACE_FILE_NAME_TO_ELEMENT_TAG[os.path.basename(fn)]
     else:
         mesh_element_tag = ElementTags.UNKNOWN_SURFACE
 
-    mesh.elm.tag1[:] = mesh_element_tag
-    mesh.elm.tag2[:] = mesh_element_tag
+    mesh = make_surface_mesh(surface.vertices, surface.faces + 1, mesh_element_tag)
     return mesh
 
 
-def write_gifti_surface(msh, fn, ref_image=None, element_tag : ElementTags | None = None):
+def write_gifti_surface(
+    surface: cortech.Surface | Msh,
+    fn,
+    element_tag: ElementTags | None = None,
+    geometry=None,
+):
     """Writes mesh surfaces as a gifti file
 
     Parameters
@@ -6926,65 +6903,25 @@ def write_gifti_surface(msh, fn, ref_image=None, element_tag : ElementTags | Non
     fn: str
         Name of file
     """
-    if ref_image is not None:
-        ref_image = nibabel.load(ref_image)
-        header = ref_image.header
-        coordsys = ref_image.get_arrays_from_intent("NIFTI_INTENT_POINTSET")[0].coordsys
-    else:
-        header = None
-        coordsys = nibabel.gifti.GiftiCoordSystem(0, 3, np.eye(4))
-    # This metadata is needed for FreeView
-    # NOT WORKING! I NEDD TO PUT THESE THINGS IN A CDATA FIELD SOMEHOW
-    metadata = nibabel.gifti.GiftiMetaData(
-        {
-            "VolGeomWidth": "256",
-            "VolGeomHeight": "256",
-            "VolGeomWidth": "256",
-            "VolGeomXsize": "1.0",
-            "VolGeomYsize": "1.0",
-            "VolGeomZsize": "1.0",
-            "VolGeomX_R": "-1.0",
-            "VolGeomX_A": "0.0",
-            "VolGeomX_S": "0.0",
-            "VolGeomY_R": "0.0",
-            "VolGeomY_A": "0.0",
-            "VolGeomY_S": "-1.0",
-            "VolGeomZ_R": "0.0",
-            "VolGeomZ_A": "1.0",
-            "VolGeomZ_S": "0.0",
-            "VolGeomC_R": "0.0",
-            "VolGeomC_A": "1.0",
-            "VolGeomC_S": "0.0",
-            "SurfaceCenterX": "0.0",
-            "SurfaceCenterY": "1.0",
-            "SurfaceCenterZ": "0.0",
-        }
-    )
+    match surface:
+        case Msh():
+            surface = surface.crop_mesh(elm_type=ElementTypes.TRIANGLE)
+            vertices = surface.nodes[:]
+            faces = surface.elm[:, :3] - 1
+            surface = cortech.Surface(vertices, faces, "scanner", geometry=geometry)
+        case cortech.Surface():
+            pass
+        case _:
+            raise ValueError(
+                f"surface must be an instance of {cortech.Surface} or {Msh} (got {type(surface)})"
+            )
+    surface.to_surface_ras()
+    gii = surface.as_gifti()
 
-    msh = msh.crop_mesh(elm_type=2)
-    vertices = msh.nodes[:]
-    faces = msh.elm[:, :3] - 1
-    verts_da = nibabel.gifti.GiftiDataArray(
-        vertices.astype(np.float32),
-        intent="NIFTI_INTENT_POINTSET",
-        coordsys=coordsys,
-        meta=metadata,
-    )
-    faces_da = nibabel.gifti.GiftiDataArray(
-        faces.astype(np.int32),
-        intent="NIFTI_INTENT_TRIANGLE",
-    )
-    # as coordsys defaults to unity, we need to overwrite it to None for the triangles
-    faces_da.coordsys = None
-
-    image = nibabel.gifti.GiftiImage(header=header, darrays=[verts_da, faces_da])
     if element_tag is not None:
-        image.meta['ElementTag'] = int(element_tag)
-    # image = nibabel.GiftiImage(
-    #     header=header,
-    #     darrays=[verts_da, faces_da]
-    # )
-    nibabel.save(image, fn)
+        gii.meta["ElementTag"] = int(element_tag)
+
+    gii.to_filename(fn)
 
 
 def read_curv(fn):
