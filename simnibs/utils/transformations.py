@@ -1755,7 +1755,7 @@ def subject_spherical_registration(
     hemi = _validate_hemi_arg(hemi)
     if subject == "fsaverage":
         return {
-            h: cortech.SphericalRegistration.from_file(
+            h: cortech.Sphere.from_file(
                 get_fsaverage_template(h, "sphere", subsampling)
             )
             for h in hemi
@@ -1767,7 +1767,7 @@ def subject_spherical_registration(
             else SubjectFiles(subpath=str(subject))
         )
         return {
-            h: cortech.SphericalRegistration.from_file(
+            h: cortech.Sphere.from_file(
                 subject_files.get_surface(h, "sphere.reg", subsampling)
             )
             for h in hemi
@@ -1781,7 +1781,7 @@ def cross_subject_map(
     subsampling_to: int | None = None,
     hemi: str | list[str] | tuple = ("lh", "rh"),
     project_kwargs: dict | None = None,
-) -> dict[str, cortech.SphericalRegistration]:
+) -> dict[str, cortech.Sphere]:
     """Construct a mapping from `subject_from` to `subject_to`.
 
     Parameters
@@ -1801,13 +1801,13 @@ def cross_subject_map(
         hemispheres).
     project_kwargs :
         Keyword arguments for the `project` method of
-        cortech.surface.SphericalRegistration (e.g., method="nearest" for
+        cortech.surface.Sphere (e.g., method="nearest" for
         nearest neighbor interpolation).
 
     Returns
     -------
-    Maps : dict[str, cortech.SphericalRegistration]
-        Dictionary of pre-projected cortech.surface.SphericalRegistration
+    Maps : dict[str, cortech.Sphere]
+        Dictionary of pre-projected cortech.surface.Sphere
         objects.
     """
     hemi = _validate_hemi_arg(hemi)
@@ -2088,8 +2088,8 @@ def atlas2subject(
         sph_fsavg = get_fsaverage_template(h, "sphere")
         sph_sub = m2m.surfaces["sphere.reg"][h]
 
-        fsavg = cortech.SphericalRegistration.from_file(sph_fsavg)
-        subject = cortech.SphericalRegistration.from_file(sph_sub)
+        fsavg = cortech.Sphere.from_file(sph_fsavg)
+        subject = cortech.Sphere.from_file(sph_sub)
 
         lab_map = fsavg.project_and_resample(subject, labels, method="nearest")
 

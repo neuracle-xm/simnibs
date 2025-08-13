@@ -11,7 +11,7 @@ class ElementTypes(IntEnum):
 
 class ElementTags(IntEnum):
     @classmethod
-    def from_surface_file_name(cls, surface_name:str, hemisphere:str):
+    def from_surface_file_name(cls, surface_name: str, hemisphere: str):
         tag_from_name = {
             ("gray", "lh"): cls.LH_PIAL_SURFACE,
             ("gray", "rh"): cls.RH_PIAL_SURFACE,
@@ -19,6 +19,8 @@ class ElementTags(IntEnum):
             ("pial", "rh"): cls.RH_PIAL_SURFACE,
             ("white", "lh"): cls.LH_WM_SURFACE,
             ("white", "rh"): cls.RH_WM_SURFACE,
+            ("sphere", "lh"): cls.LH_SPHERE,
+            ("sphere", "rh"): cls.RH_SPHERE,
             ("sphere.reg", "lh"): cls.LH_SPHERE_REG,
             ("sphere.reg", "rh"): cls.RH_SPHERE_REG,
             ("central", "lh"): cls.LH_CENTRAL_SURFACE,
@@ -78,7 +80,7 @@ class ElementTags(IntEnum):
     LH_SURFACE_START = 5000
     LH_WM_SURFACE = LH_SURFACE_START + WM
     LH_PIAL_SURFACE = LH_SURFACE_START + GM
-    LH_CENTRAL_SURFACE = LH_SURFACE_START + GM + 1 
+    LH_CENTRAL_SURFACE = LH_SURFACE_START + GM + 1
     LH_SPHERE = LH_SURFACE_START + 100
     LH_SPHERE_REG = LH_SURFACE_START + 101
     LH_SURFACE_END = 5499
@@ -99,7 +101,7 @@ class ElementTags(IntEnum):
     RH_SURFACE_START = 7000
     RH_WM_SURFACE = RH_SURFACE_START + WM
     RH_PIAL_SURFACE = RH_SURFACE_START + GM
-    RH_CENTRAL_SURFACE = RH_SURFACE_START + GM + 1 
+    RH_CENTRAL_SURFACE = RH_SURFACE_START + GM + 1
     RH_SPHERE = RH_SURFACE_START + 100
     RH_SPHERE_REG = RH_SURFACE_START + 101
     RH_SURFACE_END = 7499
@@ -118,6 +120,7 @@ class ElementTags(IntEnum):
     RH_LAYER_END = 7999
 
     UNKNOWN_SURFACE = 9999
+
 
 class CentralLayerDepths:
     CENTRAL_LAYER_1 = 0.06
