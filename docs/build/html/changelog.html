@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Changelog &#8212; SimNIBS 0) documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <title>Changelog &#8212; SimNIBS 4.6.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
-    <script src="_static/documentation_options.js?v=e6165c10"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/documentation_options.js?v=cc8a4273"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="icon" href="_static/favicon.ico"/>
     <link rel="index" title="Index" href="genindex.html" />
@@ -51,7 +51,20 @@
   <section id="changelog">
 <span id="id1"></span><h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">¶</a></h1>
 <section id="id2">
-<h2>4.5.0<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
+<h2>4.6.0<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p>Improved segmentation performance of <a class="reference internal" href="tutorial/head_meshing.html#head-modeling-tutorial"><span class="std std-ref">charm</span></a>, based on a <a class="reference internal" href="publications.html#publications"><span class="std std-ref">new probabilistic atlas</span></a>, in particular when supplying only a T1-weighted image. NOTE:  The command line option  –useatlasv1_0 switches back to the OLD atlas.</p></li>
+<li><p>More accurate AI-based reconstructions of cortical surfaces (white matter and gray matter/pial) by charm, using a <a class="reference internal" href="publications.html#publications"><span class="std std-ref">new deep learning approach</span></a>. NOTE: As standard, the first image has to be a T1-weighted image to work well. If you provide another contrast as first image, you need to tell charm to use another model by supplying a custom .ini-file.</p></li>
+<li><p>tissue interfaces to internal air cavities have now their own tissue number (prevents placement of electrodes on these interfaces)</p></li>
+<li><p>Update to numpy 2</p></li>
+<li><p>im- and export of coil positions to ANT visor2 added</p></li>
+</ul>
+</div></blockquote>
+<p>NOTES &amp; Known issues: Same as for version 4.5.0</p>
+</section>
+<section id="id3">
+<h2>4.5.0<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>New optimization method TMS that also supports bent and flexible coils, thereby systematically avoiding intersections of the coil with the head.</p></li>
@@ -61,23 +74,37 @@
 <li><p>New class to support the convenient definition of regions-of-interest.</p></li>
 <li><p>New dataset Ernie Extended.</p></li>
 <li><p>New non-human primate dataset.</p></li>
+<li><p>Tutorial for calculating <a class="reference internal" href="tutorial/advanced/eeg_leadfields.html#eeg-leadfields"><span class="std std-ref">EEG leadfields</span></a> with SimNIBS for use in <a class="reference external" href="https://www.fieldtriptoolbox.org/">FieldTrip</a> and <a class="reference external" href="https://mne.tools/stable/index.html">MNE-Python</a> added.</p></li>
+<li><p>Added <a class="reference external" href="https://mumps-solver.org/index.php">MUMPS solver</a> as option for the FEM calculations on Macs with Apple Silicon</p></li>
+<li><p>Added custom compiled version of <a class="reference external" href="https://github.com/flatironinstitute/FMM3D">FMM3d</a> so that it runs on Macs with Apple Silicon</p></li>
+<li><p>Included JupyterLab (start via <code class="docutils literal notranslate"><span class="pre">simnibs_jupyter</span></code> on command line)</p></li>
 <li><p>Update to python 3.11 and corresponding updates of most of the included packages.</p></li>
 </ul>
 </div></blockquote>
-<p>NOTES &amp; Known issues: see 4.0.0</p>
+<dl class="simple">
+<dt>NOTES &amp; Known issues:</dt><dd><ul class="simple">
+<li><p>The PARDISO solver does not work on Apple Silicon (use MUMPS instead).</p></li>
+<li><p>Support of SimNIBS on MacOS on Intel is discontinued.</p></li>
+<li><p>Installation fails on paths with non-standard characters, such as backslash, chinese characters, … (workaround: provide another path)</p></li>
+<li><p>simnibs_gui does not start on some linux systems, e.g. with wayland (workaround: ld preloading of libstdc++.so.6 seems to help; example: export LD_PRELOAD=/usr/lib/libstdc++.so.6 - path needs to be adjusted according to library path on local system)</p></li>
+<li><p>Setting the number of cpus in run_simnibs will be only taken into account in the new tms_flex_opt and tes_flex_opt optimizations, but not the previous TMS optimization methods.</p></li>
+<li><p>Setting custom conductivities and defining custom tissue types in the new tms_flex_opt and tes_flex_opt does not work yet.</p></li>
+</ul>
+</dd>
+</dl>
 </section>
-<section id="id3">
-<h2>4.1.0<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
+<section id="id4">
+<h2>4.1.0<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Tetrahedral quality of the meshes was increased substantially to improve numerical accuracy of the FEM calculations and remove outliers in the calculated electric fields</p></li>
-<li><p>Option added to use white matter and pial surfaces from FreeSurfer for more accurate representation of smaller sulci in the head meshes</p></li>
+<li><p>Option <em>–fs-dir</em> added to charm to use white matter and pial surfaces from FreeSurfer for more accurate representation of smaller sulci in the head meshes</p></li>
 <li><p>I/O functions for neuronavigation data have been updated to support new Brainsight version 2.5.3</p></li>
 </ul>
 </div></blockquote>
 </section>
-<section id="id4">
-<h2>4.0.1<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h2>
+<section id="id5">
+<h2>4.0.1<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>changed Brainsight position import/export to support only NIfTI:Aligned (to avoid ambiguities)</p></li>
@@ -85,8 +112,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id5">
-<h2>4.0.0<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
+<section id="id6">
+<h2>4.0.0<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>New head segmentation and meshing pipeline <em>charm</em> with improved accuracy and robustness</p></li>
@@ -113,31 +140,31 @@
 </dd>
 </dl>
 </section>
-<section id="id6">
-<h2>3.2.6<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h2>
+<section id="id7">
+<h2>3.2.6<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>fixed a bug causing headreco to fail on MacOS</p></li>
 <li><p>Note: On Apple M1s using .ccd coil files does not yet work, please use niftis instead.</p></li>
 </ul>
 </section>
-<section id="id7">
-<h2>3.2.5<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h2>
+<section id="id8">
+<h2>3.2.5<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>added skin smoothing options for TMS optimization</p></li>
 <li><p>more informative matlab error messages</p></li>
 <li><p>small bug fixes</p></li>
 </ul>
 </section>
-<section id="id8">
-<h2>3.2.4<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h2>
+<section id="id9">
+<h2>3.2.4<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Small bug fix related to gmsh options.</p></li>
 </ul>
 </div></blockquote>
 </section>
-<section id="id9">
-<h2>3.2.3<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h2>
+<section id="id10">
+<h2>3.2.3<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Gmsh version changed to avoid issues with Big Sur (only MacOS)</p></li>
@@ -146,8 +173,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id10">
-<h2>3.2.2<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h2>
+<section id="id11">
+<h2>3.2.2<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Added matlab and python examples for TACSchallenge</p></li>
@@ -175,8 +202,8 @@
 </dd>
 </dl>
 </section>
-<section id="id11">
-<h2>3.2<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h2>
+<section id="id12">
+<h2>3.2<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Added Auxiliary Dipole Method (ADM) TMS optimization (contributed by Luis Gomez)</p></li>
@@ -190,8 +217,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id12">
-<h2>3.1<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h2>
+<section id="id13">
+<h2>3.1<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Added TDCS and TMS Optimization</p></li>
@@ -200,8 +227,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id13">
-<h2>3.0<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h2>
+<section id="id14">
+<h2>3.0<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>Major update to SimNIBS</p></li>
@@ -217,8 +244,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id14">
-<h2>2.1.2<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h2>
+<section id="id15">
+<h2>2.1.2<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>This upgrade focused on the MATLAB library for SimNIBS</p></li>
@@ -228,8 +255,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id15">
-<h2>2.1.1<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h2>
+<section id="id16">
+<h2>2.1.1<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>This upgrade focused on usability of SimNIBS</p></li>
@@ -241,8 +268,8 @@
 </ul>
 </div></blockquote>
 </section>
-<section id="id16">
-<h2>2.1.0<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h2>
+<section id="id17">
+<h2>2.1.0<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
 <li><p>2.1.0 is a major update of SimNIBS 2</p></li>
@@ -354,7 +381,7 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="index.html">
@@ -381,21 +408,22 @@
 <li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors and Funding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="publications.html">Publications</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id2">4.5.0</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id3">4.1.0</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id4">4.0.1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id5">4.0.0</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id6">3.2.6</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id7">3.2.5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id8">3.2.4</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id9">3.2.3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id10">3.2.2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id11">3.2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id12">3.1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id13">3.0</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id14">2.1.2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id15">2.1.1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id16">2.1.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">4.6.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">4.5.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">4.1.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">4.0.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">4.0.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">3.2.6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">3.2.5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id9">3.2.4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id10">3.2.3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id11">3.2.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id12">3.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id13">3.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id14">3.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id15">2.1.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id16">2.1.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id17">2.1.0</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#g">2.0.1g</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#f">2.0.1f</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#e">2.0.1e</a></li>
@@ -406,6 +434,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="external_packages.html">See also</a></li>
 </ul>
 
 <div class="relations">
@@ -417,7 +446,7 @@
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -425,7 +454,7 @@
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -443,7 +472,7 @@
       &#169;2020, SimNIBS Developers.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |

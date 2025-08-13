@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Group Analysis &#8212; SimNIBS 0) documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <title>Group Analysis &#8212; SimNIBS 4.6.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
-    <script src="../../_static/documentation_options.js?v=e6165c10"></script>
-    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/documentation_options.js?v=cc8a4273"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="icon" href="../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -52,10 +52,11 @@
 <span id="group-tutorial"></span><h1>Group Analysis<a class="headerlink" href="#group-analysis" title="Link to this heading">¶</a></h1>
 <p>SimNIBS supports group analysis of electric fields in both <em>FsAverage</em> and <em>MNI</em> spaces.</p>
 <p>In this example, we will simulate the average electric field for a simple tDCS montage across five subjects using the <em>FsAverage</em> space.</p>
+<p>Please note that a <a class="reference external" href="https://osf.io/ah5eu/">further tutorial based on JupyterLab notebooks is available on OSF</a></p>
 <section id="example-dataset">
 <h2>Example Dataset<a class="headerlink" href="#example-dataset" title="Link to this heading">¶</a></h2>
-<p><a class="reference external" href="https://osf.io/gxumc/download">Click here to download the example dataset for group analysis</a>.</p>
-<p>This example dataset is composed of a subgroup of a cohort available at <a class="reference external" href="https://openneuro.org/datasets/ds000171">OpenfMRI</a>. The data was processed in SimNIBS 4 using <a class="reference internal" href="../../documentation/command_line/charm.html#charm-docs"><span class="std std-ref">charm</span></a>. For more information, please see the <a class="reference external" href="https://osf.io/ah5eu/">OSF repository</a> and <a class="reference external" href="https://doi.org/10.1101/500314">Saturnino et al., 2018</a>.</p>
+<p><a class="reference external" href="https://osf.io/twqk9/download">Click here to download the example dataset for group analysis</a>.</p>
+<p>This example dataset is composed of a subgroup of a cohort available at <a class="reference external" href="https://openneuro.org/datasets/ds000171">OpenfMRI</a>. The data was processed using FreeSurfer for cortical reconstruction, followed by SimNIBS <a class="reference internal" href="../../documentation/command_line/charm.html#charm-docs"><span class="std std-ref">charm</span></a>. For more information, please see the <a class="reference external" href="https://osf.io/ah5eu/">OSF repository</a> and <a class="reference external" href="https://doi.org/10.1101/500314">Saturnino et al., 2018</a>.</p>
 <p>In this example, we have five subjects, named <code class="file docutils literal notranslate"><span class="pre">sub01</span></code>, <code class="file docutils literal notranslate"><span class="pre">sub09</span></code>,
 <code class="file docutils literal notranslate"><span class="pre">sub10</span></code>, <code class="file docutils literal notranslate"><span class="pre">sub12</span></code>, and <code class="file docutils literal notranslate"><span class="pre">sub15</span></code>. Their head models are stored in the corresponding m2m-folders <code class="file docutils literal notranslate"><span class="pre">m2m_sub01</span></code>, <code class="file docutils literal notranslate"><span class="pre">m2m_sub09</span></code>, etc.</p>
 </section>
@@ -81,16 +82,19 @@ We want to obtain the mean and standard deviation of the normal component of the
 <section id="python">
 <h3>Python<a class="headerlink" href="#python" title="Link to this heading">¶</a></h3>
 <p>Write a <em>Python</em> script. In this case, remember to set <em>map_to_fsavg</em> to <em>True</em> in the <a class="reference internal" href="../../documentation/sim_struct/session.html#session-doc"><span class="std std-ref">SESSION</span></a> structure. See <a class="reference internal" href="../scripting.html#scripting-tutorial"><span class="std std-ref">Scripting Simulations</span></a> for more information.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    This example runs tDCS simulations with a bipolar montage for five subjects</span>
-<span class="sd">    The dataset with the five head models is avaliable at https://osf.io/ah5eu/</span>
-<span class="sd">    please look at the &quot;group_average&quot; for how to do a simple analysis of the group data</span>
-<span class="sd">&#39;&#39;&#39;</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">simnibs</span> <span class="kn">import</span> <span class="n">sim_struct</span><span class="p">,</span> <span class="n">run_simnibs</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This example runs tDCS simulations with a bipolar montage for five subjects</span>
+<span class="sd">The dataset with the five head models is avaliable at https://osf.io/ah5eu/</span>
+<span class="sd">please look at the &quot;group_average&quot; for how to do a simple analysis of the group data</span>
+
+<span class="sd">Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simnibs</span><span class="w"> </span><span class="kn">import</span> <span class="n">sim_struct</span><span class="p">,</span> <span class="n">run_simnibs</span>
 
 <span class="c1"># Set the subjects</span>
-<span class="n">subjects</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sub01&#39;</span><span class="p">,</span> <span class="s1">&#39;sub09&#39;</span><span class="p">,</span> <span class="s1">&#39;sub10&#39;</span><span class="p">,</span> <span class="s1">&#39;sub12&#39;</span><span class="p">,</span> <span class="s1">&#39;sub15&#39;</span><span class="p">]</span>
+<span class="n">subjects</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sub01&quot;</span><span class="p">,</span> <span class="s2">&quot;sub09&quot;</span><span class="p">,</span> <span class="s2">&quot;sub10&quot;</span><span class="p">,</span> <span class="s2">&quot;sub12&quot;</span><span class="p">,</span> <span class="s2">&quot;sub15&quot;</span><span class="p">]</span>
 
 <span class="c1"># Set a TDCSLIST structure with the simulation set-up</span>
 <span class="n">tdcslist</span> <span class="o">=</span> <span class="n">sim_struct</span><span class="o">.</span><span class="n">TDCSLIST</span><span class="p">()</span>
@@ -98,24 +102,24 @@ We want to obtain the mean and standard deviation of the normal component of the
 
 <span class="n">anode</span> <span class="o">=</span> <span class="n">tdcslist</span><span class="o">.</span><span class="n">add_electrode</span><span class="p">()</span>
 <span class="n">anode</span><span class="o">.</span><span class="n">channelnr</span> <span class="o">=</span> <span class="mi">1</span>
-<span class="n">anode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s1">&#39;C3&#39;</span>
-<span class="n">anode</span><span class="o">.</span><span class="n">pos_ydir</span> <span class="o">=</span> <span class="s1">&#39;C1&#39;</span>
-<span class="n">anode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s1">&#39;rect&#39;</span>
+<span class="n">anode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s2">&quot;C3&quot;</span>
+<span class="n">anode</span><span class="o">.</span><span class="n">pos_ydir</span> <span class="o">=</span> <span class="s2">&quot;C1&quot;</span>
+<span class="n">anode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;rect&quot;</span>
 <span class="n">anode</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">50</span><span class="p">]</span>
 <span class="n">anode</span><span class="o">.</span><span class="n">thickness</span> <span class="o">=</span> <span class="mi">4</span>
 
 
 <span class="n">cathode</span> <span class="o">=</span> <span class="n">tdcslist</span><span class="o">.</span><span class="n">add_electrode</span><span class="p">()</span>
 <span class="n">cathode</span><span class="o">.</span><span class="n">channelnr</span> <span class="o">=</span> <span class="mi">2</span>
-<span class="n">cathode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s1">&#39;AF4&#39;</span>
-<span class="n">cathode</span><span class="o">.</span><span class="n">pos_ydir</span> <span class="o">=</span> <span class="s1">&#39;F6&#39;</span>
-<span class="n">cathode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s1">&#39;rect&#39;</span>
+<span class="n">cathode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s2">&quot;AF4&quot;</span>
+<span class="n">cathode</span><span class="o">.</span><span class="n">pos_ydir</span> <span class="o">=</span> <span class="s2">&quot;F6&quot;</span>
+<span class="n">cathode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;rect&quot;</span>
 <span class="n">cathode</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>
 <span class="n">cathode</span><span class="o">.</span><span class="n">thickness</span> <span class="o">=</span> <span class="mi">4</span>
 
 <span class="c1"># create main results folder</span>
-<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;bipolar&#39;</span><span class="p">):</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s1">&#39;bipolar&#39;</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;bipolar&quot;</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s2">&quot;bipolar&quot;</span><span class="p">)</span>
 
 <span class="c1"># Run the simulation in each subject</span>
 <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">:</span>
@@ -123,9 +127,9 @@ We want to obtain the mean and standard deviation of the normal component of the
     <span class="n">s</span> <span class="o">=</span> <span class="n">sim_struct</span><span class="o">.</span><span class="n">SESSION</span><span class="p">()</span>
     <span class="n">s</span><span class="o">.</span><span class="n">map_to_fsavg</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">s</span><span class="o">.</span><span class="n">map_to_MNI</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">s</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="s1">&#39;eEjJ&#39;</span>
-    <span class="n">s</span><span class="o">.</span><span class="n">subpath</span> <span class="o">=</span> <span class="s1">&#39;m2m_&#39;</span> <span class="o">+</span> <span class="n">sub</span>
-    <span class="n">s</span><span class="o">.</span><span class="n">pathfem</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;bipolar&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="s2">&quot;eEjJ&quot;</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">subpath</span> <span class="o">=</span> <span class="s2">&quot;m2m_&quot;</span> <span class="o">+</span> <span class="n">sub</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">pathfem</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;bipolar&quot;</span><span class="p">,</span> <span class="n">sub</span><span class="p">)</span>
     <span class="c1"># Don&#39;t open in gmsh</span>
     <span class="n">s</span><span class="o">.</span><span class="n">open_in_gmsh</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="c1"># Add the tdcslist we defined above</span>
@@ -141,6 +145,8 @@ We want to obtain the mean and standard deviation of the normal component of the
 <div class="highlight-matlab notranslate"><div class="highlight"><pre><span></span><span class="c">%  This example runs tDCS simulations with a bipolar montage for five subjects</span>
 <span class="c">%  The dataset with the five head models is avaliable at https://osf.io/ah5eu/</span>
 <span class="c">%  please look at the &quot;group_average&quot; for how to do a simple analysis of the group data</span>
+<span class="c">%</span>
+<span class="c">%  Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
 
 <span class="c">% Set the subjects</span>
 <span class="n">subjects</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span><span class="s">&#39;sub01&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub09&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub10&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub12&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub15&#39;</span><span class="p">};</span>
@@ -191,28 +197,31 @@ We want to obtain the mean and standard deviation of the normal component of the
 Please notice: for setting up simulations, Python and MATLAB share a similar interface, but for post-processing, the interfaces can be very different.</p>
 <section id="id1">
 <h3>Python<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    This example wil go throgh simulations and calculate</span>
-<span class="sd">    the average and the standard deviation of the normal component</span>
-<span class="sd">    of the electric field in FsAverage space</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This example wil go throgh simulations and calculate</span>
+<span class="sd">the average and the standard deviation of the normal component</span>
+<span class="sd">of the electric field in FsAverage space</span>
 
-<span class="sd">    It is a follow-up to the &quot;run_simulations&quot; example</span>
-<span class="sd">&#39;&#39;&#39;</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">simnibs</span>
+<span class="sd">It is a follow-up to the &quot;run_simulations_group.py&quot; example</span>
+
+<span class="sd">Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">simnibs</span>
 
 <span class="c1">## Load simulation results</span>
-<span class="n">subjects</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sub01&#39;</span><span class="p">,</span> <span class="s1">&#39;sub09&#39;</span><span class="p">,</span> <span class="s1">&#39;sub10&#39;</span><span class="p">,</span> <span class="s1">&#39;sub12&#39;</span><span class="p">,</span> <span class="s1">&#39;sub15&#39;</span><span class="p">]</span>
-<span class="n">results_folder</span> <span class="o">=</span> <span class="s1">&#39;fsavg_overlays&#39;</span>
-<span class="n">fsavg_msh_name</span> <span class="o">=</span> <span class="s1">&#39;_TDCS_1_scalar_fsavg.msh&#39;</span>
-<span class="n">field_name</span> <span class="o">=</span> <span class="s1">&#39;E_normal&#39;</span>
+<span class="n">subjects</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sub01&quot;</span><span class="p">,</span> <span class="s2">&quot;sub09&quot;</span><span class="p">,</span> <span class="s2">&quot;sub10&quot;</span><span class="p">,</span> <span class="s2">&quot;sub12&quot;</span><span class="p">,</span> <span class="s2">&quot;sub15&quot;</span><span class="p">]</span>
+<span class="n">results_folder</span> <span class="o">=</span> <span class="s2">&quot;fsavg_overlays&quot;</span>
+<span class="n">fsavg_msh_name</span> <span class="o">=</span> <span class="s2">&quot;_TDCS_1_scalar_fsavg.msh&quot;</span>
+<span class="n">field_name</span> <span class="o">=</span> <span class="s2">&quot;E_normal&quot;</span>
 
 <span class="n">fields</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">subjects</span><span class="p">:</span>
     <span class="c1"># read mesh with results transformed to fsaverage space</span>
     <span class="n">results_fsavg</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">read_msh</span><span class="p">(</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;bipolar&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="p">,</span> <span class="n">results_folder</span><span class="p">,</span> <span class="n">sub</span> <span class="o">+</span> <span class="n">fsavg_msh_name</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;bipolar&quot;</span><span class="p">,</span> <span class="n">sub</span><span class="p">,</span> <span class="n">results_folder</span><span class="p">,</span> <span class="n">sub</span> <span class="o">+</span> <span class="n">fsavg_msh_name</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="c1"># save the field in each subject</span>
     <span class="n">fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">results_fsavg</span><span class="o">.</span><span class="n">field</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
@@ -224,17 +233,17 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
 <span class="n">std_field</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">fields</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="c1"># Plot</span>
-<span class="n">results_fsavg</span><span class="o">.</span><span class="n">nodedata</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># cleanup fields</span>
-<span class="n">results_fsavg</span><span class="o">.</span><span class="n">add_node_field</span><span class="p">(</span><span class="n">avg_field</span><span class="p">,</span> <span class="s1">&#39;E_normal_avg&#39;</span><span class="p">)</span> <span class="c1"># add average field</span>
-<span class="n">results_fsavg</span><span class="o">.</span><span class="n">add_node_field</span><span class="p">(</span><span class="n">std_field</span><span class="p">,</span> <span class="s1">&#39;E_normal_std&#39;</span><span class="p">)</span> <span class="c1"># add std field</span>
+<span class="n">results_fsavg</span><span class="o">.</span><span class="n">nodedata</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># cleanup fields</span>
+<span class="n">results_fsavg</span><span class="o">.</span><span class="n">add_node_field</span><span class="p">(</span><span class="n">avg_field</span><span class="p">,</span> <span class="s2">&quot;E_normal_avg&quot;</span><span class="p">)</span>  <span class="c1"># add average field</span>
+<span class="n">results_fsavg</span><span class="o">.</span><span class="n">add_node_field</span><span class="p">(</span><span class="n">std_field</span><span class="p">,</span> <span class="s2">&quot;E_normal_std&quot;</span><span class="p">)</span>  <span class="c1"># add std field</span>
 
 <span class="c1"># show surface with the fields</span>
-<span class="n">results_fsavg</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">visible_fields</span><span class="o">=</span><span class="s1">&#39;E_normal_avg&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="n">results_fsavg</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">visible_fields</span><span class="o">=</span><span class="s2">&quot;E_normal_avg&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 <span class="c1">## Calculate average in an ROI defined using an atlas</span>
 <span class="c1"># load atlas and define a region</span>
-<span class="n">atlas</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">get_atlas</span><span class="p">(</span><span class="s1">&#39;HCP_MMP1&#39;</span><span class="p">)</span>
-<span class="n">region_name</span> <span class="o">=</span> <span class="s1">&#39;lh.4&#39;</span>
+<span class="n">atlas</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">get_atlas</span><span class="p">(</span><span class="s2">&quot;HCP_MMP1&quot;</span><span class="p">)</span>
+<span class="n">region_name</span> <span class="o">=</span> <span class="s2">&quot;lh.4&quot;</span>
 <span class="n">roi</span> <span class="o">=</span> <span class="n">atlas</span><span class="p">[</span><span class="n">region_name</span><span class="p">]</span>
 <span class="c1"># visualize region</span>
 <span class="n">results_fsavg</span><span class="o">.</span><span class="n">add_node_field</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">region_name</span><span class="p">)</span>
@@ -243,7 +252,7 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
 <span class="c1"># calculate mean field using a weighted mean</span>
 <span class="n">node_areas</span> <span class="o">=</span> <span class="n">results_fsavg</span><span class="o">.</span><span class="n">nodes_areas</span><span class="p">()</span>
 <span class="n">avg_field_roi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">avg_field</span><span class="p">[</span><span class="n">roi</span><span class="p">],</span> <span class="n">weights</span><span class="o">=</span><span class="n">node_areas</span><span class="p">[</span><span class="n">roi</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Average </span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s1"> in </span><span class="si">{</span><span class="n">region_name</span><span class="si">}</span><span class="s1">: &#39;</span><span class="p">,</span> <span class="n">avg_field_roi</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Average </span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">region_name</span><span class="si">}</span><span class="s2">: &quot;</span><span class="p">,</span> <span class="n">avg_field_roi</span><span class="p">)</span>
 <span class="n">results_fsavg</span><span class="o">.</span><span class="n">add_node_field</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">region_name</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -253,8 +262,10 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
 <div class="highlight-matlab notranslate"><div class="highlight"><pre><span></span><span class="c">% This example wil go throgh simulations and calculate</span>
 <span class="c">% the average and the standard deviation of the normal component</span>
 <span class="c">% of the electric field in FsAverage space</span>
-<span class="c">% </span>
-<span class="c">% It is a follow-up to the &quot;run_simulations&quot; example</span>
+<span class="c">%</span>
+<span class="c">% It is a follow-up to the &quot;run_simulations_group.m&quot; example</span>
+<span class="c">%    </span>
+<span class="c">% Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
 
 <span class="c">%% Load simulation results</span>
 <span class="n">subjects</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span><span class="s">&#39;sub01&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub09&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub10&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub12&#39;</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;sub15&#39;</span><span class="p">};</span>
@@ -331,7 +342,7 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../../index.html">
@@ -370,6 +381,7 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
 <li class="toctree-l1"><a class="reference internal" href="../../publications.html">Publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../external_packages.html">See also</a></li>
 </ul>
 
 <div class="relations">
@@ -385,7 +397,7 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
@@ -393,7 +405,7 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -411,7 +423,7 @@ Please notice: for setting up simulations, Python and MATLAB share a similar int
       &#169;2020, SimNIBS Developers.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |

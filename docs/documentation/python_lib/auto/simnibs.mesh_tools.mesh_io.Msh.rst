@@ -62,6 +62,7 @@
       ~Msh.surface_EC
       ~Msh.test_inside_volume
       ~Msh.tetrahedra_quality
+      ~Msh.to_multiblock
       ~Msh.triangle_angles
       ~Msh.triangle_normals
       ~Msh.view

@@ -23,6 +23,10 @@
       ~Elements.get_faces
       ~Elements.get_outside_faces
       ~Elements.get_surface_outline
+      ~Elements.get_tags
+      ~Elements.get_tetrahedra
+      ~Elements.get_triangles
+      ~Elements.get_type
       ~Elements.node_elm_adjacency
       ~Elements.nodes_with_tag
    

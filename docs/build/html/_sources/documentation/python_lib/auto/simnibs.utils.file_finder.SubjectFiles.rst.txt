@@ -17,6 +17,8 @@
       ~SubjectFiles.get_eeg_cap
       ~SubjectFiles.get_morph_data
       ~SubjectFiles.get_surface
+      ~SubjectFiles.get_surface_from_element_tag
+      ~SubjectFiles.get_surfaces
    
    
 

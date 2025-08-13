@@ -49,7 +49,8 @@ Transformations
 
    subject2mni_coords
    mni2subject_coords
-   subject_atlas
+   mni2subject_coilpos
+   atlas2subject
 
 Utilities
 ----------

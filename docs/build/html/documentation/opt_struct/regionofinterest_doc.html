@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>RegionOfInterest &#8212; SimNIBS 0) documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <title>RegionOfInterest &#8212; SimNIBS 4.6.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
-    <script src="../../_static/documentation_options.js?v=e6165c10"></script>
-    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/documentation_options.js?v=cc8a4273"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="icon" href="../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -55,7 +55,7 @@
 <h2>Initialization<a class="headerlink" href="#initialization" title="Link to this heading">¶</a></h2>
 <ul>
 <li><p><strong>Python</strong></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">simnibs</span> <span class="kn">import</span> <span class="n">opt_struct</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">simnibs</span><span class="w"> </span><span class="kn">import</span> <span class="n">opt_struct</span>
 
 <span class="c1"># TmsFlexOptimization</span>
 <span class="n">opt</span> <span class="o">=</span> <span class="n">opt_struct</span><span class="o">.</span><span class="n">TmsFlexOptimization</span><span class="p">()</span>
@@ -86,7 +86,7 @@
 <h2>Parameters and attributes<a class="headerlink" href="#parameters-and-attributes" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="simnibs.utils.region_of_interest.RegionOfInterest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">simnibs.utils.region_of_interest.</span></span><span class="sig-name descname"><span class="pre">RegionOfInterest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#simnibs.utils.region_of_interest.RegionOfInterest" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">simnibs.utils.region_of_interest.</span></span><span class="sig-name descname"><span class="pre">RegionOfInterest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#simnibs.utils.region_of_interest.RegionOfInterest" title="Link to this definition">¶</a></dt>
 <dd><p>A class describing a region of Interest in a volume mesh or a surface mesh.</p>
 <section id="parameters">
 <h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
@@ -105,7 +105,7 @@
 </dd>
 <dt>mask_value: int | list[int] | None</dt><dd><p>The values that are considered as the mask in the mask files, default 1 (example: 1 | [1, 2])</p>
 </dd>
-<dt>mask_operator: str | list[str] | None</dt><dd><p>The operator to combine the mask with the ROI {“union”, “intersection”, “difference”}, default “union”</p>
+<dt>mask_operator: str | list[str] | None</dt><dd><p>The operator to combine the mask with the ROI {“union”, “intersection”, “difference”}, default “intersection”</p>
 </dd>
 <dt>roi_sphere_center: list[float] | list[list[float]] | None</dt><dd><p>Sphere center coordinates for spherical masks in mm (example: [0,0,0] | [[1,2,3], [4,5,6]])</p>
 </dd>
@@ -113,7 +113,7 @@
 </dd>
 <dt>roi_sphere_center_space: str | list[str] | None</dt><dd><p>The space the center coordinates of the spheres are defined in {“subject”, “mni”}</p>
 </dd>
-<dt>roi_sphere_operator: str | list[str] | None</dt><dd><p>The operator to combine the mask with the ROI {“union”, “intersection”, “difference”}, default “union”</p>
+<dt>roi_sphere_operator: str | list[str] | None</dt><dd><p>The operator to combine the mask with the ROI {“union”, “intersection”, “difference”}, default “intersection”</p>
 </dd>
 <dt>nodes: list[list[float]] | None</dt><dd><p>Only for method = “custom” -&gt; a custom list of node coordinates (example: [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]])</p>
 </dd>
@@ -156,7 +156,7 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../../index.html">
@@ -197,6 +197,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../publications.html">Publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../external_packages.html">See also</a></li>
 </ul>
 
 <div class="relations">
@@ -212,7 +213,7 @@
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
@@ -220,7 +221,7 @@
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -238,7 +239,7 @@
       &#169;2020, SimNIBS Developers.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |

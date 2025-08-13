@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>simnibs.utils.file_finder.SubjectFiles &#8212; SimNIBS 0) documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <title>simnibs.utils.file_finder.SubjectFiles &#8212; SimNIBS 4.6.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=12dfc556" />
-    <script src="../../../_static/documentation_options.js?v=e6165c10"></script>
-    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/documentation_options.js?v=cc8a4273"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="icon" href="../../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -52,7 +52,7 @@
 <h1>simnibs.utils.file_finder.SubjectFiles<a class="headerlink" href="#simnibs-utils-file-finder-subjectfiles" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="simnibs.utils.file_finder.SubjectFiles">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">simnibs.utils.file_finder.</span></span><span class="sig-name descname"><span class="pre">SubjectFiles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fnamehead</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subpath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#simnibs.utils.file_finder.SubjectFiles" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">simnibs.utils.file_finder.</span></span><span class="sig-name descname"><span class="pre">SubjectFiles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fnamehead</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subpath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#simnibs.utils.file_finder.SubjectFiles" title="Link to this definition">¶</a></dt>
 <dd><p>Class to find files for a given subject</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -267,7 +267,7 @@ corresponding surface file.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="simnibs.utils.file_finder.SubjectFiles.morph_data">
 <span class="sig-name descname"><span class="pre">morph_data</span></span><a class="headerlink" href="#simnibs.utils.file_finder.SubjectFiles.morph_data" title="Link to this definition">¶</a></dt>
-<dd><p>Dictionary of ‘standard’ morphometry data which os present after
+<dd><p>Dictionary of ‘standard’ morphometry data which is present after
 running CHARM. Each entry is a dict with hemispheres as keys pointing
 to the corresponding morph file.</p>
 <dl class="field-list simple">
@@ -521,6 +521,12 @@ to the corresponding morph file.</p>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_surface</span></code>(hemi, surface[, subsampling])</p></td>
 <td><p>Get surface files, e.g., central, pial, sphere, sphere.reg</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_surface_from_element_tag</span></code>(element_tag[, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_surfaces</span></code>(surface[, subsampling])</p></td>
+<td><p></p></td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -547,7 +553,7 @@ to the corresponding morph file.</p>
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../../../index.html">
@@ -588,6 +594,7 @@ to the corresponding morph file.</p>
 <li class="toctree-l1"><a class="reference internal" href="../../../publications.html">Publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../external_packages.html">See also</a></li>
 </ul>
 
 <div class="relations">
@@ -603,7 +610,7 @@ to the corresponding morph file.</p>
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../../search.html" method="get">
@@ -611,7 +618,7 @@ to the corresponding morph file.</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -629,7 +636,7 @@ to the corresponding morph file.</p>
       &#169;2020, SimNIBS Developers.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |

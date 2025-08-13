@@ -49,6 +49,7 @@
       ~Msh.open_in_gmsh
       ~Msh.partition_skin_surface
       ~Msh.prepare_surface_tags
+      ~Msh.project_points_on_surface
       ~Msh.pts_inside_surface
       ~Msh.read_hdf5
       ~Msh.reconstruct_surfaces
@@ -61,6 +62,7 @@
       ~Msh.surface_EC
       ~Msh.test_inside_volume
       ~Msh.tetrahedra_quality
+      ~Msh.to_multiblock
       ~Msh.triangle_angles
       ~Msh.triangle_normals
       ~Msh.view

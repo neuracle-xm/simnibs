@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Uncertainty Quantification &#8212; SimNIBS 0) documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <title>Uncertainty Quantification &#8212; SimNIBS 4.6.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
-    <script src="../../_static/documentation_options.js?v=e6165c10"></script>
-    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/documentation_options.js?v=cc8a4273"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="icon" href="../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -76,18 +76,19 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
 </div>
 <section id="python">
 <h3>Python<a class="headerlink" href="#python" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39; Example for running a SimNIBS tDCS simulation in Python</span>
-<span class="sd">    Run with:</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Example for running a SimNIBS tDCS simulation in Python</span>
+<span class="sd">Run with:</span>
 
-<span class="sd">    simnibs_python uncertainty_quantification.py</span>
+<span class="sd">simnibs_python uncertainty_quantification.py</span>
 
-<span class="sd">    Copyright (C) 2019 Guilherme B Saturnino</span>
-<span class="sd">&#39;&#39;&#39;</span>
-<span class="kn">from</span> <span class="nn">simnibs</span> <span class="kn">import</span> <span class="n">sim_struct</span><span class="p">,</span> <span class="n">run_simnibs</span>
+<span class="sd">Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">simnibs</span><span class="w"> </span><span class="kn">import</span> <span class="n">sim_struct</span><span class="p">,</span> <span class="n">run_simnibs</span>
 
 <span class="n">S</span> <span class="o">=</span> <span class="n">sim_struct</span><span class="o">.</span><span class="n">SESSION</span><span class="p">()</span>
-<span class="n">S</span><span class="o">.</span><span class="n">subpath</span> <span class="o">=</span> <span class="s1">&#39;m2m_ernie&#39;</span>
-<span class="n">S</span><span class="o">.</span><span class="n">pathfem</span> <span class="o">=</span> <span class="s1">&#39;tdcs_uq&#39;</span>
+<span class="n">S</span><span class="o">.</span><span class="n">subpath</span> <span class="o">=</span> <span class="s2">&quot;m2m_ernie&quot;</span>
+<span class="n">S</span><span class="o">.</span><span class="n">pathfem</span> <span class="o">=</span> <span class="s2">&quot;tdcs_uq&quot;</span>
 
 <span class="n">tdcs</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">add_tdcslist</span><span class="p">()</span>
 <span class="n">tdcs</span><span class="o">.</span><span class="n">currents</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.001</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">]</span>
@@ -95,27 +96,27 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
 <span class="c1"># Set-up the electrodes</span>
 <span class="n">mc_electrode</span> <span class="o">=</span> <span class="n">tdcs</span><span class="o">.</span><span class="n">add_electrode</span><span class="p">()</span>
 <span class="n">mc_electrode</span><span class="o">.</span><span class="n">channelnr</span> <span class="o">=</span> <span class="mi">1</span>
-<span class="n">mc_electrode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s1">&#39;C3&#39;</span>
-<span class="n">mc_electrode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s1">&#39;rect&#39;</span>
+<span class="n">mc_electrode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s2">&quot;C3&quot;</span>
+<span class="n">mc_electrode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;rect&quot;</span>
 <span class="n">mc_electrode</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">50</span><span class="p">]</span>
 <span class="n">mc_electrode</span><span class="o">.</span><span class="n">thickness</span> <span class="o">=</span> <span class="mi">4</span>
 
 <span class="n">so_electrode</span> <span class="o">=</span> <span class="n">tdcs</span><span class="o">.</span><span class="n">add_electrode</span><span class="p">()</span>
 <span class="n">so_electrode</span><span class="o">.</span><span class="n">channelnr</span> <span class="o">=</span> <span class="mi">2</span>
-<span class="n">so_electrode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s1">&#39;AF4&#39;</span>
-<span class="n">so_electrode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s1">&#39;rect&#39;</span>
+<span class="n">so_electrode</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s2">&quot;AF4&quot;</span>
+<span class="n">so_electrode</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;rect&quot;</span>
 <span class="n">so_electrode</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>
 <span class="n">so_electrode</span><span class="o">.</span><span class="n">thickness</span> <span class="o">=</span> <span class="mi">4</span>
 
 <span class="c1"># Set-up the uncertain conductivities</span>
 <span class="c1"># White Matter</span>
-<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s1">&#39;beta&#39;</span>
-<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">.1</span><span class="p">,</span> <span class="mf">.4</span><span class="p">]</span>
+<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span>
+<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">]</span>
 <span class="c1"># Gray Matter</span>
-<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s1">&#39;beta&#39;</span>
-<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">.1</span><span class="p">,</span> <span class="mf">.6</span><span class="p">]</span>
+<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span>
+<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">]</span>
 <span class="c1"># Compact Bone</span>
-<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s1">&#39;beta&#39;</span>
+<span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span>
 <span class="n">tdcs</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.012</span><span class="p">]</span>
 
 <span class="n">run_simnibs</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
@@ -126,8 +127,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
 <h3>MATLAB<a class="headerlink" href="#matlab" title="Link to this heading">¶</a></h3>
 <div class="highlight-matlab notranslate"><div class="highlight"><pre><span></span><span class="c">% example script that runs an Uncertainty Quantification analysis</span>
 <span class="c">% </span>
-<span class="c">% G. Saturnino, 2019</span>
-<span class="c">%</span>
+<span class="c">% Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
 
 <span class="c">%% General information</span>
 
@@ -240,56 +240,69 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
 <h2>More Options<a class="headerlink" href="#more-options" title="Link to this heading">¶</a></h2>
 <p>In <em>Python</em>, it is also possible to call lower-level functions to set more options for the UQ run and the post-processing of results.</p>
 <p>In the example below, we set-up a UQ TMS problem with the ROI being the whole brain (tissues 1 and 2) and with a tolerance of 0.1.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">example for setting up a gPC-based uncertainty quantification</span>
 
-<span class="kn">import</span> <span class="nn">simnibs</span>
-<span class="kn">from</span> <span class="nn">simnibs.simulation</span> <span class="kn">import</span> <span class="n">gpc</span>
+<span class="sd">Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">simnibs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simnibs.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">gpc</span>
 
 <span class="c1">## Define the TMS simulation</span>
 <span class="n">tms</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">sim_struct</span><span class="o">.</span><span class="n">TMSLIST</span><span class="p">()</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">fnamecoil</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;legacy_and_other&#39;</span><span class="p">,</span><span class="s1">&#39;Magstim_70mm_Fig8.ccd&#39;</span><span class="p">)</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">read_msh</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;m2m_ernie&#39;</span><span class="p">,</span><span class="s1">&#39;ernie.msh&#39;</span><span class="p">))</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">fnamecoil</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;legacy_and_other&quot;</span><span class="p">,</span> <span class="s2">&quot;Magstim_70mm_Fig8.ccd&quot;</span><span class="p">)</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">read_msh</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;m2m_ernie&quot;</span><span class="p">,</span> <span class="s2">&quot;ernie.msh&quot;</span><span class="p">))</span>
 
 <span class="c1"># We need to set the EEG cap as we are giving the coil</span>
 <span class="c1"># Coordinates as EEG positions</span>
-<span class="n">sub_files</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">SubjectFiles</span><span class="p">(</span><span class="n">subpath</span><span class="o">=</span><span class="s1">&#39;m2m_ernie&#39;</span><span class="p">)</span>
+<span class="n">sub_files</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">SubjectFiles</span><span class="p">(</span><span class="n">subpath</span><span class="o">=</span><span class="s2">&quot;m2m_ernie&quot;</span><span class="p">)</span>
 <span class="n">tms</span><span class="o">.</span><span class="n">eeg_cap</span> <span class="o">=</span> <span class="n">sub_files</span><span class="o">.</span><span class="n">eeg_cap_1010</span>
 
 <span class="c1"># Define the coil position</span>
 <span class="n">pos</span> <span class="o">=</span> <span class="n">tms</span><span class="o">.</span><span class="n">add_position</span><span class="p">()</span>
-<span class="n">pos</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s1">&#39;C3&#39;</span>
-<span class="n">pos</span><span class="o">.</span><span class="n">pos_ydir</span> <span class="o">=</span> <span class="s1">&#39;CP3&#39;</span>
+<span class="n">pos</span><span class="o">.</span><span class="n">centre</span> <span class="o">=</span> <span class="s2">&quot;C3&quot;</span>
+<span class="n">pos</span><span class="o">.</span><span class="n">pos_ydir</span> <span class="o">=</span> <span class="s2">&quot;CP3&quot;</span>
 <span class="n">pos</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="mi">4</span>
 
 <span class="c1"># Define the uncertain conductivities</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s1">&#39;beta&#39;</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">.1</span><span class="p">,</span> <span class="mf">.4</span><span class="p">]</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s1">&#39;beta&#39;</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">.1</span><span class="p">,</span> <span class="mf">.6</span><span class="p">]</span>
-<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s1">&#39;beta&#39;</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">]</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">]</span>
+<span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_type</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span>
 <span class="n">tms</span><span class="o">.</span><span class="n">cond</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">distribution_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.003</span><span class="p">,</span> <span class="mf">0.012</span><span class="p">]</span>
 
 <span class="c1"># Run the UQ calling with White and Gray matter as an ROI and tolerance of 1e-2</span>
-<span class="n">gpc</span><span class="o">.</span><span class="n">run_tms_gpc</span><span class="p">(</span><span class="n">tms</span><span class="p">,</span> <span class="s1">&#39;tms_gpc/TMS_UQ&#39;</span><span class="p">,</span> <span class="n">tissues</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>
+<span class="n">gpc</span><span class="o">.</span><span class="n">run_tms_gpc</span><span class="p">(</span><span class="n">tms</span><span class="p">,</span> <span class="s2">&quot;tms_gpc/TMS_UQ&quot;</span><span class="p">,</span> <span class="n">tissues</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
 <section id="secondary-quantities">
 <h2>Secondary Quantities<a class="headerlink" href="#secondary-quantities" title="Link to this heading">¶</a></h2>
 <p>It is also possible to calculate secondary quantities, such as the 99th percentile of the electric field magnitude.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">simnibs</span>
-<span class="kn">from</span> <span class="nn">simnibs.simulation</span> <span class="kn">import</span> <span class="n">gpc</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">example for  determining auxiliary results from a gPC-based uncertainty quantification</span>
+
+<span class="sd">Copyright (c) 2019 SimNIBS developers. Licensed under the GPL v3.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">simnibs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simnibs.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">gpc</span>
 
 
-<span class="n">fn_hdf5</span> <span class="o">=</span> <span class="s1">&#39;tdcs_uq/ernie_TDCS_1_gpc.hdf5&#39;</span>
+<span class="n">fn_hdf5</span> <span class="o">=</span> <span class="s2">&quot;tdcs_uq/ernie_TDCS_1_gpc.hdf5&quot;</span>
 <span class="c1"># Read the regression object from the HDF5 file</span>
 <span class="n">regression</span> <span class="o">=</span> <span class="n">gpc</span><span class="o">.</span><span class="n">gPC_regression</span><span class="o">.</span><span class="n">read_hdf5</span><span class="p">(</span><span class="n">fn_hdf5</span><span class="p">)</span>
 <span class="c1"># Read the mesh ROI from the HDF5 file</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">Msh</span><span class="o">.</span><span class="n">read_hdf5</span><span class="p">(</span><span class="n">fn_hdf5</span><span class="p">,</span> <span class="s1">&#39;mesh_roi&#39;</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">Msh</span><span class="o">.</span><span class="n">read_hdf5</span><span class="p">(</span><span class="n">fn_hdf5</span><span class="p">,</span> <span class="s2">&quot;mesh_roi&quot;</span><span class="p">)</span>
 <span class="c1"># Define the function to be used for the expansion</span>
 
-<span class="k">def</span> <span class="nf">percentile_99</span><span class="p">(</span><span class="n">Es</span><span class="p">):</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">percentile_99</span><span class="p">(</span><span class="n">Es</span><span class="p">):</span>
     <span class="c1"># The function will receive the electric field in a format</span>
     <span class="c1"># N_sims x N_elm x 3</span>
     <span class="c1"># for each simulation, we calculate the 99th percentile</span>
@@ -298,6 +311,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
         <span class="n">prc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">simnibs</span><span class="o">.</span><span class="n">ElementData</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">)</span><span class="o">.</span><span class="n">get_percentiles</span><span class="p">(</span><span class="mi">99</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="k">return</span> <span class="n">prc</span>
+
 
 <span class="c1"># Calculate the gPC coefficients</span>
 <span class="n">gpc_coeffs</span> <span class="o">=</span> <span class="n">regression</span><span class="o">.</span><span class="n">expand_quantity</span><span class="p">(</span><span class="n">percentile_99</span><span class="p">)</span>
@@ -342,7 +356,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <p class="logo">
   <a href="../../index.html">
@@ -381,6 +395,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
 <li class="toctree-l1"><a class="reference internal" href="../../publications.html">Publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../external_packages.html">See also</a></li>
 </ul>
 
 <div class="relations">
@@ -396,7 +411,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
@@ -404,7 +419,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
 
 
@@ -422,7 +437,7 @@ At each step, the error is evaluated using a K-means cross-validation scheme. Th
       &#169;2020, SimNIBS Developers.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |
