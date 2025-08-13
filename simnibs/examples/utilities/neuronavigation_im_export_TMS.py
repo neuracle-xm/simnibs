@@ -1,9 +1,9 @@
-"""Example on how to run a SimNIBS TMS simulation in Python
+"""Example on how to im- or export TMS coil positions in Python
 Run with:
 
-simnibs_python TMS.py
+simnibs_python neuronavigation_im_export_TMS.py
 
-Copyright (c) 2018 SimNIBS developers. Licensed under the GPL v3.
+Copyright (c) 2025 SimNIBS developers. Licensed under the GPL v3.
 """
 
 import os

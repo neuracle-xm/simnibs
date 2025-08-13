@@ -251,6 +251,11 @@ class TestPythonErnie:
         )
         assert ret.returncode == 0
 
+    def test_neuronavigation_im_export_TMS(self, example_dataset, replace_gmsh):
+        os.chdir(example_dataset)
+        ret = self.run_script("utilities", "neuronavigation_im_export_TMS.py")
+        assert ret.returncode == 0
+        
 
 class TestMatlabErnie:
     def run_script(self, script_folder, script_name, clean=None):
