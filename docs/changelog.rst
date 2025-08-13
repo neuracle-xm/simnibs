@@ -5,7 +5,7 @@ Changelog
 4.6.0
 ------
   * Improved segmentation performance of :ref:`charm <head_modeling_tutorial>`, based on a :ref:`new probabilistic atlas <publications>`, in particular when supplying only a T1-weighted image. NOTE:  The command line option  --useatlasv1_0 switches back to the OLD atlas.
-  * More accurate reconstructions of cortical surfaces (white matter and gray matter/pial) by charm, using a :ref:`new deep learning approach <publications>`.
+  * More accurate AI-based reconstructions of cortical surfaces (white matter and gray matter/pial) by charm, using a :ref:`new deep learning approach <publications>`. NOTE: As standard, the first image has to be a T1-weighted image to work well. If you provide another contrast as first image, you need to tell charm to use another model by supplying a custom .ini-file.
   * tissue interfaces to internal air cavities have now their own tissue number (prevents placement of electrodes on these interfaces)
   * Update to numpy 2
   * im- and export of coil positions to ANT visor2 added
