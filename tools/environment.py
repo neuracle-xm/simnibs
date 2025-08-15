@@ -443,7 +443,7 @@ DEPENDENCIES = Dependencies(
     CondaPackage("libwebp"),
     CondaPackage("matplotlib-base"),
     CondaPackage("mesa-libgl-cos6-x86_64", platforms="linux"),
-    CondaPackage("mkl","2024", comparison="eq"),
+    CondaPackage("mkl","2024", comparison="eq", platforms=["linux", "windows"]),
     CondaPackage("mpfr"),
     CondaPackage("nibabel"),
     CondaPackage("numba"),
