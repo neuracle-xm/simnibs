@@ -17,7 +17,7 @@ from simnibs import sim_struct, opt_struct, run_simnibs, localite, brainsight, a
 # Define a TMS simulation with 2 coil positions
 S = sim_struct.SESSION()
 S.subpath = "m2m_ernie"  # m2m-folder of the subject
-S.pathfem = "tms_simu"
+S.pathfem = "tms_simu_forexport"
 
 tmslist = S.add_tmslist()
 tmslist.fnamecoil = os.path.join("legacy_and_other", "Magstim_70mm_Fig8.ccd")  

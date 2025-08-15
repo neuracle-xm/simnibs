@@ -54,6 +54,8 @@ def replace_pyzzer_entry_point_shebang(all_data, new_prefix):
         raise OSError("Could not find begining of shebang line")
     end_pad_shebang = all_data.rfind(b"\n\r\n", begin_pad_shebang)
     if end_pad_shebang < 0:
+        end_pad_shebang = all_data.find(b"\n", begin_pad_shebang)
+    if end_pad_shebang < 0:
         raise OSError("Could not find end of shebang line")
     shebang_line = all_data[begin_pad_shebang:end_pad_shebang]
     # find the interpreter, usually python.exe or pythonw.exe
