@@ -1782,7 +1782,7 @@ class TDCSDistributedOptimize:
         # load image
         if isinstance(self.target_image, str):
             img = nibabel.load(self.target_image)
-            vol = np.array(img.dataobj)
+            vol = np.asarray(img.dataobj)
             affine = img.affine
         else:
             vol, affine = self.target_image
