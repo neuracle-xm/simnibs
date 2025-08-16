@@ -124,6 +124,9 @@ class TestPythonMUMPS:
         np.testing.assert_allclose(x, x_pd, atol=1e-12)
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin", reason="MKL PARDISO not available on MacOS."
+)
 class TestPythonPardiso:
     def test_solve(self):
         A, b, x = create_matrix(1000, 0.99)
