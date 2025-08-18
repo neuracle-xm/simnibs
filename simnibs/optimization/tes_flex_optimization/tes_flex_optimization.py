@@ -1434,99 +1434,93 @@ class TesFlexOptimization:
         
         self._finish_logger()
 
-    
     def add_roi(self, roi=None):
         """
-        Maps optimized electrode positions to the nearest available positions in a
-        co-registered EEG net loaded from a CSV file.
+        Adds an ROI to the current TESoptimize
 
         Parameters
         ----------
-        net_csv_path : str, optional
-            Path to the CSV file containing electrode positions. If None, uses the default
-            EEG cap file from the subject (self._ff_subject.eeg_cap_1010).
+        roi: RegionOfInterest object, optional, default=None
+            ROI structure.
 
         Returns
         -------
-        dict
-            Dictionary containing mapping information including electrode positions,
-            labels, and distances.
+        roi: RegionOfInterestInitializer
+            RegionOfInterestInitializer structure added to TESoptimize
         """
+        if roi is None:
+            roi = RegionOfInterest()
+        self.roi.append(roi)
+        return roi
 
-        if net_csv_path is None:
-            if not hasattr(self._ff_subject, "eeg_cap_1010"):
-                raise ValueError(
-                    "Could not find default EEG cap. Please specify a net_csv_path or ensure subject files are properly initialized."
-                )
-            net_csv_path = self._ff_subject.eeg_cap_1010
-            logger.info(f"Using default EEG cap file: {net_csv_path}")
+    def to_dict(self) -> dict:
+        """ Makes a dictionary storing all settings as key value pairs
 
-        if not os.path.isfile(net_csv_path):
-            raise FileNotFoundError(f"Electrode net file not found: {net_csv_path}")
-
-        logger.info("Loading electrode positions from CSV...")
-        type_, coordinates, _, name, _, _ = read_csv_positions(net_csv_path)
-
-        net_positions = []
-        net_labels = []
-        for t, coord, n in zip(type_, coordinates, name):
-            if t in ["Electrode", "ReferenceElectrode"]:
-                net_positions.append(coord)
-                net_labels.append(n)
-
-        net_positions = np.array(net_positions)
-        logger.info(f"Loaded {len(net_positions)} electrode positions from net")
-
-        logger.info("Extracting optimized electrode positions...")
-        ideal_coords = []
-        electrode_indices = []
-
-        for i_channel_stim in range(len(self.electrode)):
-            for i_array, electrode_array in enumerate(
-                self.electrode[i_channel_stim]._electrode_arrays
-            ):
-                actual_pos = electrode_array.electrodes[0].posmat[:3, 3].copy()
-                ideal_coords.append(actual_pos)
-                electrode_indices.append((i_channel_stim, i_array))
-
-        ideal_coords = np.array(ideal_coords)
-        logger.info(f"Extracted {len(ideal_coords)} optimized electrode positions")
-
-        logger.info("Calculating distances and finding optimal assignment...")
-        distance_matrix = np.array(
-            [[np.linalg.norm(i - j) for j in net_positions] for i in ideal_coords]
-        )
-
-        row_ind, col_ind = linear_sum_assignment(distance_matrix)
-
-        mapping_result = {
-            "optimized_positions": [ideal_coords[i] for i in row_ind],
-            "mapped_positions": [net_positions[j] for j in col_ind],
-            "mapped_labels": [net_labels[j] for j in col_ind],
-            "distances": [distance_matrix[i, j] for i, j in zip(row_ind, col_ind)],
-            "channel_array_indices": [electrode_indices[i] for i in row_ind],
+        Returns
+        --------------------
+        dict
+            Dictionary containing settings as key value pairs
+        """
+        # Generate dict from instance variables (excluding variables starting with _ or __)
+        settings = {
+            key:value for key, value in self.__dict__.items()
+            if not key.startswith('__')
+            and not key.startswith('_')
+            and not callable(value)
+            and not callable(getattr(value, "__get__", None))
+            and value is not None
         }
 
-        total_distance = sum(mapping_result["distances"])
-        avg_distance = total_distance / len(row_ind) if row_ind.size > 0 else 0
+        # Add class name as type (type is protected in python so it cannot be a instance variable)
+        settings['type'] = 'TesFlexOptimization'
 
-        mapping_file = os.path.join(self.output_folder, "electrode_mapping.json")
-        with open(mapping_file, "w") as f:
-            json_data = {
-                "optimized_positions": [
-                    pos.tolist() for pos in mapping_result["optimized_positions"]
-                ],
-                "mapped_positions": [
-                    pos.tolist() for pos in mapping_result["mapped_positions"]
-                ],
-                "mapped_labels": mapping_result["mapped_labels"],
-                "distances": mapping_result["distances"],
-                "channel_array_indices": mapping_result["channel_array_indices"],
-            }
-            json.dump(json_data, f, indent=2)
+        roi_dicts = []
+        for roi_class in self.roi:
+            roi_dicts.append(roi_class.to_dict())
+        settings["roi"] = roi_dicts
 
-        logger.info(f"Mapping data saved to: {mapping_file}")
-        return mapping_result
+        electrode_dicts = []
+        for electrode_class in self.electrode:
+            electrode_dicts.append(electrode_class.to_dict())
+        settings["electrode"] = electrode_dicts
+
+        return settings
+
+    def from_dict(self, settings: dict) -> "TesFlexOptimization":
+        """ Reads parameters from a dict
+
+        Parameters
+        ----------
+        settings: dict
+            Dictionary containing parameter as key value pairs
+        """
+
+        for key, value in self.__dict__.items():
+            if key.startswith('__') or key.startswith('_') or callable(value) or callable(getattr(value, "__get__", None)):
+                continue
+            setattr(self, key, settings.get(key, value))
+
+        self.roi = []
+        if 'roi' in settings:
+            roi_dicts = settings["roi"]
+            if isinstance(roi_dicts, dict):
+                roi_dicts = [roi_dicts]
+            for roi_dict in roi_dicts:
+                self.roi.append(RegionOfInterest(roi_dict))
+
+        self.electrode = []
+        if 'electrode' in settings:
+            electrode_dicts = settings["electrode"]
+            if isinstance(electrode_dicts, dict):
+                electrode_dicts = [electrode_dicts]
+            for elec_dict in electrode_dicts:
+                if elec_dict['type'] == 'ElectrodeArrayPair':
+                    self.electrode.append(ElectrodeArrayPair().from_dict(elec_dict))
+                elif elec_dict['type'] == 'CircularArray':
+                    self.electrode.append(CircularArray().from_dict(elec_dict))
+
+        return self
+   
 
     def goal_fun(self, parameters):
         """
