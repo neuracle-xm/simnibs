@@ -850,14 +850,12 @@ class TestElectrodeMapping:
         """Create a simple TesFlexOptimization setup for testing"""
         output_dir = tmp_path / "test_output"
         output_dir.mkdir(exist_ok=True)
-
         opt = TesFlexOptimization()
         opt.fnamehead = str(tmp_path / "mock_ernie.msh")
         opt.output_folder = str(output_dir)
         opt.subpath = str(tmp_path / "mock_m2m_ernie")
         opt.seed = 42
         opt.goal = "mean"
-
         # Set up electrode array
         electrode = ElectrodeArrayPair()
         electrode.radius = [4]
@@ -865,7 +863,6 @@ class TestElectrodeMapping:
         electrode.current = [0.002, -0.002]
         electrode._prepare()
         opt.electrode = [electrode]
-
         # Set up ROI
         roi = opt.add_roi()
         roi.method = "surface"

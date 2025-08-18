@@ -60,7 +60,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-exclude = ["packing"]
+exclude = ["packing*", "docs*"]
 
 # [tool.setuptools_scm]
 

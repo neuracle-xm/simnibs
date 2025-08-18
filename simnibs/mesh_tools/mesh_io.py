@@ -5742,7 +5742,7 @@ def _find_mesh_version(fn):
     with open(fn, "rb") as f:
         # check 1st line
         first_line = f.readline().decode()
-        if first_line != "$MeshFormat\n":
+        if not first_line.startswith('$MeshFormat'):
             raise IOError(fn, "must start with $MeshFormat")
 
         # parse 2nd line
@@ -5760,7 +5760,7 @@ def _read_msh_2(fn, m, skip_data=False):
     with open(fn, "rb") as f:
         # check 1st line
         first_line = f.readline()
-        if first_line != b"$MeshFormat\n":
+        if not first_line.startswith(b'$MeshFormat'):
             raise IOError(fn, "must start with $MeshFormat")
 
         # parse 2nd line
@@ -5794,12 +5794,12 @@ def _read_msh_2(fn, m, skip_data=False):
             raise IOError("endianness is not 1, is the endian order wrong?")
 
         # read 3rd line
-        if f.readline() != b"$EndMeshFormat\n":
+        if not f.readline().startswith(b'$EndMeshFormat'):
             raise IOError(fn + " expected $EndMeshFormat")
-
-        # read 4th line
-        if f.readline() != b"$Nodes\n":
-            raise IOError(fn + " expected $Nodes")
+        
+        # Skip  everyting until nodes
+        while not f.readline().startswith(b'$Nodes'):
+            continue
 
         # read 5th line with number of nodes
         try:
@@ -5843,13 +5843,12 @@ def _read_msh_2(fn, m, skip_data=False):
             )
         m.nodes.node_coord = node_coord
 
-        if f.readline() != b"$EndNodes\n":
-            raise IOError(
-                fn + " expected $EndNodes after reading " + str(node_nr) + " nodes"
-            )
+        if not f.readline().startswith(b'$EndNodes'):
+            raise IOError(fn + " expected $EndNodes after reading " +
+                          str(node_nr) + " nodes")
 
         # read all elements
-        if f.readline() != b"$Elements\n":
+        if not f.readline().startswith(b'$Elements'):
             raise IOError(fn, "expected line with $Elements")
 
         try:
@@ -6080,13 +6079,9 @@ def _read_msh_2(fn, m, skip_data=False):
                     node_number[ii] = int(line[0])
                     data.value[ii, :] = [float(v) for v in line[1:]]
 
-            if f.readline() != b"$EndNodeData\n":
-                raise IOError(
-                    fn
-                    + " expected $EndNodeData after reading "
-                    + str(nr)
-                    + " lines in $NodeData"
-                )
+            if not f.readline().startswith(b'$EndNodeData'):
+                raise IOError(fn + " expected $EndNodeData after reading " +
+                              str(nr) + " lines in $NodeData")
 
             if np.any(node_number != m.nodes.node_number):
                 raise IOError(
@@ -6122,13 +6117,9 @@ def _read_msh_2(fn, m, skip_data=False):
                     elm_number[ii] = int(line[0])
                     data.value[ii, :] = [float(jj) for jj in line[1:]]
 
-            if f.readline() != b"$EndElementData\n":
-                raise IOError(
-                    fn
-                    + " expected $EndElementData after reading "
-                    + str(nr)
-                    + " lines in $ElementData"
-                )
+            if not f.readline().startswith(b'$EndElementData'):
+                raise IOError(fn + " expected $EndElementData after reading " +
+                              str(nr) + " lines in $ElementData")
 
             if np.any(elm_number != m.elm.elm_number):
                 raise IOError(

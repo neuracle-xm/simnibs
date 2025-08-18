@@ -1100,7 +1100,6 @@ def install(
     # Try importing the jupyter paths, if it fails just skip the fixing
     try:
         from jupyter_core.paths import jupyter_path
-
         _fix_kernel_config(jupyter_path(), install_dir)
     except ImportError:
         print("Jupyter not found. Will skip kernel configuration")

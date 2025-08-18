@@ -123,7 +123,6 @@ class TestPythonMUMPS:
         x_pd = solver.solve(b)
         np.testing.assert_allclose(x, x_pd, atol=1e-12)
 
-
 @pytest.mark.skipif(
     sys.platform == "darwin", reason="MKL PARDISO not available on MacOS."
 )
