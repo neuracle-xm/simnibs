@@ -112,7 +112,7 @@ def build(
 
         # check that simnibs is in the current environment
         res = subprocess.run(
-            f"conda run -n {env_name} list simnibs --json", shell=True, capture_output=True
+            f"conda list -n {env_name} simnibs --json", shell=True, capture_output=True
         )
         assert (
             len(json.loads(res.stdout)) == 1
