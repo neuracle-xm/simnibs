@@ -563,10 +563,13 @@ class Ellipsoid:
         """
         n_points = start.shape[0]
 
-        if sys.platform == 'win32' and n_cpu != 1:
+        if sys.platform == "win32" and n_cpu != 1:
             n_cpu = 1
-            warnings.warn("Restricting geodesic destination calculations on Windows to one CPU core.", RuntimeWarning)
-                    
+            warnings.warn(
+                "Restricting geodesic destination calculations on Windows to one CPU core.",
+                RuntimeWarning,
+            )
+
         if n_cpu is None:
             n_cpu = multiprocessing.cpu_count()
         n_cpu = min(n_cpu, n_points)
@@ -678,7 +681,7 @@ class Ellipsoid:
                         args=np.array([x1[i], y1[i], z1[i]]).astype(np.float64),
                         xtol=1e-9,
                         maxfev=200,
-                    )
+                    ).squeeze()
                     x1[i] = Cx(t, x1[i])
                     y1[i] = Cy(t, y1[i])
                     z1[i] = Cz(t, z1[i])
