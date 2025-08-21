@@ -804,40 +804,66 @@ def make_surface_mesh(vertices, faces, tag: int | None = None):
 
 
 class Msh:
-    """class to handle the meshes.
-    Gathers Nodes, Elements and Data
+    def __init__(
+        self,
+        nodes: Nodes | npt.NDArray | None = None,
+        elements: Elements | dict[str, npt.NDArray] | None = None,
+        fn=None,
+    ):
+        """Class defining a polygon mesh collecting vertices and element
+        (triangles, tetrahedra) and associated data.
 
-    Parameters
-    -------------------------
-    nodes: (optional) simnibs.msh.Nodes
-        Nodes structure
+        Parameters
+        ----------
+        nodes: Nodes | npt.NDArray | None
+            Node coordinates.
 
-    elements: (optional) simnibs.msh.Elements()
-        Elements structure
+        elements: Elements | dict[str, npt.NDArray] | None
+            Element definitions. Can be an instance of Elements, a dict mapping
+            strings to arrays (e.g., dict(triangles=..., tetrahedra=[...])), or
+            None.
 
-    fn: str (optional)
-        Name of ".msh" file to be read.
-        Overides nodes and elements
+        fn: str (optional)
+            Name of ".msh" file to be read.
+            Overides nodes and elements
 
-    Attributes
-    -------------------------
-    nodes: simnibs.msh.Nodes
-        a Nodes field
-    elm: simnibs.msh.Elements
-        A Elements field
-    nodedata: simnibs.msh.NodeData
-        list of NodeData filds
-    elmdata: simnibs.msh.ElementData
-        list of ElementData fields
-    fn: str
-        name of file
-    binary: bool
-        wheather or not the mesh was in binary format
-    """
+        Attributes
+        ----------
+        nodes: simnibs.msh.Nodes
+            a Nodes field
+        elm: simnibs.msh.Elements
+            A Elements field
+        nodedata: simnibs.msh.NodeData
+            list of NodeData filds
+        elmdata: simnibs.msh.ElementData
+            list of ElementData fields
+        fn: str
+            name of file
+        binary: bool
+            wheather or not the mesh was in binary format
+        """
+        match nodes:
+            case None:
+                nodes = Nodes()
+            case Nodes():
+                pass
+            case np.ndarray():
+                nodes = Nodes(nodes)
+            case _:
+                raise ValueError()
+        self.nodes = nodes
 
-    def __init__(self, nodes: Nodes = None, elements: Elements = None, fn=None):
-        self.nodes = Nodes()
-        self.elm = Elements()
+        match elements:
+            case None:
+                elements = Elements()
+            case Elements():
+                pass
+            case dict():
+                elements = Elements(**elements)
+            case _:
+                raise ValueError()
+        self.elm = elements
+
         self.nodedata: list[NodeData] = []
         self.elmdata: list[ElementData] = []
         self.fn = ""  # file name to save msh
