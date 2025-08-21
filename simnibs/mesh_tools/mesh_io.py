@@ -6826,30 +6826,27 @@ def write_geo_triangles(triangles, nodes, fn, values=None, name="", mode="bw"):
         f.write(b"};\n")
 
 
-def read_freesurfer_surface(fn, apply_transform: bool = False):
-    """Function to read FreeSurfer surface files
+def read_freesurfer_surface(fn) -> Msh:
+    """Function to read FreeSurfer surface files. The vertex coordinates will
+    be converted to scanner RAS.
 
     Parameters
-    ------------
+    ----------
     fn: str
-        File name
-    apply_transform : bool, optional
-        Apply transformation from Vertex RAS to Scanner RAS.
-        This is needed when importing surfaces created by Freesurfer to align Freesurfer surfaces with SimNIBS head models, by default False
+        Filename
 
     Returns
-    --------
-    msh: Msh()
-        Mesh structure
+    -------
+    msh: Msh
+        Msh object containing the surface.
 
     """
     surface = cortech.Surface.from_file(fn)
-    if apply_transform:
-        surface.to_scanner_ras()
+    surface.to_scanner_ras()
     return make_surface_mesh(surface.vertices, surface.faces + 1)
 
 
-def write_freesurfer_surface(msh, fn):
+def write_freesurfer_surface(msh: Msh, fn) -> None:
     """Writes a FreeSurfer surface
     Only the surfaces (triangles) are writen to the FreeSurfer surface file
 
@@ -7471,9 +7468,7 @@ def load_fsaverage_template(surface: str, resolution: int = 7) -> dict:
     }
 
 
-def load_freesurfer_surfaces(
-    fs_sub: FreeSurferSubject, surface: str, coord: str = "surface ras"
-) -> dict[str, Msh]:
+def load_freesurfer_surfaces(fs_sub: FreeSurferSubject, surface: str) -> dict[str, Msh]:
     """Load surfaces from a FreeSurfer subject directory.
 
     Parameters
@@ -7492,12 +7487,8 @@ def load_freesurfer_surfaces(
     surfaces : dict
         Dictionary containing the surfaces for left and right hemispheres.
     """
-    assert coord in {"ras", "surface ras"}
-
-    apply_transform = True if coord == "ras" else False
     return {
-        h: read_freesurfer_surface(s, apply_transform)
-        for h, s in fs_sub.get_surfaces(surface).items()
+        h: read_freesurfer_surface(s) for h, s in fs_sub.get_surfaces(surface).items()
     }
 
 

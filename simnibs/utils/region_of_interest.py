@@ -1224,7 +1224,7 @@ def load_surface_from_file(surface_path: str) -> Msh:
             surface = mesh_io.read_gifti_surface(surface_path)
         case _:
             try:
-                surface = mesh_io.read_freesurfer_surface(surface_path, True)
+                surface = mesh_io.read_freesurfer_surface(surface_path)
             except:
                 pass
     if surface is None:
