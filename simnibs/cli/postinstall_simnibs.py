@@ -1023,20 +1023,19 @@ if GUI:
         else:
             raise Exception("uninstall cancelled by user")
 
-
-def _fix_kernel_config(jupyter_core_paths: list[str], install_dir: str) -> None:
-    """This function takes in a list of core jupyter paths,
+def _fix_kernel_config(jupyter_core_paths: list[str], path_to_system_python: str) -> None:
+    """ This function takes in a list of core jupyter paths,
     finds the one that points to the simnibs install locations
     (if it exists) and fixes the python interpreter path in the
     kernel config json.
     """
 
-    simnibs_env_path = list(filter(lambda x: "simnibs_env" in x, jupyter_core_paths))
+    simnibs_env_path = list(filter(lambda x: 'simnibs_env' in x, jupyter_core_paths))
     # If the path doesn't exist just stop
     if not simnibs_env_path:
         return
 
-    config_json = Path(simnibs_env_path[0]) / "kernels" / "python3" / "kernel.json"
+    config_json = Path(simnibs_env_path[0]) / 'kernels' / 'python3' / 'kernel.json'
 
     # Double-check that this thing exists
     if config_json.exists():
@@ -1045,14 +1044,13 @@ def _fix_kernel_config(jupyter_core_paths: list[str], install_dir: str) -> None:
 
         # This is the field we need to set correctly
         # It's basically just missing the install_dir
-        config["argv"][0] = os.path.join(install_dir, config["argv"][0])
+        config['argv'][0] = path_to_system_python
         # and set an informative name
-        config["display_name"] = "SimNIBS python"
+        config['display_name'] = "SimNIBS python"
 
         # Dump it back
-        with open(config_json, "w") as f:
+        with open(config_json, 'w') as f:
             json.dump(config, f)
-
 
 def install(
     install_dir,
@@ -1100,7 +1098,7 @@ def install(
     # Try importing the jupyter paths, if it fails just skip the fixing
     try:
         from jupyter_core.paths import jupyter_path
-        _fix_kernel_config(jupyter_path(), install_dir)
+        _fix_kernel_config(jupyter_path(), sys.executable)
     except ImportError:
         print("Jupyter not found. Will skip kernel configuration")
 
