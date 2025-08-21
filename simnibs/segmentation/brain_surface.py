@@ -109,13 +109,16 @@ def spherical_registration_cat(
         representation is then upsampled to the original resolution.
 
     """
+    # Binaries
     cat_surf2sphere = file_finder.path2bin("CAT_Surf2Sphere")
     cat_warpsurf = file_finder.path2bin("CAT_WarpSurf")
 
+    # Surfaces
     white = m2m.get_surface(hemi, "white")
     sphere = m2m.surfaces["sphere"][hemi]
     sphere_reg = m2m.surfaces["sphere.reg"][hemi]
 
+    # Templates
     fsavg_dir = file_finder.templates.freesurfer_templates
     fsavg_white = os.path.join(fsavg_dir, f"{hemi}.white.gii")
     fsavg_sphere = os.path.join(fsavg_dir, f"{hemi}.sphere.gii")
@@ -148,13 +151,10 @@ def spherical_registration_cat(
             s = cortech.Surface.from_file(sphere)
             v = topo.subdivide_vertices(torch.tensor(s.vertices).T).T.numpy()
             f = topo.subdivide_faces().numpy()
-            m = mesh_io.make_surface_mesh(v, f + 1)
-            mesh_io.write_gifti_surface(m, str(sphere))
-            # s = Surface(v, s.faces)
-            # s.save(sphere)
+            mesh_io.write_gifti_surface(cortech.Surface(v, f), sphere)
     finally:
-        # clean up
         if surf2sphere_subsampling:
+            # clean up
             sph_map_white.unlink()
 
     # Register to fsaverage ({hemi}.sphere.reg)

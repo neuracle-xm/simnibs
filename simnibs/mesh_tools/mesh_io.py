@@ -318,9 +318,9 @@ class Elements:
         elements
             Indices or mask of elements.
         """
-        assert not (
-            return_element_numbers and return_indices
-        ), "Can only return *either* element numbers (one-based) *or* indices (zero-based)"
+        assert not (return_element_numbers and return_indices), (
+            "Can only return *either* element numbers (one-based) *or* indices (zero-based)"
+        )
         m = np.isin(self.tag1, tags, invert=invert)
         if return_element_numbers:
             m = self.elm_number[m]
@@ -367,9 +367,9 @@ class Elements:
         tetrahedra
             Indices or mask of tetrahedra elements.
         """
-        assert not (
-            return_element_numbers and return_indices
-        ), "Can only return *either* element numbers (one-based) *or* indices (zero-based)"
+        assert not (return_element_numbers and return_indices), (
+            "Can only return *either* element numbers (one-based) *or* indices (zero-based)"
+        )
         m = self.elm_type == getattr(ElementTypes, element_type)
         m = m & self.get_tags(tags, invert=invert_tags) if tags is not None else m
         if return_element_numbers:
@@ -768,7 +768,7 @@ class Elements:
         else:
             if n_tag != n_add:
                 raise ValueError(
-                    "Number of tags show be the same as" " the number of triangles"
+                    "Number of tags show be the same as the number of triangles"
                 )
             tag = np.reshape(tag, n_add)
             tag = tag.astype(int)
@@ -3020,8 +3020,7 @@ class Msh:
         if isinstance(field, NodeData):
             if field.nr != self.nodes.nr:
                 raise ValueError(
-                    "Number of data points in the field "
-                    "and of mesh nodes do not match"
+                    "Number of data points in the field and of mesh nodes do not match"
                 )
             field.field_name = field_name
             field.mesh = self
@@ -3032,8 +3031,7 @@ class Msh:
         else:
             if self.nodes.nr != field.shape[0]:
                 raise ValueError(
-                    "Number of data points in the field "
-                    "and of mesh nodes do not match"
+                    "Number of data points in the field and of mesh nodes do not match"
                 )
 
             nd = NodeData(field, field_name, self)
@@ -3808,7 +3806,7 @@ class Data(object):
 
         if self.nr_comp > self.nr:
             warnings.warn(
-                "Second axis larger than the first " "Field is probably transposed"
+                "Second axis larger than the first Field is probably transposed"
             )
 
     @property
@@ -4358,7 +4356,7 @@ class Data(object):
     def _test_msh(self):
         if self.mesh is None:
             raise ValueError(
-                "Cannot evaluate function if .mesh property is not " "assigned"
+                "Cannot evaluate function if .mesh property is not assigned"
             )
 
     def write_hdf5(self, hdf5_fn, path="./"):
@@ -5767,7 +5765,7 @@ def _find_mesh_version(fn):
     with open(fn, "rb") as f:
         # check 1st line
         first_line = f.readline().decode()
-        if not first_line.startswith('$MeshFormat'):
+        if not first_line.startswith("$MeshFormat"):
             raise IOError(fn, "must start with $MeshFormat")
 
         # parse 2nd line
@@ -5785,7 +5783,7 @@ def _read_msh_2(fn, m, skip_data=False):
     with open(fn, "rb") as f:
         # check 1st line
         first_line = f.readline()
-        if not first_line.startswith(b'$MeshFormat'):
+        if not first_line.startswith(b"$MeshFormat"):
             raise IOError(fn, "must start with $MeshFormat")
 
         # parse 2nd line
@@ -5819,11 +5817,11 @@ def _read_msh_2(fn, m, skip_data=False):
             raise IOError("endianness is not 1, is the endian order wrong?")
 
         # read 3rd line
-        if not f.readline().startswith(b'$EndMeshFormat'):
+        if not f.readline().startswith(b"$EndMeshFormat"):
             raise IOError(fn + " expected $EndMeshFormat")
-        
+
         # Skip  everyting until nodes
-        while not f.readline().startswith(b'$Nodes'):
+        while not f.readline().startswith(b"$Nodes"):
             continue
 
         # read 5th line with number of nodes
@@ -5864,16 +5862,17 @@ def _read_msh_2(fn, m, skip_data=False):
 
         if not np.all(node_number == np.arange(1, node_nr + 1)):
             warnings.warn(
-                "Mesh file with discontinuos nodes, things can fail" " unexpectedly"
+                "Mesh file with discontinuos nodes, things can fail unexpectedly"
             )
         m.nodes.node_coord = node_coord
 
-        if not f.readline().startswith(b'$EndNodes'):
-            raise IOError(fn + " expected $EndNodes after reading " +
-                          str(node_nr) + " nodes")
+        if not f.readline().startswith(b"$EndNodes"):
+            raise IOError(
+                fn + " expected $EndNodes after reading " + str(node_nr) + " nodes"
+            )
 
         # read all elements
-        if not f.readline().startswith(b'$Elements'):
+        if not f.readline().startswith(b"$Elements"):
             raise IOError(fn, "expected line with $Elements")
 
         try:
@@ -5976,7 +5975,7 @@ def _read_msh_2(fn, m, skip_data=False):
                     read[current_element : current_element + nr] = 1
                 else:
                     warnings.warn(
-                        "element of type {0} " "cannot be read, ignoring it".format(
+                        "element of type {0} cannot be read, ignoring it".format(
                             elm_type
                         )
                     )
@@ -6027,7 +6026,7 @@ def _read_msh_2(fn, m, skip_data=False):
                 else:
                     read[ii] = 0
                     warnings.warn(
-                        "element of type {0} " "cannot be read, ignoring it".format(
+                        "element of type {0} cannot be read, ignoring it".format(
                             line[1]
                         )
                     )
@@ -6063,15 +6062,15 @@ def _read_msh_2(fn, m, skip_data=False):
                 return "EOF", "", 0, 0
             # string tags
             number_of_string_tags = int(f.readline().decode("ascii"))
-            assert (
-                number_of_string_tags == 1
-            ), "Invalid Mesh File: invalid number of string tags"
+            assert number_of_string_tags == 1, (
+                "Invalid Mesh File: invalid number of string tags"
+            )
             name = f.readline().decode("ascii").strip().strip('"')
             # real tags
             number_of_real_tags = int(f.readline().decode("ascii"))
-            assert (
-                number_of_real_tags == 1
-            ), "Invalid Mesh File: invalid number of real tags"
+            assert number_of_real_tags == 1, (
+                "Invalid Mesh File: invalid number of real tags"
+            )
             f.readline()
             # integer tags
             number_of_integer_tags = int(
@@ -6104,9 +6103,13 @@ def _read_msh_2(fn, m, skip_data=False):
                     node_number[ii] = int(line[0])
                     data.value[ii, :] = [float(v) for v in line[1:]]
 
-            if not f.readline().startswith(b'$EndNodeData'):
-                raise IOError(fn + " expected $EndNodeData after reading " +
-                              str(nr) + " lines in $NodeData")
+            if not f.readline().startswith(b"$EndNodeData"):
+                raise IOError(
+                    fn
+                    + " expected $EndNodeData after reading "
+                    + str(nr)
+                    + " lines in $NodeData"
+                )
 
             if np.any(node_number != m.nodes.node_number):
                 raise IOError(
@@ -6142,9 +6145,13 @@ def _read_msh_2(fn, m, skip_data=False):
                     elm_number[ii] = int(line[0])
                     data.value[ii, :] = [float(jj) for jj in line[1:]]
 
-            if not f.readline().startswith(b'$EndElementData'):
-                raise IOError(fn + " expected $EndElementData after reading " +
-                              str(nr) + " lines in $ElementData")
+            if not f.readline().startswith(b"$EndElementData"):
+                raise IOError(
+                    fn
+                    + " expected $EndElementData after reading "
+                    + str(nr)
+                    + " lines in $ElementData"
+                )
 
             if np.any(elm_number != m.elm.elm_number):
                 raise IOError(
@@ -6919,8 +6926,8 @@ def write_gifti_surface(
     match surface:
         case Msh():
             surface = surface.crop_mesh(elm_type=ElementTypes.TRIANGLE)
-            vertices = surface.nodes[:]
-            faces = surface.elm[:, :3] - 1
+            vertices = surface.nodes.node_coord
+            faces = surface.elm.node_number_list[:, :3] - 1
             surface = cortech.Surface(vertices, faces, "scanner", geometry=geometry)
         case cortech.Surface():
             pass
