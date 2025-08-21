@@ -200,21 +200,6 @@ class TestDrawElectrodes:
             (np.abs(points[~inside, 0]) > 5) + (np.abs(points[~inside, 1]) > 5)
         )
 
-    def test_calc_gamma(self):
-        # test regular tetrahedra with correct node ordering
-        th = np.array(
-            [[[0.0, 0.0, 0.0], [0.0, 1.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]]
-        )
-        a = electrode_placement._calc_gamma(th)
-        assert np.allclose(a, 1.0, rtol=1e-3)
-
-        # test inversion (negative volume)
-        th_inverted = np.array(
-            [[[0.0, 0.0, 0.0], [0.0, 1.0, 1.0], [1.0, 1.0, 0.0], [1.0, 0.0, 1.0]]]
-        )
-        a = electrode_placement._calc_gamma(th_inverted)
-        assert np.allclose(a, 100.0)
-
     def test_point_line_distance(self):
         np.random.seed(0)
         line = np.array([[3.0, 3.0], [-3.0, -3.0]])
@@ -378,7 +363,6 @@ class TestDrawElectrodes:
                 el_layer,
                 loop_count,
             )
-
         # Test if node gets moved to new_position. If not, the max_gamma value should be close to 7.0
         if np.allclose(new_points[to_be_moved][:2], new_position, 1e-2):
             assert True
@@ -407,12 +391,12 @@ class TestDrawElectrodes:
                 el_layer,
                 loop_count,
             )
-        assert ~np.allclose(
+        assert not np.allclose(
             new_points[to_be_moved][:2], new_position, 1e-2
         ), "Node reached position right next to other node, which should result in a too bad tetrahedron."
         assert (
             6.5 <= max_gamma <= 7.0
-        ), "Tehtrahedron does not have expected gamma value close to allowed maximum"
+        ), "Tetrahedron does not have expected gamma value close to allowed maximum"
 
         # Try to move node outside of roi -> should fail
         new_position = [5.0, 0.0]

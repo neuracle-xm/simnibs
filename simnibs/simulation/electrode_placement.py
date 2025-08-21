@@ -27,7 +27,7 @@ import numpy as np
 import scipy.spatial
 
 from simnibs.utils.mesh_element_properties import ElementTags
-from simnibs.mesh_tools.mesh_io import _hash_rows
+from simnibs.mesh_tools import mesh_io
 
 
 def _remove_unconnected_triangles(mesh, roi_triangles, center, roi_nodes, triangles):
@@ -319,7 +319,7 @@ def _edge_list(triangles):
     method in mesh_io"""
     edges = triangles[:, [[0, 1], [0, 2], [1, 2]]]
     edges = edges.reshape(-1, 2)
-    hash_array = _hash_rows(edges)
+    hash_array = mesh_io._hash_rows(edges)
     unique, idx, inv, count = np.unique(
         hash_array, return_index=True, return_inverse=True, return_counts=True
     )
@@ -485,13 +485,15 @@ def _move_point(
     edge_list=None,
     kdtree=None,
 ):
-    """
-    Moves one point to new old_position on the line of the electrode. The gamma metric [source] is calculated for all adjacent tetrahedra,
-    including the electrode tetrahedra built on the scalp. If the gamma metric becomes less than the minimal value,
-    the movement of the current node is rejected.
+    """Moves one point to new old_position on the line of the electrode. The
+    gamma metric [source] is calculated for all adjacent tetrahedra, including
+    the electrode tetrahedra built on the scalp. If the gamma metric becomes
+    less than the minimal value, the movement of the current node is rejected.
 
-    The triangle roi (tr roi) and tetrahedra roi (th roi) are indexes differently. The node to_be_moved in the tr roi
-    is mapped to the original mesh indices and then to the th roi to determine the teterahedra that need to be checked for quality.
+    The triangle roi (tr roi) and tetrahedra roi (th roi) are indexes
+    differently. The node to_be_moved in the tr roi is mapped to the original
+    mesh indices and then to the th roi to determine the teterahedra that need
+    to be checked for quality.
 
     new_position:
         position in electrode plane, where node should be moved
@@ -516,7 +518,8 @@ def _move_point(
     holes:
         description of holes, needed to built electrode tetrahedra
     el_layer: float
-        thickness of first electrode layer calculated by average edge length of triangles in roi
+        thickness of first electrode layer calculated by average edge length of
+        triangles in roi
 
     """
     # Certify that the new_position is inside the patch = adj_tr_nodes
@@ -539,25 +542,25 @@ def _move_point(
     # The triangle node is indexed in the tr roi. To extract all adjacent tetrahedra,
     # the original index of to_be_moved is extracted from roi_tr_nodes[to_be_moved].
     th_with_node = np.any(roi_th_nodes[tetrahedra] == roi_tr_nodes[to_be_moved], axis=1)
-    adj_th_nodes = roi_th_nodes[tetrahedra[th_with_node]]
     roi_adj_th_nodes = tetrahedra[th_with_node]
-    adj_th_node_coords = th_nodes[roi_adj_th_nodes]
 
-    # which node in which tetrahedron is moved
-    th_moved, node_moved = np.where(adj_th_nodes == roi_tr_nodes[to_be_moved])
+    to_be_moved_in_tetra = np.where(roi_th_nodes == roi_tr_nodes[to_be_moved])[0]
 
-    moved_tr_nodes = np.copy(tr_nodes)
-    moved_th_nodes = adj_th_node_coords.copy()
+    moved_tr_nodes = tr_nodes.copy()
+    moved_tetra = mesh_io.Msh(th_nodes.copy(), dict(tetrahedra=roi_adj_th_nodes + 1))
 
     gamma_threshold = 7.0
     for t in np.linspace(loop_count / 6, 0, num=10):
         moved_tr_nodes[to_be_moved, :2] = old_position[:2] + t * d
+
         # node movement in tetrahedra is done in original 3D space to assess th quality ->
         # apply inverse affine on node movement to map to original space
-        moved_th_nodes[th_moved, node_moved] = _apply_affine(
+        new_point = _apply_affine(
             inv_affine, (old_position + np.append(t * d, 0)).reshape(-1, 3)
         )
-        # build electrode tetrahedra according to current movement
+        moved_tetra.nodes.node_coord[to_be_moved_in_tetra] = new_point
+
+        # build electrode mesh according to current movement
         el_nodes, el_tetrahedra_, _, corresponding, _, _, _ = _build_electrode(
             poly,
             el_layer,
@@ -568,20 +571,26 @@ def _move_point(
         )
         el_nodes[:, 2] += tr_nodes[:, 2][corresponding]
         el_nodes = _apply_affine(inv_affine, el_nodes)
-        el_nodes = el_nodes[el_tetrahedra_]
-        # reorder elec th nodes, so volume is positive
-        MM = el_nodes[:, 1:] - el_nodes[:, 0, None]
-        vol = np.linalg.det(MM) / 6.0
-        neg_vol = np.signbit(vol)
-        if np.any(neg_vol):
-            tmp = el_nodes[neg_vol, 1]
-            el_nodes[neg_vol, 1] = el_nodes[neg_vol, 0]
-            el_nodes[neg_vol, 0] = tmp
-            del tmp
+        mesh_elec = mesh_io.Msh(el_nodes, dict(tetrahedra=el_tetrahedra_ + 1))
+        # reorder elec nodes so volume is positive
+        vol = mesh_elec.elements_volumes_and_areas(return_signed_volume=True).value
+        if (neg_vol := np.signbit(vol)).any():
+            (
+                mesh_elec.elm.node_number_list[neg_vol, 0],
+                mesh_elec.elm.node_number_list[neg_vol, 1],
+            ) = (
+                mesh_elec.elm.node_number_list[neg_vol, 1],
+                mesh_elec.elm.node_number_list[neg_vol, 0],
+            )
 
-        max_gamma = np.max(_calc_gamma(np.vstack((moved_th_nodes, el_nodes))))
+        # Check quality of tetrahedra
+        g_moved = moved_tetra.compute_normalized_gamma()
+        g_moved[np.isnan(g_moved)] = 100.0
 
-        if max_gamma <= gamma_threshold:
+        g_elec = mesh_elec.compute_normalized_gamma()
+        g_elec[np.isnan(g_elec)] = 100.0
+
+        if (max_gamma := np.maximum(g_moved.max(), g_elec.max())) <= gamma_threshold:
             break
 
     return moved_tr_nodes, max_gamma

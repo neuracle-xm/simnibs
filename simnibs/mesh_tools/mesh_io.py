@@ -19,20 +19,22 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import tempfile
-import os
-import struct
 import copy
-import warnings
+from functools import partial
 import gc
 import hashlib
+import itertools
+import os
+from pathlib import Path
+import struct
 import subprocess
+import tempfile
 import threading
-from itertools import combinations
-from functools import partial
+import warnings
 
 import numpy as np
 from numpy.lib import recfunctions
+import numpy.typing as npt
 import scipy.spatial
 import scipy.ndimage
 import scipy.sparse
@@ -324,6 +326,8 @@ class Elements:
             m = self.elm_number[m]
         elif return_indices:
             m = np.where(m)[0]  # could be elm_number - 1 ?
+        # else:
+        #     pass # return a mask
         return m
 
     def get_type(
@@ -868,11 +872,6 @@ class Msh:
         self.elmdata: list[ElementData] = []
         self.fn = ""  # file name to save msh
 
-        if nodes is not None:
-            self.nodes = nodes
-        if elements is not None:
-            self.elm = elements
-
         if fn is not None:
             self = read_msh(fn, m=self)
 
@@ -880,16 +879,6 @@ class Msh:
     def field(self):
         """Dictionary of fields indexed by their name"""
         return dict([(data.field_name, data) for data in self.nodedata + self.elmdata])
-
-    def write(self, out_fn):
-        """Writes out the mesh as a ".msh" file
-
-        Parameters
-        ---------------
-        out_fn: str
-            Name of output file
-        """
-        write_msh(self, out_fn)
 
     def crop_mesh(self, tags=None, elm_type=None, nodes=None, elements=None):
         """Crops the specified tags from the mesh
@@ -1162,13 +1151,15 @@ class Msh:
 
         return bar
 
-    def elements_volumes_and_areas(self):
+    def elements_volumes_and_areas(self, return_signed_volume: bool = False):
         """Calculates the volumes of tetrahedra and areas of triangles
 
         Returns
         ----------
         v: simnibs.Msh.ElementData
             Volume/areas of tetrahedra/triangles
+        signed_volume
+            If true, return the signed volume of tetrahedra.
 
         Note
         ------
@@ -1185,8 +1176,8 @@ class Msh:
 
         th_indexes = self.elm.tetrahedra
         node_th = self.nodes[self.elm[th_indexes]]
-        M = node_th[:, 1:] - node_th[:, 0, None]
-        vol[th_indexes] = np.abs(np.linalg.det(M)) / 6.0
+        signed_vol = _compute_signed_tetrahedra_volume(node_th)
+        vol[th_indexes] = signed_vol if return_signed_volume else np.abs(signed_vol)
 
         return vol
 
@@ -3411,6 +3402,48 @@ class Msh:
         )
         self.fix_tr_node_ordering()
 
+    def compute_normalized_gamma(
+        self,
+        tags: int | list[int] | tuple | np.ndarray | None = None,
+    ) -> npt.NDArray:
+        """Calculate the (normalized) gamma quality metric of tetrahedra. The
+        equilateral tetrahedron has a value of 1. Other tetrahedra are >1.
+
+        Parameters
+        ----------
+        tetrahedra : npt.NDArray
+            Array of size (N, 4, 3) definint N tetrahedra.
+
+        Returns
+        -------
+        gamma : npt.NDArray
+            Array of size (N,) containing the gamma metric. (Where the volume
+            of tetrahedra is negative, this value is nan.)
+
+        References
+        ----------
+        Parthasarathy, V. N., C. M. Graichen, and A. F. Hathaway. "A comparison of
+            tetrahedron quality measures" Finite Elements in Analysis and Design
+            15.3 (1994): 255-261.
+        """
+        equilateral_tetrahedron_value = 8.479670
+
+        mask = self.elm.get_tetrahedra(tags)
+        t_mesh = self.nodes.node_coord[self.elm.node_number_list[mask] - 1]
+        n = t_mesh.shape[0]
+        m = 4  # vertices per element == tetrahedra.shape[1]
+        volume = _compute_signed_tetrahedra_volume(t_mesh)
+
+        E_index = itertools.combinations(range(m), 2)
+        E_rms = np.zeros(n)
+        for i, j in E_index:
+            E_rms += np.sum((t_mesh[:, j] - t_mesh[:, i]) ** 2, axis=1)
+        E_rms = np.sqrt(E_rms / 6.0)
+
+        gamma = E_rms**3 / volume / equilateral_tetrahedron_value
+        gamma[volume < 0] = np.nan
+        return gamma
+
     def smooth_surfaces(self, n_steps, step_size=0.3, tags=None, max_gamma=5):
         """In-place smoothing of the mesh surfaces using Taubin smoothing,
             ensures that the tetrahedra quality does not fall below
@@ -3469,29 +3502,13 @@ class Msh:
         adj_th = adj_th[:, idx]
         adj_th = adj_th.tocsc()
 
-        def calc_gamma(nodes_coords, th):
-            """gamma of tetrahedra"""
-            node_th = nodes_coords[th]
-            # tet volumes
-            M = node_th[:, 1:] - node_th[:, 0, None]
-            vol = np.linalg.det(M) / 6.0
-            # edge lengths
-            edge_rms = np.zeros(len(th))
-            for i in range(4):
-                for j in range(i + 1, 4):
-                    edge_rms += np.sum(
-                        (node_th[:, i, :] - node_th[:, j, :]) ** 2, axis=1
-                    )
-            edge_rms = edge_rms / 6.0
-            # gamma
-            gamma = edge_rms**1.5 / vol
-            gamma /= 8.479670
-            gamma[vol < 0] = -1
-            return gamma
+        def _get_bad_gamma(gamma, max_gamma):
+            return np.isnan(gamma) + (gamma > max_gamma)
 
         nodes_coords = np.ascontiguousarray(self.nodes.node_coord, float)
-        gamma = calc_gamma(nodes_coords, th)
-        n_badgamma = np.sum((gamma < 0) + (gamma > max_gamma))
+        smooth_mesh = Msh(nodes_coords, dict(tetrahedra=th + 1))
+        gamma = smooth_mesh.compute_normalized_gamma()
+        n_badgamma = _get_bad_gamma(gamma, max_gamma).sum()
         for i in range(n_steps):
             nc_before = nodes_coords.copy()
             cython_msh.gauss_smooth_simple(
@@ -3510,11 +3527,13 @@ class Msh:
                 -1.05 * float(step_size),
             )
             # revert where gamma exceeded max_gamma
-            gamma = calc_gamma(nodes_coords, th)
-            idx_badtet = (gamma < 0) + (gamma > max_gamma)
-            for k in range(
-                4
-            ):  # mostly < 4 iterations required, limit to ensure stability
+
+            smooth_mesh.nodes.node_coord = nodes_coords
+            gamma = smooth_mesh.compute_normalized_gamma()
+
+            # at most 4 iterations required, limit to ensure stability
+            idx_badtet = _get_bad_gamma(gamma, max_gamma)
+            for _ in range(4):
                 if np.sum(idx_badtet) <= n_badgamma:
                     break
 
@@ -3522,12 +3541,15 @@ class Msh:
                 idx_badnodes = np.asarray(idx_badnodes).reshape(-1)
                 nodes_coords[idx_badnodes] = nc_before[idx_badnodes]
 
-                gamma = calc_gamma(nodes_coords, th)
-                idx_badtet = (gamma < 0) + (gamma > max_gamma)
+                smooth_mesh.nodes.node_coord = nodes_coords
+                gamma = smooth_mesh.compute_normalized_gamma()
 
-            n_badgamma = np.sum(idx_badtet)
+                idx_badtet = _get_bad_gamma(gamma, max_gamma)
 
-        self.nodes.node_coord = nodes_coords
+            n_badgamma = idx_badtet.sum()
+
+        # Finally, update self
+        self.nodes.node_coord = smooth_mesh.nodes.node_coord
 
     def smooth_surfaces_simple(
         self, n_steps, step_size=0.3, tags=None, nodes_mask=None
@@ -3592,29 +3614,6 @@ class Msh:
             )
 
         self.nodes.node_coord = nodes_coords
-
-    def gamma_metric(self):
-        """calculates the (normalized) Gamma quality metric for tetrahedra
-
-        Returns
-        ----------
-        gamma: ElementData
-            Gamma metric from Parthasarathy et al., 1994
-        """
-        vol = self.elements_volumes_and_areas()
-        th = self.elm.get_tetrahedra()
-        edge_rms = np.zeros(self.elm.nr)
-        for i in range(4):
-            for j in range(i + 1, 4):
-                edge_rms[th] += np.sum(
-                    (self.nodes[self.elm[th, i]] - self.nodes[self.elm[th, j]]) ** 2,
-                    axis=1,
-                )
-        edge_rms = np.sqrt(edge_rms / 6.0)
-        gamma = np.zeros(self.elm.nr)
-        gamma[th] = edge_rms[th] ** 3 / vol[th]
-        gamma /= 8.479670  # dividing by value for equilateral tetrahedra -> normalized value as metric
-        return ElementData(gamma, "gamma", self)
 
     def surface_EC(self):
         """return euler characteristic of surfaces"""
@@ -7545,7 +7544,7 @@ def split(
             node_indxs = m.elm.node_number_list[tetra_indx] - 1
             tetra_tags.extend([m.elm.tag1[tetra_indx]] * 8)
 
-            for edge in combinations(node_indxs, 2):
+            for edge in itertools.combinations(node_indxs, 2):
                 if edge in edge_to_new_node_idx:
                     continue
 
@@ -7658,3 +7657,19 @@ def _format_table(table):
         if i == 0:
             t += "|" + "|".join((cs + 1) * "-" for cs in col_sizes) + "|\n"
     return t
+
+
+def _compute_signed_tetrahedra_volume(mesh: npt.NDArray):
+    """Compute the signed volume of an array of tetrahedra
+
+    Parameters
+    ----------
+    mesh : npt.NDArray
+        Mesh of size (N, 4, 3) where N is the number of tetrahedra.
+
+    Returns
+    -------
+    _type_
+        Signed volume of each tetrahedron.
+    """
+    return np.linalg.det(mesh[:, 1:] - mesh[:, [0]]) / 6.0

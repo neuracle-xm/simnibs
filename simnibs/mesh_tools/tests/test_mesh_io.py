@@ -1278,42 +1278,15 @@ class TestMsh:
         assert np.all(m2_tags == m_tags)
         assert np.all(m2_cts == m_cts)
 
-    def test_smooth_calc_gamma(self):
-        tetrahedra = np.array([0, 1, 2, 3], dtype=np.uint)
-        nodes = np.array(
-            [
-                [1.0 / 3.0 * np.sqrt(3), 0, 0],
-                [-1.0 / 6.0 * np.sqrt(3), 1.0 / 2.0, 0],
-                [-1.0 / 6.0 * np.sqrt(3), -1.0 / 2.0, 0],
-                [0, 0, 1.0 / 3.0 * np.sqrt(6)],
-                [0, 0, 1.0 / 3.0 * np.sqrt(6)],
-            ],
-            dtype=float,
+    def test_compute_normalized_gamma(self):
+        # test two regular tetrahedra with correct and incorrect node ordering
+        v = np.array(
+            [[0.0, 0.0, 0.0], [0.0, 1.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]
         )
-        gamma = mesh_io.cython_msh.calc_gamma(nodes, tetrahedra)
-        assert np.isclose(gamma, 1.0, rtol=1e-3)
-
-    def test_gamma_metric(self):
-        msh = mesh_io.Msh()
-        # 2 regular tetrahedron of edge size 1
-        msh.elm = mesh_io.Elements(
-            tetrahedra=np.array([[1, 2, 3, 4], [1, 2, 5, 4]], dtype=int)
+        m = mesh_io.Msh(v, dict(tetrahedra=np.array([[1, 2, 3, 4], [1, 2, 4, 3]])))
+        assert np.allclose(
+            m.compute_normalized_gamma(), [1.0, np.nan], rtol=1e-3, equal_nan=True
         )
-        msh.elm.elm_type = np.array([4, 4])
-        msh.nodes = mesh_io.Nodes(
-            np.array(
-                [
-                    [1.0 / 3.0 * np.sqrt(3), 0, 0],
-                    [-1.0 / 6.0 * np.sqrt(3), 1.0 / 2.0, 0],
-                    [0, 0, 1.0 / 3.0 * np.sqrt(6)],
-                    [-1.0 / 6.0 * np.sqrt(3), -1.0 / 2.0, 0],
-                    [0, 0, 1.0 / 3.0 * np.sqrt(6)],
-                ],
-                dtype=float,
-            )
-        )
-        gamma = msh.gamma_metric()
-        assert np.allclose(gamma[:], 1, rtol=1e-3)
 
     def test_smooth_without_th(self, sphere3_msh):
         mesh = sphere3_msh.crop_mesh(elm_type=2)
@@ -1361,9 +1334,8 @@ class TestMsh:
         )
         mesh_before = copy.deepcopy(mesh)
         mesh.smooth_surfaces(10, max_gamma=3)
-        curvature_after = mesh.gaussian_curvature()
-        low_q = mesh_before.gamma_metric()[:] >= 3
-        assert np.all(mesh_before.gamma_metric()[~low_q] < 3)
+        high_q = mesh_before.compute_normalized_gamma() <= 3
+        assert np.all(mesh.compute_normalized_gamma()[high_q] <= 3)
 
     def test_split_tets_along_line(self, sphere3_msh):
         m = sphere3_msh.crop_mesh(elm_type=4)
