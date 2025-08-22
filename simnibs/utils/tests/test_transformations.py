@@ -834,3 +834,44 @@ def test_fix_boundary_zeros():
     assert np.nanmin(df_data[:, :, :, 1]) == -200.0
     assert np.nanmax(df_data[:, :, :, 2]) == 45.0
     assert np.nanmin(df_data[:, :, :, 2]) == -25.0
+
+
+class TestMiddleGMInterpolation:
+    def test_middle_gm_interpolation(self, example_dataset, tmp_path):
+        """
+        tests that the central surface created with middle_gm_interpolation is tagged with LH_CENTRAL_SURFACE or RH_CENTRAL_SURFACE.
+
+        checks that all tags in the central.msh are tagged with either LH or RH_CENTRAL_SURFACE.
+        checks that the number of elements for each hemisphere is approximately half the total number of elements.
+        """
+        from simnibs.utils.mesh_element_properties import ElementTags
+        import glob
+
+        m2m_path = os.path.join(example_dataset, "m2m_ernie")
+        output_path = os.path.join(tmp_path, "output")
+        ernie_with_field_path = os.path.join(tmp_path, "ernie_with_field.msh")
+
+        ernie_msh = mesh_io.read(os.path.join(m2m_path, "ernie.msh"))
+        field = np.ones([ernie_msh.elm.nr, 3])
+        ernie_msh.add_element_field(field, "test")
+        mesh_io.write_msh(ernie_msh, ernie_with_field_path)
+
+        transformations.middle_gm_interpolation(
+            mesh_fn=ernie_with_field_path,
+            m2m_folder=m2m_path,
+            out_folder=output_path
+        )
+        central_msh_path = glob.glob(os.path.join(output_path, "ernie_*_central.msh"))[0]
+        central_msh = mesh_io.read(central_msh_path)
+
+        tags = [ElementTags.LH_CENTRAL_SURFACE, ElementTags.RH_CENTRAL_SURFACE]
+        approx_nr_of_elm_on_each_hemisphere_in_ernie_central_surface = len(central_msh.elm.elm_number) * 0.45 # 0.45 to account for asymmetrical brain
+
+        assert all(t in tags for t in central_msh.elm.tag1)
+        assert all(t in tags for t in central_msh.elm.tag2)
+        assert sum(t == ElementTags.LH_CENTRAL_SURFACE for t in central_msh.elm.tag1) > approx_nr_of_elm_on_each_hemisphere_in_ernie_central_surface
+        assert sum(t == ElementTags.RH_CENTRAL_SURFACE for t in central_msh.elm.tag1) > approx_nr_of_elm_on_each_hemisphere_in_ernie_central_surface
+        assert sum(t == ElementTags.LH_CENTRAL_SURFACE for t in central_msh.elm.tag2) > approx_nr_of_elm_on_each_hemisphere_in_ernie_central_surface
+        assert sum(t == ElementTags.RH_CENTRAL_SURFACE for t in central_msh.elm.tag2) > approx_nr_of_elm_on_each_hemisphere_in_ernie_central_surface
+        
+        

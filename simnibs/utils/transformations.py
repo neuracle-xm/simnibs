@@ -1990,9 +1990,15 @@ def middle_gm_interpolation(
     # screw up the atlases
 
     def join_and_write(surfs, fn_out, open_in_gmsh, f_geo=None):
-        mesh = surfs["lh"].join_mesh(surfs["rh"])
-        mesh.elm.tag1 = ElementTags.GM_TH_SURFACE * np.ones(mesh.elm.nr, dtype=int)
-        mesh.elm.tag2 = ElementTags.GM_TH_SURFACE * np.ones(mesh.elm.nr, dtype=int)
+        lh_mesh = surfs["lh"]
+        lh_mesh.elm.tag1 = ElementTags.LH_CENTRAL_SURFACE * np.ones(lh_mesh.elm.nr, dtype=int)
+        lh_mesh.elm.tag2 = ElementTags.LH_CENTRAL_SURFACE * np.ones(lh_mesh.elm.nr, dtype=int)
+
+        rh_mesh = surfs["rh"]
+        rh_mesh.elm.tag1 = ElementTags.RH_CENTRAL_SURFACE * np.ones(rh_mesh.elm.nr, dtype=int)
+        rh_mesh.elm.tag2 = ElementTags.RH_CENTRAL_SURFACE * np.ones(rh_mesh.elm.nr, dtype=int)
+
+        mesh = lh_mesh.join_mesh(rh_mesh)
         mesh.nodedata = []
         mesh.elmdata = []
         for k in surfs["lh"].field.keys():
