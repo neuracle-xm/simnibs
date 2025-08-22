@@ -434,40 +434,6 @@ def _triangle_with_points(
     return tr_with_points
 
 
-def _calc_gamma(affected_nodes):
-    """gamma value of tetrahedra
-    (see Parthasarathy et al., Finite Elements in Analysis and Design, 1994)
-
-    Calculates the gamma metric for tetrahdra.
-    Negative volumes can happen if tetrahedra had been inverted in the process of moving nodes.
-    In that case, penalize by returning a high gamma value (100).
-
-    Parameters
-    ------------
-    affected_nodes:
-        node coordinates for each node in each triangle
-    """
-
-    M = affected_nodes[:, 1:] - affected_nodes[:, 0, None]
-    vol = np.linalg.det(M) / 6.0
-    if np.any(vol == 0.0):
-        return np.inf
-
-    # unique combination of nodes -> six edges
-    unique_pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
-    edge_len = np.zeros((affected_nodes.shape[0], 6, affected_nodes.shape[2]))
-    for e, (i, j) in enumerate(unique_pairs):
-        edge_len[:, e, :] = affected_nodes[:, i, :] - affected_nodes[:, j, :]
-    edge_rms = np.sqrt(np.sum(edge_len**2, axis=(1, 2)) / 6.0)
-    gamma = edge_rms**3 / vol
-    gamma /= 8.479670
-    # if volume is negative, th has been inverted ->
-    # return high gamma to penalize
-    gamma[np.signbit(vol)] = 100
-
-    return gamma
-
-
 def _move_point(
     new_position,
     to_be_moved,
