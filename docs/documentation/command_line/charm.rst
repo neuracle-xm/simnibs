@@ -10,8 +10,8 @@ Description
 
 charm reconstructs a tetrahedral head mesh from T1- and T2-weighted structural MR images. It runs also with only a T1w image, but it will achieve more reliable skull segmentations when a T2w image is supplied.
 
-Usage example
---------------
+Example: Basic Usage
+--------------------
 
 1. Open a terminal and go to the :file:`ernie/` folder of the example data set.
 2. Run the reconstruction:
@@ -35,11 +35,26 @@ Usage example
 
 3. Check the segmentation. Click on the final segmentation viewer in the results.html (to be found in the m2m-folder of the subject). The viewer shows the outlines of the reconstructed tissue compartments, enabling a visual check whether the outlines are accurate.
 
+
+Configuring CHARM
+-----------------
+Whereas options relevant to the controlling how ``charm`` behaves (e.g., which steps to execute) are available from the command line, detailed configuration is done in the ``charm.ini`` file. By default, ``charm`` will read a standard configuration file from the SimNIBS directory. It is also possible to pass a custom file by using the ``--usesettings`` options. (If no file is specified the default settings file is copied to the directory of the current subject.) The settings file contain different sections each of which allow you to tune the behavior of the different steps of the pipeline. Here we describe a selected subset of the available options in different sections.
+
+surfaces
+""""""""
+As of SimNIBS 4.6, we use an implementation of the TopoFit network to reconstruct cortical surfaces. Here it is possible to specify the specific model parameters to use by changing ``topofit_contrast`` and ``topofit_resolution``.
+
+- By default, ``topofit_contrast = "T1w"`` which expects *the first input image* to ``charm`` to be a T1w image. If this is not the case, you can set it to "random" which will use a contrast agnostic model.
+- By default, ``topofit_resolution = "1mm"`` thus expecting *the first input image* to ``charm`` to be approximately 1 mm isotropic resolution. If this is not the case, you can set it to "random" which use a resolution agnistic model.
+
+It is also possible to control how the central gray matter surface (infra-supragranular border) is estimated by setting ``central_surface_fraction`` (default is 0.5) and ``central_surface_method`` (options are equidistance, equivolume [default]).
+
+
 Further notes
 --------------
 
 * If you encounter spurious segmentation results this *could* be due to a suboptimal affine registration between the anatomical image(s) and the atlas. Please see the tutorial :ref:`fix_affine_registration_tutorial`.
-* charm can use the cortical surfaces created by FreeSurfer recon-all to achieve a more accurate representation of smaller sulci in the head meshes (option *--fs-dir*).						
+* charm can use the cortical surfaces created by FreeSurfer recon-all to achieve a more accurate representation of smaller sulci in the head meshes (option *--fs-dir*).
 * Please see the tutorial :ref:`fixheadmodel_tutorial` in case manually fixes to the segmentation are needed.
 * Since SimNIBS version 4.6, CHARM uses a new segmentation atlas that includes subcutaneous fat for improved skull border segmentation by default. If you want to use the previous version of the segmentation atlas, use option *--useatlasv1_0*.
 
