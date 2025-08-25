@@ -349,60 +349,6 @@ def calc_quantities_for_test_point_in_triangle(triangles):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def gauss_smooth(
-    unsigned long[::1] surf_nodes,
-    double[:, ::1] nodes_pos,
-    unsigned long[:, ::1] tetrahedra,
-    unsigned long[::1] adj_indices,
-    unsigned long[::1] adj_indptr,
-    unsigned long[::1] adj_th_indices,
-    unsigned long[::1] adj_th_indptr,
-    float factor,
-    float max_gamma
-    ):
-    ''' Gaussian smoothing in-place
-    that tetrahedra dont degenerate too much
-    '''
-    cdef int count_cancelled = 0
-    cdef unsigned long n
-    cdef double[3] bar
-    cdef double[::1] pos_before
-    cdef Py_ssize_t i, j, k
-    cdef float gamma
-
-    # for speed, I dont use numpy functions
-    for i in range(len(surf_nodes)):
-        n = surf_nodes[i]
-        for k in range(3):
-            bar[k] = 0.
-
-        # move
-        for j in range(adj_indptr[n], adj_indptr[n+1]):
-            for k in range(3):
-                bar[k] = bar[k] + nodes_pos[adj_indices[j], k]
-
-        for k in range(3):
-            bar[k] = bar[k]/float(adj_indptr[n+1] - adj_indptr[n])
-
-        pos_before = nodes_pos[n].copy()
-
-        for k in range(3):
-            nodes_pos[n, k] += factor * (bar[k] - nodes_pos[n, k])
-
-        # check
-        for j in range(adj_th_indptr[n], adj_th_indptr[n+1]):
-            gamma = _calc_gamma(nodes_pos, tetrahedra[adj_th_indices[j]])
-            if gamma < 0 or gamma > max_gamma:
-                nodes_pos[n] = pos_before
-                count_cancelled += 1
-                break
-
-    return count_cancelled
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
 def gauss_smooth_simple(
     uint64_t [::1] surf_nodes,
     double[:, ::1] nodes_pos,
@@ -461,47 +407,3 @@ def test_sign(
     double[:, ::1] nodes_pos,
     unsigned long[:] th):
     return _test_sign(nodes_pos, th)
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef float _calc_gamma(
-    double[:, ::1] nodes_pos,
-    unsigned long[:] th):
-    '''
-    Gamma measurement from the paper
-    Parthasarathy, V. N., C. M. Graichen, and A. F. Hathaway. "A comparison of
-    tetrahedron quality measures." Finite Elements in Analysis and Design 15.3 (1994):
-    255-261.
-    '''
-    cdef double[3][3] M
-    cdef Py_ssize_t i, j, k
-    cdef double det, vol, edge_rms, gamma
-
-    for i in range(3):
-        for j in range(3):
-            M[i][j] = nodes_pos[th[i + 1], j] - nodes_pos[th[0], j]
-
-    det = M[0][0]*(M[1][1]*M[2][2] - M[2][1]*M[1][2]) - \
-          M[0][1]*(M[1][0]*M[2][2] - M[2][0]*M[1][2]) + \
-          M[0][2]*(M[1][0]*M[2][1] - M[2][0]*M[1][1])
-
-
-    if det < 0.:
-        return -1.
-
-    vol = 1./6. * det
-
-    edge_rms = 0.
-    for i in range(4):
-        for j in range(i + 1, 4):
-            for k in range(3):
-                edge_rms += (nodes_pos[th[i], k] - nodes_pos[th[j], k])**2
-
-    edge_rms *= 1./6.
-    gamma = (edge_rms ** 1.5)/vol
-    return gamma/8.479670
-
-def calc_gamma(
-    double[:, ::1] nodes_pos,
-    unsigned long[:] th):
-    return _calc_gamma(nodes_pos, th)
