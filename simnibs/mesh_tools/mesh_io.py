@@ -880,6 +880,16 @@ class Msh:
         """Dictionary of fields indexed by their name"""
         return dict([(data.field_name, data) for data in self.nodedata + self.elmdata])
 
+    def write(self, out_fn):
+        """Writes out the mesh as a ".msh" file
+
+        Parameters
+        ---------------
+        out_fn: str
+            Name of output file
+        """
+        write_msh(self, out_fn)
+
     def crop_mesh(self, tags=None, elm_type=None, nodes=None, elements=None):
         """Crops the specified tags from the mesh
         Generates a new mesh, with only the specified tags
