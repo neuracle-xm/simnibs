@@ -83,8 +83,8 @@ lh={}; rh={};
 
 if strcmpi(fnameIn,'fsaverage')
     % look up fsaverage template in cat12 folder
-    if load_lh; lh={ fullfile(path_to_avg_surf,'lh.central.freesurfer.gii') }; end
-    if load_rh; rh={ fullfile(path_to_avg_surf,'rh.central.freesurfer.gii') }; end
+    if load_lh; lh={ fullfile(path_to_avg_surf,'lh.central.gii') }; end
+    if load_rh; rh={ fullfile(path_to_avg_surf,'rh.central.gii') }; end
     
 elseif exist(fnameIn,'dir')
     % load subject-specific surfaces

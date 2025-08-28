@@ -60,35 +60,32 @@ fnameIn=fnameHlp(idx+1:end);
 % determine hemispheres from mesh triangle regions and get corresponding
 % file names
 region_idx=unique(m.triangle_regions);
-load_lh = false; load_rh = false; start_idx=[]; fnames={}; prefix={};
+
+fnames={[pnameIn filesep 'lh.' fnameIn] [pnameIn filesep 'rh.' fnameIn]};
+prefix={'lh.' 'rh.'};
+
 if any(region_idx == 1)
-    surf_idx = 1;
-    both_hemispheres = true;
-elseif any(region_idx == 1002)
-    surf_idx = 1002;
-    both_hemispheres = true;
-end
-if both_hemispheres
-    load_lh=true;
-    load_rh=true;
-     % get first lh node
-    hlpIdx=m.triangles(m.triangle_regions==surf_idx,:);
-    start_idx=[start_idx min(hlpIdx(:))]; 
-    fnames={fnames{:} [pnameIn filesep 'lh.' fnameIn]};
-    prefix={prefix{:} 'lh.'};
-end
-if any(region_idx == 2)
-    load_rh=true;
-    hlpIdx=m.triangles(m.triangle_regions==2,:); % get first rh node
+    % surfaces loaded via mesh_load_fssurf, and hemispheres numbered 1 and 2
+    % get first lh node
+    hlpIdx=m.triangles(m.triangle_regions==1,:);
+    start_idx=[min(hlpIdx(:))];
+    % get first rh node
+    hlpIdx=m.triangles(m.triangle_regions==2,:); 
     start_idx=[start_idx min(hlpIdx(:))];
-    fnames={fnames{:} [pnameIn filesep 'rh.' fnameIn]};
-    prefix={prefix{:} 'rh.'};
-% This here handles when both hemispheres are together as a .msh file
-elseif (surf_idx == 1002)
-    fnames={fnames{:} [pnameIn filesep 'rh.' fnameIn]};
-    prefix={prefix{:} 'rh.'};
+elseif any(region_idx == 1002)
+    % surfaces written by simnibs <4.6
+    hlpIdx=m.triangles(m.triangle_regions==1002,:);
+    start_idx=[min(hlpIdx(:))];
+else
+    % surfaces written by simnibs 4.6 or newer
+    % get first lh node
+    hlpIdx=m.triangles(m.triangle_regions==5003,:);
+    start_idx=[min(hlpIdx(:))];
+    % get first rh node
+    hlpIdx=m.triangles(m.triangle_regions==7003,:); 
+    start_idx=[start_idx min(hlpIdx(:))];
 end
-if ~load_lh&&~load_rh; error('mesh has to contain triangle regions 1 or 2'); end
+
 for i=1:length(fnames)
     if ~exist(fnames{i},'file'); error(['could not find ' fnames{i}]); end
 end
@@ -126,8 +123,8 @@ for i=1:length(fnames)
             struct_names{N_struct_name+j}=[prefix{i} colortable.struct_names{j}];
         end
     end
-    % This is an ugly hack dot the loading to work with the CS meshes
-    if surf_idx == 1002
+    % This is an ugly hack for the loading to work with the old central surface meshes
+    if length(start_idx)==1
         start_idx=[start_idx max(vertices) + 1];
     end
 end
