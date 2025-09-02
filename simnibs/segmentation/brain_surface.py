@@ -4,17 +4,15 @@ import time
 
 import nibabel as nib
 import numpy as np
+import numpy.typing as npt
 import scipy.sparse
 from scipy.spatial import cKDTree, ConvexHull
 from scipy.ndimage import label, binary_dilation
 import torch
 
+import brainnet
+import brainnet.helpers
 import cortech
-
-from brainsynth.dataset import PredictionDataset
-from brainnet.mesh.topology import StandardTopology
-from brainnet.prediction import PretrainedModels
-from brainnet.prediction.brainnet_predict import PredictionStep
 
 from simnibs.mesh_tools import mesh_io
 from simnibs.utils import file_finder
@@ -23,17 +21,34 @@ from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import normalize
 
 
-class SimNIBSDataset(PredictionDataset):
+MNI305_to_MNI152 = brainnet.datasets.MNI305_to_MNI152.numpy()
+
+
+class SimNIBSImageDataset(brainnet.datasets.ImageDataset):
     def __init__(
         self,
-        m2m_dirs: list | tuple[file_finder.SubjectFiles],
+        m2m_dirs: list[file_finder.SubjectFiles] | tuple,
+        image: str = "reference_volume",
+        **kwargs,
+    ):
+        images = [getattr(m2m, image) for m2m in m2m_dirs]
+        super().__init__(images, **kwargs)
+
+
+class SimNIBSTopoFitDataset(brainnet.datasets.TopoFitDataset):
+    def __init__(
+        self,
+        m2m_dirs: list[file_finder.SubjectFiles] | tuple,
         image: str = "reference_volume",
         **kwargs,
     ):
         images = [getattr(m2m, image) for m2m in m2m_dirs]
         mni_transforms = [m2m.coregistration_matrices for m2m in m2m_dirs]
+        kwargs |= dict(
+            mni_transforms=mni_transforms, mni_direction="mni2sub", mni_space="mni152"
+        )
+        super().__init__(images, **kwargs)
 
-        super().__init__(images, mni_transforms, "mni2sub", "mni152", **kwargs)
         self.m2m_dirs = m2m_dirs
 
 
@@ -42,58 +57,84 @@ def _load_mni_transform(filename):
     return scipy.io.loadmat(filename)["worldToWorldTransformMatrix"]
 
 
-def cortical_surface_estimation(
-    m2m_dirs: list | tuple[file_finder.SubjectFiles],
-    model_name="topofit",
-    model_contrast="T1w",
-    model_resolution="1mm",
-    device="cpu",
+def estimate_mni152_to_ras_affine(
+    m2m_dirs: list[file_finder.SubjectFiles] | tuple,
+    transform: str = "brain",
+    device: str | torch.device = "cpu",
 ):
+    def _get_mni152_to_ras(v):
+        return MNI305_to_MNI152 @ v.squeeze(0).cpu().numpy()
+
+    dataset = SimNIBSImageDataset(m2m_dirs, conform=True)
+    step = brainnet.helpers.trega.PredictionStep.from_pretrained(device=device)
+    return [_get_mni152_to_ras(step(None, batch)[transform]) for batch in dataset]
+
+
+def _to_Surface(s):
+    s.to("cpu")
+    return cortech.Surface(s.vertices.squeeze(0).numpy(), s.topology.faces.numpy())
+
+
+def _to_Hemisphere(hemi, surfaces):
+    return cortech.Hemisphere(hemi, **{k: _to_Surface(v) for k, v in surfaces.items()})
+
+
+def _extract_vertex_data(y_pred: dict[str, dict[str, brainnet.Surface]]):
+    def _convert_vertex_data(v: dict[str, brainnet.Surface]):
+        def _norm_if_2d(v: torch.Tensor):
+            v = v.squeeze(0).cpu().numpy()
+            assert v.ndim <= 2
+            return np.linalg.norm(v, axis=1) if v.ndim == 2 else v
+
+        return {name: _norm_if_2d(value) for name, value in v.vertex_data.items()}
+
+    return {
+        h: {s: _convert_vertex_data(vv) for s, vv in v.items()}
+        for h, v in y_pred.items()
+    }
+
+
+def cortical_surface_estimation(
+    m2m_dirs: list[file_finder.SubjectFiles] | tuple,
+    contrast: str = "T1w",
+    resolution: str = "1mm",
+    device: str | torch.device = "cpu",
+) -> tuple[list[cortech.Cortex], list[dict[str, dict[str, npt.NDArray]]]]:
     """
     Parameters
     ----------
-    m2m_dirs
-    model_name: str
-        The name of the model to use.
-    model_contrast: str
+    m2m_dirs: list[]
+    contrast: str
         The contrast with which the model was trained (choices: synth, t1w).
-    model_resolution: str
+    resolution: str
         The resolution with which the model was trained (choices: 1mm, random).
 
     Returns
     -------
 
     """
-    dataset = SimNIBSDataset(
+    contrast = contrast.lower()
+    resolution = resolution.lower()
+    device = torch.device(device)
+
+    dataset = SimNIBSTopoFitDataset(
         m2m_dirs, conform=True, mni_transform_loader=_load_mni_transform
     )
-
-    name = model_name
-    specs = (model_contrast.lower(), model_resolution.lower())
-    pretrained_models = PretrainedModels()
-    model = pretrained_models.load_model(name, specs, device)
-    preprocessor = pretrained_models.load_preprocessor(name, specs, device)
-
-    predict_step = PredictionStep(preprocessor, model, enable_amp=True)
+    step = brainnet.helpers.topofit.PredictionStep.from_pretrained(
+        contrast, resolution, device
+    )
 
     predictions = []
+    vertex_data = []
     for batch in dataset:
-        # y_pred is in RAS coordinates
-        y_pred, _ = predict_step(None, batch)
-        y_pred = y_pred["surface"]
-
-        hemispheres = {}
-        for hemi, surfaces in y_pred.items():
-            for surface, vertices in surfaces.items():
-                y_pred[hemi][surface] = cortech.Surface(
-                    vertices, predict_step.topology[hemi].faces.cpu().numpy()
-                )
-            hemispheres[hemi] = cortech.Hemisphere(
-                hemi, y_pred[hemi]["white"], y_pred[hemi]["pial"]
-            )
-        predictions.append(hemispheres)
-
-    return [cortech.Cortex(**pred) for pred in predictions]
+        y_pred = step(None, batch)
+        y_pred = step.model.swap_output_levels(y_pred)  # {hemi: surf: ...}
+        cortex = cortech.Cortex(
+            **{h: _to_Hemisphere(h, surfs) for h, surfs in y_pred.items()}
+        )
+        predictions.append(cortex)
+        vertex_data.append(_extract_vertex_data(y_pred))
+    return predictions, vertex_data
 
 
 def spherical_registration_cat(
@@ -126,7 +167,7 @@ def spherical_registration_cat(
     if surf2sphere_subsampling:
         res = 5
         sph_map_white = white.with_name(f"{white.stem}.{res}{white.suffix}")
-        topo = StandardTopology.recursive_subdivision(res)[-1]
+        topo = brainnet.DeepSurferTopology.recursive_subdivision(res)[-1]
 
         # Subsample white
         s = cortech.Surface.from_file(white)
@@ -163,38 +204,6 @@ def spherical_registration_cat(
     spawn_process(cmd.split())
     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
     logger.info(f"Time to register sphere ({hemi}) : {time_elapsed}")
-
-
-# def map_to_sphere_and_register(m2m, hemi):
-#     """Compute spherical registration using CAT."""
-
-#     cat_warpsurf = file_finder.path2bin("CAT_WarpSurf")
-
-#     white = m2m.get_surface(hemi, "white")
-#     sphere_reg = m2m.surfaces["sphere.reg"][hemi]
-
-#     fsavg_dir = file_finder.templates.freesurfer_templates
-#     fsavg_white = os.path.join(fsavg_dir, f"{hemi}.white.gii")
-#     fsavg_sphere = os.path.join(fsavg_dir, f"{hemi}.sphere.gii")
-
-#     # Copy the *sphere* representation of the surface. We do not use this here
-#     # but function that subsamples the surfaces to an arbitrary number of
-#     # vertices relies on this (the vertices are more evently distributed on the
-#     # sphere in "sphere" compared to "sphere.reg")
-#     shutil.copy(brainsynth.resources.surfaces[hemi, "sphere"], m2m.surfaces["sphere"])
-
-#     # Directly map the cortical vertices to the sphere using the one-to-one
-#     # correspondence we have, because the surfaces are estimated by deforming
-#     # the template. Hence, we use the spherically registered *template* as
-#     # "sphere"
-#     sphere = brainsynth.resources.surfaces[hemi, "sphere.reg"]
-
-#     # registration to fsaverage (sphere.reg)
-#     s = time.perf_counter()
-#     cmd = f"{cat_warpsurf} -steps 2 -avg -i {white} -is {sphere} -t {fsavg_white} -ts {fsavg_sphere} -ws {sphere_reg}"
-#     spawn_process(cmd.split())
-#     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-#     logger.info(f"Time for spherical registration ({hemi}) : {time_elapsed}")
 
 
 def segment_triangle_intersect(vertices, faces, segment_start, segment_end):

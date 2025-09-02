@@ -466,10 +466,6 @@ DEPENDENCIES = Dependencies(
     # On MacOS, torch+cpu is simply the default package
     PipPackage("torch", "2.6.0", "darwin", comparison="eq"),
 
-    # we need this for now due to a bug in the pyproject.toml of brainnet which
-    # states 'ignite' but the package name on PyPI is 'pytorch-ignite'...
-    PipPackage("pytorch-ignite"),
-
     # Replace when new samseg is released...
     # PyPIPackage("samseg", "0.5a0", comparison="eq"),
     GitHubRelease("samseg", "0.5a0", platform_tags=DEFAULT_PLAT_TAGS, user="oulap", repository="samseg_wheels", release="dev"),
@@ -477,8 +473,8 @@ DEPENDENCIES = Dependencies(
     GitHubRelease("cortech", "0.1", platform_tags=dict(darwin="macosx_11_0_arm64", linux="manylinux_2_24_x86_64.manylinux_2_28_x86_64", windows="win_amd64"), user="simnibs"),
     GitHubRelease("fmm3dpy", "1.0.4", platform_tags=DEFAULT_PLAT_TAGS, user="simnibs"),
     GitHubRelease("petsc4py", "3.22.2", platform_tags=DEFAULT_PLAT_TAGS, user="simnibs"),
-    GitHubCommit("brainsynth", "57fcdfe", user="simnibs"),
-    GitHubCommit("brainnet", "88fbb63", user="simnibs"),
+    GitHubCommit("brainsynth", "v0.1", user="simnibs"),
+    GitHubCommit("brainnet", "v0.2", user="simnibs"),
 
     # Build
     # =========================================================================

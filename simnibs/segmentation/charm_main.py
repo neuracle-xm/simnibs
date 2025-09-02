@@ -2,12 +2,14 @@ import glob
 import itertools
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 import time
 
 import nibabel as nib
 import numpy as np
+import numpy.typing as npt
 import samseg
 import cortech
 
@@ -175,17 +177,30 @@ def run(
             logger.info("Using world-to-world transform provided by user.")
             trans_mat = use_transform
         else:
-            if samseg_settings["init_type"] == "atlas":
-                trans_mat = None
-            elif samseg_settings["init_type"] == "mni":
-                mni_template = file_finder.Templates().mni_volume
-                mni_settings = settings["initmni"]
-                trans_mat = charm_utils._init_atlas_affine(
-                    inputT1, mni_template, mni_settings
-                )
-            else:
-                logger.info("Affine initialization type unknown. Defaulting to 'atlas'")
-                trans_mat = None
+            logger.info("Estimating affine MNI to RAS transformation")
+            init_type = samseg_settings["init_type"].lower()
+            match init_type:
+                case "atlas":
+                    logger.info("Using method: atlas")
+                    trans_mat = None
+                case "mni":
+                    mni_template = file_finder.Templates().mni_volume
+                    mni_settings = settings["initmni"]
+                    logger.info("Using method: initmni")
+                    trans_mat = charm_utils._init_atlas_affine(
+                        inputT1, mni_template, mni_settings
+                    )
+                case "trega":
+                    logger.info("Using method: TREGA")
+                    trans_mat = brain_surface.estimate_mni152_to_ras_affine(
+                        [sub_files]
+                    )[0]
+                    trans_mat = _RAS2LPS_transform(trans_mat)
+                case _:
+                    logger.info(
+                        f"Invalid initialization '{init_type}'. Defaulting to 'atlas'"
+                    )
+                    trans_mat = None
 
         charm_utils._register_atlas_to_input_affine(
             inputT1,
@@ -335,13 +350,17 @@ def run(
         if fs_dir is None:
             logger.info("Estimating cortical surfaces")
 
-            cortex = brain_surface.cortical_surface_estimation(
+            cortex, curv = brain_surface.cortical_surface_estimation(
                 [sub_files],
-                "topofit",
                 surface_settings["topofit_contrast"],
                 surface_settings["topofit_resolution"],
                 surface_settings["topofit_device"],
-            )[0]  # only one subject
+            )
+            # only one subject
+            cortex = cortex[0]
+            curv = curv[0]
+            cortex.lh.registration = None
+            cortex.rh.registration = None
         else:
             logger.info("Loading surfaces from existing FreeSurfer run")
             logger.info(f"FreeSurfer subject directory is {fs_dir}")
@@ -360,15 +379,10 @@ def run(
             return_surface=True,
         )
 
-        for hemi in cortex:
-            kw = dict(sub_files=sub_files, hemi=hemi.name)
-            _write_gifti(hemi.white, name="white", **kw)
-            _write_gifti(hemi.pial, name="pial", **kw)
-            _write_gifti(getattr(central, hemi.name), name="central", **kw)
-            if hemi.sphere is not None:
-                _write_gifti(hemi.sphere, name="sphere", **kw)
-            if hemi.has_registration():
-                _write_gifti(hemi.registration, name="sphere.reg", **kw)
+        _write_cortex_as_gifti(cortex, sub_files)
+        _write_gifti(central.lh, sub_files, "central", "lh")
+        _write_gifti(central.rh, sub_files, "central", "rh")
+        _write_vertex_data_as_curv(curv, sub_files)  # uncertainty estimates etc.
 
         if not cortex.lh.has_registration():  # only check lh
             logger.info("Generating spherical registrations")
@@ -720,15 +734,17 @@ def _denoise_inputs(T1, T2, sub_files):
         charm_utils._denoise_input_and_save(sub_files.T2_reg, sub_files.T2_reg_denoised)
 
 
-def _read_transform(transform_file):
-    transform = np.loadtxt(transform_file)
-    assert transform.shape == (
-        4,
-        4,
-    ), f"`transform` should have shape (4, 4), got {transform.shape}"
+def _RAS2LPS_transform(t: npt.NDArray):
     # Change from RAS to LPS. ITK uses LPS internally
     RAS2LPS = np.diag([-1, -1, 1, 1])
-    return RAS2LPS @ transform @ RAS2LPS
+    return RAS2LPS @ t @ RAS2LPS
+
+
+def _read_transform(transform_file):
+    transform = np.loadtxt(transform_file)
+    error_msg = f"`transform` should have shape (4, 4), got {transform.shape}"
+    assert transform.shape == (4, 4), error_msg
+    return _RAS2LPS_transform(transform)
 
 
 def _fs_lut_labels_to_fs_lut_values(labels_dict: dict[str, list[str]]):
@@ -743,3 +759,24 @@ def _write_gifti(surface, sub_files, name, hemi):
     tag = ElementTags.from_surface_file_name(name, hemi)
     filename = sub_files.get_surface_from_element_tag(tag)
     write_gifti_surface(surface, filename, element_tag=tag)
+
+
+def _write_cortex_as_gifti(cortex, sub_files):
+    for hemi in cortex:
+        kw = dict(sub_files=sub_files, hemi=hemi.name)
+        _write_gifti(hemi.white, name="white", **kw)
+        _write_gifti(hemi.pial, name="pial", **kw)
+        if hemi.sphere is not None:
+            _write_gifti(hemi.sphere, name="sphere", **kw)
+        if hemi.has_registration():
+            _write_gifti(hemi.registration, name="sphere.reg", **kw)
+
+
+def _write_vertex_data_as_curv(curv, sub_files):
+    # write curv data
+    for h, v in curv.items():
+        for s, vv in v.items():
+            for n, vd in vv.items():
+                nib.freesurfer.write_morph_data(
+                    Path(sub_files.surface_folder) / f"{h}.{s}.{n}", vd
+                )

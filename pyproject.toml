@@ -18,7 +18,7 @@ requires-python = ">=3.11"
 # python-mumps - only works automatically via conda
 # mpfr, gmp - from conda
 dependencies = [
-  "brainnet",
+  "brainnet>=0.2",
   "cortech",
   "fmm3dpy==1.0.4",
   "h5py",
@@ -63,7 +63,8 @@ include-package-data = true
 where = ["."]
 exclude = ["packing*", "docs*"]
 
-# [tool.setuptools_scm]
+[tool.setuptools_scm]
+# setuptools_scm complains if this section is not present
 
 [project.scripts]
 charm = "simnibs.cli.charm:main"
