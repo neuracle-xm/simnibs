@@ -53,7 +53,7 @@ from . import gmsh_view
 from simnibs.utils.file_finder import (
     HEMISPHERES,
     get_fsaverage_template,
-    path2bin,
+    path2envbin,
     SubjectFiles,
     FreeSurferSubject,
     SURFACE_FILE_NAME_TO_ELEMENT_TAG,
@@ -7293,7 +7293,7 @@ def open_in_gmsh(fn, new_thread=False):
         Wether to open gmsh in a new thread. Defaut: False
 
     """
-    gmsh_bin = path2bin("gmsh")
+    gmsh_bin = path2envbin("gmsh")
     if new_thread:
         t = threading.Thread(
             target=subprocess.run, args=([gmsh_bin, fn],), kwargs={"check": True}

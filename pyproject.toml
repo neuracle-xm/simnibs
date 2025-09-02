@@ -36,6 +36,7 @@ dependencies = [
   "samseg",
   "scipy",
   "tbb ; sys_platform != 'darwin'",
+  "gmsh",
 ]
 
 [project.urls] # Optional

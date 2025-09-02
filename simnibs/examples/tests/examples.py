@@ -11,7 +11,7 @@ import shutil
 import glob
 
 import pytest
-from simnibs.utils.file_finder import path2bin
+from simnibs.utils.file_finder import path2envbin
 import simnibs
 
 EXAMPLES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -19,8 +19,8 @@ EXAMPLES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 @pytest.fixture
 def replace_gmsh():
-    fn_gmsh = path2bin("gmsh")
-    fn_gmsh_tmp = path2bin("gmsh_tmp")
+    fn_gmsh = path2envbin("gmsh")
+    fn_gmsh_tmp = path2envbin("gmsh_tmp")
     # move
     if sys.platform == "win32":
         fn_gmsh += ".exe"

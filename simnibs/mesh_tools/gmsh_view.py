@@ -5,7 +5,7 @@ import threading
 import numpy as np
 import shutil
 
-from simnibs.utils.file_finder import path2bin, Templates
+from simnibs.utils.file_finder import path2envbin, Templates
 from simnibs.utils.mesh_element_properties import ElementTags
 
 
@@ -72,7 +72,7 @@ class Visualization:
         self.mesh.write(mesh_fn)
         geo_fn = mesh_fn + ".opt"
         self._write(geo_fn)
-        command = [path2bin("gmsh"), mesh_fn]
+        command = [path2envbin("gmsh"), mesh_fn]
 
         fn_list = [mesh_fn, geo_fn]
         if hasattr(self.General, "BackgroundImageFileName"):
@@ -230,7 +230,7 @@ class Visualization:
         if hasattr(self.General, "BackgroundImageFileName"):
             fn_list.append(os.path.join(os.path.dirname(mesh_fn), ".lg.png"))
 
-        _run([path2bin("gmsh"), geo_fn], fn_list)
+        _run([path2envbin("gmsh"), geo_fn], fn_list)
 
 
 class General(object):

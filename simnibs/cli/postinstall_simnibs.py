@@ -101,11 +101,17 @@ def create_scripts(dest_dir):
         if sys.platform == "win32":
             with open(bash_name + ".cmd", "w") as f:
                 f.write("@echo off\n")
-                f.write(f'"{file_finder.path2bin(basename)}" %*')
+                if basename == "gmsh":
+                    f.write(f'"{file_finder.path2envbin(basename)}" %*')
+                else:
+                    f.write(f'"{file_finder.path2bin(basename)}" %*')
         else:
             if os.path.lexists(bash_name):
                 os.remove(bash_name)
-            os.symlink(file_finder.path2bin(basename), bash_name)
+            if basename == "gmsh":
+                os.symlink(file_finder.path2envbin(basename), bash_name)
+            else:
+                os.symlink(file_finder.path2bin(basename), bash_name)
 
     # dwi2cond bash script
     if not sys.platform == "win32":
@@ -432,7 +438,7 @@ def setup_shortcut_icons(scripts_dir, force=False, silent=False):
 
     _create_shortcut(
         os.path.join(shortcut_folder, "Gmsh"),
-        file_finder.path2bin("gmsh"),
+        file_finder.path2envbin("gmsh"),
         "Gmsh is a free 3D finite element mesh generator with a built-in CAD engine and"
         " post-processor",
         mime_type="model/x.stl-binary",
@@ -555,7 +561,7 @@ def _create_apps(install_dir):
     ):
         _copy_and_log(icns, resouces_dir)
 
-    _copy_and_log(file_finder.path2bin("gmsh"), os.path.join(macos_dir))
+    _copy_and_log(file_finder.path2envbin("gmsh"), os.path.join(macos_dir))
 
 
 def _create_app(app_name, executable, icon, plist):
@@ -610,7 +616,7 @@ def setup_file_association(force=False, silent=False):
     # Linux and OSX file associations are done together with desktop items
     if sys.platform != "win32":
         return
-    gmsh_bin = file_finder.path2bin("gmsh")
+    gmsh_bin = file_finder.path2envbin("gmsh")
     extensions = [".msh", ".geo", ".stl"]
     associate = dict.fromkeys(extensions)
     for ext in extensions:

@@ -34,7 +34,7 @@ from . import head_model_OGL
 from . import simulation_menu
 from simnibs import __version__
 from simnibs.utils.simnibs_logger import logger
-from simnibs.utils.file_finder import SubjectFiles, path2bin
+from simnibs.utils.file_finder import SubjectFiles, path2envbin
 from simnibs.utils.matlab_read import read_mat
 from simnibs.utils.mesh_element_properties import ElementTags
 
@@ -1919,7 +1919,7 @@ class openGmshThread(QtCore.QThread):
         self.fn = fn
 
     def run(self):
-        gmsh = path2bin("gmsh")
+        gmsh = path2envbin("gmsh")
         gmsh_return = subprocess.run([gmsh, self.fn])
         self.exit(gmsh_return.returncode)
         self.exec_()
