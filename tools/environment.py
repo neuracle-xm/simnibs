@@ -458,6 +458,7 @@ DEPENDENCIES = Dependencies(
     CondaPackage("zlib"),
 
     PipPackage("pyqt5", platforms=["darwin","linux"]),
+    PipPackage("gmsh", "4.14", comparison="eq"),
     PipPackage("PyQt5", platforms="windows"),
     PipPackage("numpy", "2", comparison="geq"),
     PipPackage("pygpc", "0.4", comparison="geq"),
