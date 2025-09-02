@@ -128,7 +128,7 @@ class TDCSoptimize:
             return "element"
         else:
             raise ValueError(
-                "Could not find if the leadfield is node- or " "element-based"
+                "Could not find if the leadfield is node- or element-based"
             )
 
     @property
@@ -144,9 +144,9 @@ class TDCSoptimize:
     def leadfield(self, leadfield):
         if leadfield is not None:
             assert leadfield.ndim == 3, "leadfield should be 3 dimensional"
-            assert (
-                leadfield.shape[2] == 3
-            ), "Size of last dimension of leadfield should be 3"
+            assert leadfield.shape[2] == 3, (
+                "Size of last dimension of leadfield should be 3"
+            )
         self._leadfield = leadfield
 
     @property
@@ -368,12 +368,12 @@ class TDCSoptimize:
         if max_individual_current is None:
             max_individual_current = self.max_individual_current
 
-        assert (
-            max_total_current > 0
-        ), f"`max_total_current` must be positive (got {max_total_current})"
-        assert (
-            max_individual_current > 0
-        ), f"`max_individual_current` must be positive (got {max_individual_current})"
+        assert max_total_current > 0, (
+            f"`max_total_current` must be positive (got {max_total_current})"
+        )
+        assert max_individual_current > 0, (
+            f"`max_individual_current` must be positive (got {max_individual_current})"
+        )
         assert max_total_current >= max_individual_current
 
     def optimize(self, fn_out_mesh=None, fn_out_csv=None):
@@ -397,9 +397,9 @@ class TDCSoptimize:
         assert self.leadfield is not None, "Leadfield not defined"
         assert self.mesh is not None, "Mesh not defined"
         if self.max_active_electrodes is not None:
-            assert (
-                self.max_active_electrodes > 1
-            ), "The maximum number of active electrodes should be at least 2"
+            assert self.max_active_electrodes > 1, (
+                "The maximum number of active electrodes should be at least 2"
+            )
 
         self._assert_valid_currents()
         max_total_current = self.max_total_current
@@ -937,9 +937,9 @@ class TDCStarget:
 
     @intensity.setter
     def intensity(self, value):
-        assert (
-            value > 0
-        ), "Please provide a positive target intensity (if a negative intensity is desired, please invert the target direction)."
+        assert value > 0, (
+            "Please provide a positive target intensity (if a negative intensity is desired, please invert the target direction)."
+        )
         self._intensity = value
 
     @property
@@ -950,17 +950,17 @@ class TDCStarget:
     def directions(self, value):
         value = None if value == "none" else value
         if isinstance(value, str):
-            assert (
-                value in {"normal", "negative normal"}
-            ), f"Invalid value for `directions`. If a string, it must be 'none', 'normal', or 'negative normal' (got {value})"
+            assert value in {"normal", "negative normal"}, (
+                f"Invalid value for `directions`. If a string, it must be 'none', 'normal', or 'negative normal' (got {value})"
+            )
         elif value is None:
             if self.max_angle is not None:
                 raise ValueError("Cannot constrain angle in magnitude optimizations.")
         else:
             value = np.atleast_2d(value)
-            assert (
-                value.shape[1] == 3
-            ), f"If `directions` is an array, it must be Nx3 (got {value.shape})"
+            assert value.shape[1] == 3, (
+                f"If `directions` is an array, it must be Nx3 (got {value.shape})"
+            )
 
         self._directions = value
 
@@ -1063,7 +1063,7 @@ class TDCStarget:
             weights = self.mesh.elements_volumes_and_areas().value
         else:
             raise ValueError(
-                "Invalid lf_type: {0}, should be " '"element" or "node"'.format(
+                'Invalid lf_type: {0}, should be "element" or "node"'.format(
                     self.lf_type
                 )
             )
@@ -1123,7 +1123,7 @@ class TDCStarget:
             field_type = mesh_io.ElementData
         else:
             raise ValueError(
-                "lf_type must be 'node' or 'element'." " Got: {0} instead".format(
+                "lf_type must be 'node' or 'element'. Got: {0} instead".format(
                     self.lf_type
                 )
             )
@@ -1187,7 +1187,7 @@ class TDCStarget:
             weights = self.mesh.elements_volumes_and_areas()[indexes]
         else:
             raise ValueError(
-                "lf_type must be 'node' or 'element'." " Got: {0} instead".format(
+                "lf_type must be 'node' or 'element'. Got: {0} instead".format(
                     self.lf_type
                 )
             )
@@ -1239,7 +1239,7 @@ class TDCStarget:
             weights = self.mesh.elements_volumes_and_areas()[indexes]
         else:
             raise ValueError(
-                "lf_type must be 'node' or 'element'." " Got: {0} instead".format(
+                "lf_type must be 'node' or 'element'. Got: {0} instead".format(
                     self.lf_type
                 )
             )
@@ -1400,7 +1400,7 @@ class TDCSavoid:
             f = np.ones(self.mesh.elm.nr)
         else:
             raise ValueError(
-                "lf_type must be 'node' or 'element'." " Got: {0} instead".format(
+                "lf_type must be 'node' or 'element'. Got: {0} instead".format(
                     self.lf_type
                 )
             )
@@ -1449,7 +1449,7 @@ class TDCSavoid:
             weight = self.mesh.elements_volumes_and_areas()[indexes]
         else:
             raise ValueError(
-                "lf_type must be 'node' or 'element'." " Got: {0} instead".format(
+                "lf_type must be 'node' or 'element'. Got: {0} instead".format(
                     self.lf_type
                 )
             )
@@ -1918,9 +1918,9 @@ class TDCSDistributedOptimize:
         assert self.leadfield is not None, "Leadfield not defined"
         assert self.mesh is not None, "Mesh not defined"
         if self.max_active_electrodes is not None:
-            assert (
-                self.max_active_electrodes > 1
-            ), "The maximum number of active electrodes should be at least 2"
+            assert self.max_active_electrodes > 1, (
+                "The maximum number of active electrodes should be at least 2"
+            )
 
         self._tdcs_opt_obj._assert_valid_currents(
             self.max_total_current, self.max_individual_current
@@ -2219,9 +2219,9 @@ class TESOptimizationProblem(TESConstraints):
         self.leadfield = leadfield
         self.weights = np.ones(self.n_target) if weights is None else np.array(weights)
 
-        assert (
-            self.weights.shape[0] == self.n_target
-        ), "Please define one weight per leadfield element"
+        assert self.weights.shape[0] == self.n_target, (
+            "Please define one weight per leadfield element"
+        )
 
         self.P = self._calc_P_mat()
         self.Q = self._calc_Q_mat()
@@ -2253,9 +2253,9 @@ class TESOptimizationProblem(TESConstraints):
         assert target_direction.shape[1] == 3, "A direction must have 3 dimentions"
 
         target_indices = np.atleast_1d(target_indices)
-        assert len(target_indices) == len(
-            target_direction
-        ), "Please define one direction per target"
+        assert len(target_indices) == len(target_direction), (
+            "Please define one direction per target"
+        )
 
         target_direction = target_direction / np.linalg.norm(
             target_direction, axis=1, keepdims=True
@@ -2908,9 +2908,9 @@ def _linear_constrained_tes_opt(
     extra_eq=None,
     log_level=10,
 ):
-    assert (
-        l_vec.shape[0] == target_mean.shape[0]
-    ), "Please specify one target mean per target"
+    assert l_vec.shape[0] == target_mean.shape[0], (
+        "Please specify one target mean per target"
+    )
     assert l_vec.shape[1] == Q.shape[0]
 
     scale = max_total_current
@@ -3476,6 +3476,7 @@ def _least_squares_tes_opt(
         b_,
         tol_primal=eps,
         tol_feasibility_x0=eps,
+        check_inequality_x0=False,
     )
 
     x = x_[:n] - x_[n:]
@@ -3493,6 +3494,8 @@ def _active_set_QP(
     tol_primal: float = 1e-5,
     tol_feasibility_x0: float = 1e-5,
     tol_zero_div: float = 1e-9,
+    check_inequality_x0: bool = True,
+    check_equality_x0: bool = True,
 ):
     """Solves the problem
 
@@ -3524,6 +3527,12 @@ def _active_set_QP(
     tol_zero_div : float
         Tolerance for avoiding zero division. In particular, the values for
         which C @ p < tol_zero_div are ignored in (d - C @ x) / (C @ p).
+    check_inequality_x0 : bool
+        Check whether the inequality constraint is satisfied for the initial
+        point, x0, i.e., C @ x0 <= d.
+    check_equality_x0 : bool
+        Check whether the equality constraint is satisfied for the initial
+        point, x0, i.e., A @ x0 = b.
 
     Returns
     -------
@@ -3542,16 +3551,14 @@ def _active_set_QP(
     active = np.abs(C.dot(x) - d) < tol_feasibility_x0
 
     # Check feasibility of x0
-    assert np.all(
-        C.dot(x) <= d + tol_feasibility_x0
-    ), f"Infeasible start ({C.dot(x)} > {d}) [{C.dot(x) <= d + tol_feasibility_x0}]"
-    if A is not None and b is not None:
-        assert np.allclose(
-            A.dot(x), b, atol=tol_feasibility_x0
-        ), f"Infeasible start ({A.dot(x)} != {b})"
-
-    # if not np.allclose(A.dot(x0), b, atol=eps):
-    #     print(f"Infeasible start ({A.dot(x0)} != {b})")
+    if check_inequality_x0:
+        assert np.all(C.dot(x) <= d + tol_feasibility_x0), (
+            f"Infeasible start ({C.dot(x)} > {d}) [{C.dot(x) <= d + tol_feasibility_x0}]"
+        )
+    if A is not None and b is not None and check_equality_x0:
+        assert np.allclose(A.dot(x), b, atol=tol_feasibility_x0), (
+            f"Infeasible start ({A.dot(x)} != {b})"
+        )
 
     if A is None:
         A = np.empty((0, len(x0)))
@@ -3751,7 +3758,7 @@ def _branch_and_bound(init, function, eps, max_k, log_level=20):
             if ub.min() - lb.min() <= eps * np.abs(lb.min()):
                 logger.log(log_level, "Tolerance reached, returning")
             else:
-                logger.log(log_level, "Maximum number of iterations reached, retunning")
+                logger.log(log_level, "Maximum number of iterations reached, returning")
             return_val = active_nodes[ub.argmin()].state
             break
         q = active_nodes.pop(lb.argmin())
