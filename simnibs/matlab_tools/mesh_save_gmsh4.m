@@ -3,17 +3,17 @@ function mesh_save_gmsh4(varargin)
 %
 % USAGE:
 % mesh_save_gmsh4(m, fn);
-% mesh_save_gmsh4(m, fn, 'ascii');  
+% mesh_save_gmsh4(m, fn, 'ascii');
 %
 % Saves a gmsh mesh file for use with SimNIBS 2.1. Binary files are written
 % as standard (otherwise, specify 'ascii' as third argument)
-% 
+%
 % Note: Not all features of gmsh meshes are supported (see mesh_load_gmsh4
 % for details)
 %
 % See http://www.geuz.org/gmsh/doc/texinfo/gmsh-full.html#SEC56 for
 % documentation of the file format.
-% 
+%
 % Andre Antunes 17 Oct 2014
 % AT 27-Feb-2018 changed to writing of "compact" meshes
 
@@ -73,7 +73,12 @@ if ~strcmpi(extHlp,'.msh')
     fn=[fn '.msh'];
 end;
 
-fid=fopen(fn, 'W');
+if ~is_binary
+    % suggested fix for more robust file-reading on PCs
+    fid = fopen(fn, 'Wt');
+else
+    fid = fopen(fn, 'W');
+end
 
 %% write initial header
 fprintf(fid, '$MeshFormat\n');
@@ -93,7 +98,7 @@ if is_binary
     % int32 float64 float64 float64
     % I typecast the float64 to integers (this does not change information),
     % so that I can concatenate with the int32 column and write everything with
-    % a single fwrite call. 
+    % a single fwrite call.
     % =====
     cx = typecast(m.nodes(:,1), 'uint32');
     cx = reshape(cx, [2 nr_nodes])';
@@ -122,7 +127,7 @@ if is_binary
         % element_number, tag1, tag2, node_number_list
         fwrite(fid, [idx m.triangle_regions m.triangle_regions m.triangles]', 'int');
     end;
-    
+
     if nr_tetr
         fwrite(fid, [4 nr_tetr 2]', 'int');
         idx = int32(nr_triangles + (1:nr_tetr)');
@@ -148,16 +153,16 @@ for i=1:length(m.node_data)
         error('node data has to contain one data point per node')
     end;
     nr_comp = size(m.node_data{i}.data,2);
-    
+
     idx = 1:nr_nodes;
-    
+
     fprintf(fid, '1\n"%s"\n1\n0.0\n4\n0\n%d\n%d\n0\n', m.node_data{i}.name, nr_comp, nr_nodes);
     if is_binary
         % data is written as:
         % int32 nr_comp*float64
         % I typecast the float64 to integers (this does not change information),
         % so that I can concatenate with the int32 column and write everything with
-        % a single fwrite call. 
+        % a single fwrite call.
         % =====
         fullt = zeros([2*nr_comp+1, nr_nodes], 'uint32');
         fullt(1,:) = idx;
@@ -187,9 +192,9 @@ for i=1:length(m.element_data)
             size(m.element_data{i}.tetdata,1)~= size(m.tetrahedra,1)
             error('element tetdata has to contain one data point per tetrahedron')
         end
-    
+
         if  ~isempty(m.element_data{i}.tetdata)&&...
-            ~isempty(m.element_data{i}.tridata)&&...    
+            ~isempty(m.element_data{i}.tridata)&&...
             size(m.element_data{i}.tetdata,2) ~= size(m.element_data{i}.tridata,2)
             error('element tridata and tetdata has to have the same number of rows')
         end
@@ -204,19 +209,19 @@ for i=1:length(m.element_data)
     end
     nr_elements = size(data,1);
     nr_comp = size(data,2);
-    
+
     idx = 1:nr_elements;
     if isfield(m.element_data{i}, 'tridata') && isempty(m.element_data{i}.tridata)
         idx=idx+size(m.triangles,1);
     end
-         
+
     fprintf(fid, '1\n"%s"\n1\n0.0\n4\n0\n%d\n%d\n0\n', m.element_data{i}.name, nr_comp, nr_elements);
     if is_binary
         % data is written as:
         % int32 nr_comp*float64
         % I typecast the float64 to integers (this does not change information),
         % so that I can concatenate with the int32 column and write everything with
-        % a single fwrite call. 
+        % a single fwrite call.
         % =====
         fullt = zeros([2*nr_comp+1, nr_elements], 'uint32');
         fullt(1,:) = idx;
