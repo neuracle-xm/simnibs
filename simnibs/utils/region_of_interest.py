@@ -136,7 +136,7 @@ class RegionOfInterest:
         self.surface_type = None
         self.surface_path = None
 
-        self.tissues = None
+        self.tissues = [ElementTags.GM]
 
         self.surface_inclusion_radius = None
 
