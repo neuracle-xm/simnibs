@@ -1,15 +1,12 @@
-import sys
-import numpy as np
-import multiprocessing.pool
-
 from functools import partial
+import multiprocessing
+import sys
+import warnings
+
+import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.integrate import solve_ivp
 from scipy.optimize import fsolve, minimize
-import warnings
-
-warnings.filterwarnings("ignore")
-warnings.filterwarnings("ignore", "The iteration is not making good progress")
 
 from simnibs.mesh_tools import cgal
 from simnibs.mesh_tools.mesh_io import Msh
@@ -573,7 +570,6 @@ class Ellipsoid:
         if n_cpu is None:
             n_cpu = multiprocessing.cpu_count()
         n_cpu = min(n_cpu, n_points)
-
         if n_cpu == 1:
             coords_destination = np.zeros((n_points, 3))
             for i in range(n_points):
@@ -669,50 +665,55 @@ class Ellipsoid:
             Cy = lambda t, y: self.radii2[1] * y / (t + self.radii2[1])
             Cz = lambda t, z: self.radii2[2] * z / (t + self.radii2[2])
 
-            t = -50
-            # walk along path in steps of ds and update coordinates
-            for i, s_ in enumerate(s[:-1]):
-                # apply correction step after every 20 steps (project point to ellipsoid surface)
-                # https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
-                if not (i % 5):
-                    t = fsolve(
-                        self.F_t,
-                        t,
-                        args=np.array([x1[i], y1[i], z1[i]]).astype(np.float64),
-                        xtol=1e-9,
-                        maxfev=200,
-                    ).squeeze()
-                    x1[i] = Cx(t, x1[i])
-                    y1[i] = Cy(t, y1[i])
-                    z1[i] = Cz(t, z1[i])
+            with warnings.catch_warnings():
+                msg = "The iteration is not making good progress"
+                warnings.filterwarnings("ignore", msg)
+                t = -50
+                # walk along path in steps of ds and update coordinates
+                for i, s_ in enumerate(s[:-1]):
+                    # apply correction step after every 20 steps (project point to ellipsoid surface)
+                    # https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
+                    if not (i % 5):
+                        t = fsolve(
+                            self.F_t,
+                            t,
+                            args=np.array([x1[i], y1[i], z1[i]]).astype(np.float64),
+                            xtol=1e-9,
+                            maxfev=200,
+                        ).squeeze()
+                        x1[i] = Cx(t, x1[i])
+                        y1[i] = Cy(t, y1[i])
+                        z1[i] = Cz(t, z1[i])
 
-                # constants
-                h = (
-                    x2[i] ** 2
-                    + y2[i] ** 2 / (1 - self.e_e2)
-                    + z2[i] ** 2 / (1 - self.e_x2)
-                )  # eq. (44)
-                H = (
-                    x1[i] ** 2
-                    + y1[i] ** 2 / (1 - self.e_e2)
-                    + z1[i] ** 2 / (1 - self.e_x2)
-                )  # eq. (43)
-                h_H = h / H
+                    # constants
+                    h = (
+                        x2[i] ** 2
+                        + y2[i] ** 2 / (1 - self.e_e2)
+                        + z2[i] ** 2 / (1 - self.e_x2)
+                    )  # eq. (44)
+                    H = (
+                        x1[i] ** 2
+                        + y1[i] ** 2 / (1 - self.e_e2)
+                        + z1[i] ** 2 / (1 - self.e_x2)
+                    )  # eq. (43)
+                    h_H = h / H
 
-                # update equations of system of 1st order ODE
-                x1[i + 1] = x2[i] * ds + x1[i]
-                x2[i + 1] = -h_H * x1[i] * ds + x2[i]
-                y1[i + 1] = y2[i] * ds + y1[i]
-                y2[i + 1] = -h_H * y1[i] / (1.0 - self.e_e2) * ds + y2[i]
-                z1[i + 1] = z2[i] * ds + z1[i]
-                z2[i + 1] = -h_H * z1[i] / (1.0 - self.e_x2) * ds + z2[i]
+                    # update equations of system of 1st order ODE
+                    x1[i + 1] = x2[i] * ds + x1[i]
+                    x2[i + 1] = -h_H * x1[i] * ds + x2[i]
+                    y1[i + 1] = y2[i] * ds + y1[i]
+                    y2[i + 1] = -h_H * y1[i] / (1.0 - self.e_e2) * ds + y2[i]
+                    z1[i + 1] = z2[i] * ds + z1[i]
+                    z2[i + 1] = -h_H * z1[i] / (1.0 - self.e_x2) * ds + z2[i]
 
-                distance_current += np.linalg.norm(
-                    np.array([x1[i + 1] - x1[i], y1[i + 1] - y1[i], z1[i + 1] - z1[i]])
-                )
+                    distance_current += np.linalg.norm(
+                        np.array(
+                            [x1[i + 1] - x1[i], y1[i + 1] - y1[i], z1[i + 1] - z1[i]]
+                        )
+                    )
 
-                if distance_current > distance:
-                    break
+                    if distance_current > distance:
+                        break
 
             coords_destination = np.array([x1[i + 1], y1[i + 1], z1[i + 1]])
             # coords_path = np.hstack((x1[:, np.newaxis], y1[:, np.newaxis], z1[:, np.newaxis]))
