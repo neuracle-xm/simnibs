@@ -376,6 +376,7 @@ def run(
         central = cortex.estimate_layers(
             surface_settings["central_surface_method"],
             surface_settings["central_surface_fraction"],
+            curv_kwargs=dict(smooth_iter=10),
             return_surface=True,
         )
 
