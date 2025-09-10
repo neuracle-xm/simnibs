@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import functools
-import multiprocessing
+import multiprocessing as mp
 from typing import Callable
 
 
@@ -17,7 +17,11 @@ def run_in_new_thread(fn):
 
 @run_in_new_thread
 def run_in_multiprocessing_pool(
-    n_workers: int, fn: Callable, iterable, pool_kwargs: dict | None = None
+    n_workers: int,
+    fn: Callable,
+    iterable,
+    pool_kwargs: dict | None = None,
+    start_method: str | None = None,
 ):
     """Submit an iterable to a pool of workers.  `fn` is executed as
 
@@ -39,8 +43,9 @@ def run_in_multiprocessing_pool(
     result
         The concatenated result from running `fn`.
     """
+    start_method = mp.get_start_method() if start_method is None else start_method
     pool_kwargs = pool_kwargs or {}
-    with multiprocessing.Pool(processes=n_workers, **pool_kwargs) as pool:
+    with mp.get_context(start_method).Pool(processes=n_workers, **pool_kwargs) as pool:
         result = pool.starmap_async(fn, iterable)
         pool.close()
         pool.join()

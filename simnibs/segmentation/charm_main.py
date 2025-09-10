@@ -149,7 +149,7 @@ def run(
     num_threads = settings["general"]["threads"]
     if isinstance(num_threads, int) and num_threads > 0:
         samseg.gems.setGlobalDefaultNumberOfThreads(num_threads)
-        logger.info("Using %d threads, instead of all available." % num_threads)
+        logger.info(f"Using {num_threads} threads, instead of all available.")
 
     # TODO: Setup the visualization tool. This needs some pyqt stuff to be
     # installed. Don't know if we want to expose this in the .ini
@@ -392,6 +392,7 @@ def run(
                 surface_settings["spherical_registration_process_pool"],
                 brain_surface.spherical_registration_cat,
                 itertools.product([sub_files], file_finder.HEMISPHERES),
+                start_method="spawn",
             )
 
         if surface_settings["update_segmentation_from_surfaces"]:

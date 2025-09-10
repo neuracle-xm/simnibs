@@ -179,31 +179,33 @@ def spherical_registration_cat(
 
     # Map to sphere (create {hemi}.sphere)
     try:
+        logger.info(f"Generating sphere ({hemi})")
         s = time.perf_counter()
         cmd = f"{cat_surf2sphere} {sph_map_white} {sphere} 10"
         spawn_process(cmd.split())
         time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-        logger.info(f"Time to generate sphere ({hemi}) : {time_elapsed}")
+        logger.info(f"Generating sphere ({hemi}) : {time_elapsed}")
     except Exception as e:
         raise e
     else:
         if surf2sphere_subsampling:
             # upsample sphere
-            s = cortech.Surface.from_file(sphere)
+            s = cortech.Sphere.from_file(sphere, normalize=False)
             v = topo.subdivide_vertices(torch.tensor(s.vertices).T).T.numpy()
             f = topo.subdivide_faces().numpy()
-            mesh_io.write_gifti_surface(cortech.Surface(v, f), sphere)
+            mesh_io.write_gifti_surface(cortech.Sphere(v, f, normalize=False), sphere)
     finally:
         if surf2sphere_subsampling:
             # clean up
             sph_map_white.unlink()
 
     # Register to fsaverage ({hemi}.sphere.reg)
+    logger.info(f"Registering sphere ({hemi})")
     s = time.perf_counter()
     cmd = f"{cat_warpsurf} -steps 2 -avg -i {white} -is {sphere} -t {fsavg_white} -ts {fsavg_sphere} -ws {sphere_reg}"
     spawn_process(cmd.split())
     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(time.perf_counter() - s))
-    logger.info(f"Time to register sphere ({hemi}) : {time_elapsed}")
+    logger.info(f"Registering sphere ({hemi}) : {time_elapsed}")
 
 
 def segment_triangle_intersect(vertices, faces, segment_start, segment_end):

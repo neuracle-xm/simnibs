@@ -1117,9 +1117,9 @@ class DipoleFEM(FEMSystem):
         """
         dip_pos = np.atleast_2d(dip_pos).astype(float)
         dip_mom = np.atleast_2d(dip_mom).astype(float)
-        assert (
-            dip_pos.shape == dip_mom.shape
-        ), "`dip_pos` and `dip_mom` must have the same dimensions"
+        assert dip_pos.shape == dip_mom.shape, (
+            "`dip_pos` and `dip_mom` must have the same dimensions"
+        )
         n_dip = dip_pos.shape[0]
 
         if self.units == "mm":
@@ -1451,14 +1451,14 @@ def tdcs(
     potential: simnibs.msh.mesh_io.NodeData
         Total electric potential
     """
-    assert len(currents) == len(
-        electrode_surface_tags
-    ), "there should be one channel for each current"
+    assert len(currents) == len(electrode_surface_tags), (
+        "there should be one channel for each current"
+    )
 
     surf_tags = np.unique(mesh.elm.tag1[mesh.elm.get_triangles()])
-    assert np.all(
-        np.isin(electrode_surface_tags, surf_tags)
-    ), "Could not find all the electrode surface tags in the mesh"
+    assert np.all(np.isin(electrode_surface_tags, surf_tags)), (
+        "Could not find all the electrode surface tags in the mesh"
+    )
 
     assert np.isclose(np.sum(currents), 0), "Currents should sum to 0"
 
@@ -1812,9 +1812,9 @@ def tdcs_neumann(mesh, cond, currents, electrode_surface_tags):
     potential: simnibs.msh.mesh_io.NodeData
         Total electric potential
     """
-    assert len(electrode_surface_tags) == len(
-        currents
-    ), "Please define one current per electrode"
+    assert len(electrode_surface_tags) == len(currents), (
+        "Please define one current per electrode"
+    )
     assert np.isclose(np.sum(currents), 0.0), "Sum of currents must be zero"
     S = TDCSFEMNeumann(mesh, cond, electrode_surface_tags[0])
     b = S.assemble_rhs(electrode_surface_tags[1:], currents[1:])
@@ -1959,9 +1959,9 @@ def tdcs_leadfield(
 
     n_sims = len(electrode_surface) - 1
     currents = [current] * n_sims if isinstance(current, float) else current
-    assert (
-        len(currents) == n_sims
-    ), f"Number of currents ({len(currents)}) do not correspond to the number of simulations ({n_sims})"
+    assert len(currents) == n_sims, (
+        f"Number of currents ({len(currents)}) do not correspond to the number of simulations ({n_sims})"
+    )
 
     # Run simulations (sequential)
     if n_workers == 1:
