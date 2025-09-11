@@ -42,6 +42,6 @@
   GMSH_BIN_DIR="$(dirname "$GMSH_BIN_DIR")"
   echo $GMSH_BIN_DIR
 
-  e ${GMSH_BIN_PATH}/gmsh $D2C_DIR/first_ev_for_check.msh $D2C_DIR/d2c_check.opt &
+  e ${GMSH_BIN_DIR}/gmsh $D2C_DIR/first_ev_for_check.msh $D2C_DIR/d2c_check.opt &
     
   e2 cd $OLD_PWD
