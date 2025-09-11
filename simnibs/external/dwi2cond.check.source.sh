@@ -39,6 +39,9 @@
 
   PYTHON_BIN_DIR=$(which simnibs_python)
   GMSH_BIN_DIR=$(readlink -f $PYTHON_BIN_DIR)
+  GMSH_BIN_DIR="$(dirname "$GMSH_BIN_DIR")"
+  echo $GMSH_BIN_DIR
+
   e ${GMSH_BIN_PATH}/gmsh $D2C_DIR/first_ev_for_check.msh $D2C_DIR/d2c_check.opt &
     
   e2 cd $OLD_PWD
