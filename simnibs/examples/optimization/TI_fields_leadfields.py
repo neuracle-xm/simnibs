@@ -6,7 +6,7 @@ Copyright (c) 2022 SimNIBS developers. Licensed under the GPL v3.
 
 import copy
 
-from simnibs import mesh_io
+import simnibs
 from simnibs.utils import TI_utils as TI
 
 # load lead field
@@ -24,9 +24,9 @@ ef2 = TI.get_field(TIpair2, leadfield, idx_lf)
 
 # add to mesh for later visualization
 mout = copy.deepcopy(mesh)
-hlpvar = mesh_io.NodeData(ef1, mesh=mout)
+hlpvar = simnibs.mesh_io.NodeData(ef1, mesh=mout)
 mout.add_node_field(hlpvar.norm(), "E_magn1")
-hlpvar = mesh_io.NodeData(ef2, mesh=mout)
+hlpvar = simnibs.mesh_io.NodeData(ef2, mesh=mout)
 mout.add_node_field(hlpvar.norm(), "E_magn2")
 
 
@@ -52,10 +52,14 @@ TIamp = TI.get_dirTI(ef1, ef2, surf_normals)
 mout.add_node_field(TIamp, "TIamp_localnorm")  # for visualization
 
 
-mesh_io.write_msh(mout, "TI_via_leadfields.msh")
+simnibs.mesh_io.write_msh(mout, "TI_via_leadfields.msh")
 v = mout.view(
-    visible_tags=[1, 2, 1006],
+    visible_tags=[
+        simnibs.ElementTags.WM,
+        simnibs.ElementTags.GM,
+        simnibs.ElementTags.EYE_BALLS_TH_SURFACE,
+    ],
     visible_fields="TImax",
 )
 v.write_opt("TI_via_leadfields.msh")
-mesh_io.open_in_gmsh("TI_via_leadfields.msh", True)
+simnibs.mesh_io.open_in_gmsh("TI_via_leadfields.msh", True)

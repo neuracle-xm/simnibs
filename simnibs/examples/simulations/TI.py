@@ -81,7 +81,10 @@ mout.add_element_field(ef2.norm(), "magnE - pair 2")
 mout.add_element_field(TImax, "TImax")
 mesh_io.write_msh(mout, os.path.join(S.pathfem, "TI.msh"))
 v = mout.view(
-    visible_tags=[1002, 1006],
+    visible_tags=[
+        ElementTags.GM_TH_SURFACE,
+        ElementTags.EYE_BALLS_TH_SURFACE,
+    ],
     visible_fields="TImax",
 )
 v.write_opt(os.path.join(S.pathfem, "TI.msh"))

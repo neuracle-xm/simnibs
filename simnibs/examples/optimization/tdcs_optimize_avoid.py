@@ -18,7 +18,7 @@ target.positions = simnibs.mni2subject_coords([-37, -21, 58], "m2m_ernie")
 target.intensity = 0.2
 
 avoid = opt.add_avoid()
-avoid.tissues = 1006  # 1006 corresponds to the eye surface
+avoid.tissues = simnibs.ElementTags.EYE_BALLS_TH_SURFACE
 
 # Run optimization
 simnibs.run_simnibs(opt)
