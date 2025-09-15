@@ -340,7 +340,7 @@ class gPC_regression(Reg):
                 del f['gpc_object']
             # save random parameters
             f.create_dataset('gpc_object/random_vars',
-                             data=np.array(self.random_vars, dtype=np.string_))
+                             data=np.array(self.random_vars, dtype=np.bytes_))
             f.create_dataset('gpc_object/pdftype',
                              data=np.array(pdftype, dtype='S10'))
             f.create_dataset('gpc_object/pdfshape', data=np.array(pdfshape))
