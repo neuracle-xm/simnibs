@@ -108,7 +108,6 @@ class TesFlexOptimization:
         Path to CSV file containing EEG electrode positions in SimNIBS format.
         Required if map_to_net_electrodes is True.
     
->>>>>>> master
     Parameters (optimizer + FEM)
     ------------------------------------
     optimizer : str, optional, default: "differential_evolution"
