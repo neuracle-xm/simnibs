@@ -256,6 +256,21 @@ class TestPythonErnie:
         ret = self.run_script("utilities", "neuronavigation_im_export_TMS.py")
         assert ret.returncode == 0
         
+    def test_uncertainty_quantification(self, example_dataset):
+        os.chdir(example_dataset)
+        ret = self.run_script("uncertainty_quantification", "uncertainty_quantification.py")
+        assert ret.returncode == 0
+
+    def test_uq_secondary_quantities(self, example_dataset):
+        os.chdir(example_dataset)
+        ret = self.run_script("uncertainty_quantification", "uq_secondary_quantities.py")
+        assert ret.returncode == 0
+        
+    def test_uq_setup_advanced(self, example_dataset):
+        os.chdir(example_dataset)
+        ret = self.run_script("uncertainty_quantification", "uq_setup_advanced.py")
+        assert ret.returncode == 0
+        
 
 class TestMatlabErnie:
     def run_script(self, script_folder, script_name, clean=None):
