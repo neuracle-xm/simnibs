@@ -7,7 +7,7 @@
 import numpy as np
 import simnibs
 from simnibs.simulation import gpc
-
+from simnibs.mesh_tools.mesh_io import ElementData
 
 fn_hdf5 = 'tdcs_uq/ernie_TDCS_1_gpc.hdf5'
 # Read the regression object from the HDF5 file
@@ -22,7 +22,7 @@ def percentile_99(Es):
     # for each simulation, we calculate the 99th percentile
     prc = np.zeros(Es.shape[0])
     for i, E in enumerate(Es):
-        prc[i] = simnibs.ElementData(E, mesh=mesh).get_percentiles(99)[0]
+        prc[i] = ElementData(E, mesh=mesh).get_percentiles(99)[0]
 
     return prc
 
