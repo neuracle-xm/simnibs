@@ -49,13 +49,19 @@ As of SimNIBS 4.6, we use an implementation of the TopoFit network to reconstruc
 
 It is also possible to control how the central gray matter surface (infra-supragranular border) is estimated by setting ``central_surface_fraction`` (default is 0.5) and ``central_surface_method`` (options are equidistance, equivolume [default]).
 
+It is also possible to use cortical surfaces created by FreeSurfer's *recon-all* pipeline with CHARM. To do this, pass the subject directory using the option ``--fs-dir``.
+
 
 Further notes
 --------------
 
-* If you encounter spurious segmentation results this *could* be due to a suboptimal affine registration between the anatomical image(s) and the atlas. Please see the tutorial :ref:`fix_affine_registration_tutorial`.
-* charm can use the cortical surfaces created by FreeSurfer recon-all to achieve a more accurate representation of smaller sulci in the head meshes (option *--fs-dir*).
-* Please see the tutorial :ref:`fixheadmodel_tutorial` in case manually fixes to the segmentation are needed.
+* If you encounter spurious segmentation results this *could* be due to a suboptimal affine registration to MNI space. To fix this, you have several options:
+
+  1. Use another initialization method (e.g., if using "TREGA", try for example "atlas"). This can be changed in the ``charm.ini`` file.
+  2. When using the "atlas" registration method, it is possible to modify the search bounds on rotation, scaling, and translation. Please see the tutorial :ref:`fix_affine_registration_tutorial` for how to achieve this.
+  3. When using the "atlas" registration method, it is possible to supply a custom transformation matrix that is for initialization. To pass this, use the option ``--inittransform``. Note that the transformation must be world-to-world (not voxel-to-voxel!).
+  4. If none of the above works, you can estimate the transformation using some other method/software package and pass the resulting transformation directly to CHARM using the ``--usetransform`` option. Note that the transformation must be world-to-world (not voxel-to-voxel!).
+
 * Since SimNIBS version 4.6, CHARM uses a new segmentation atlas that includes subcutaneous fat for improved skull border segmentation by default. If you want to use the previous version of the segmentation atlas, use option *--useatlasv1_0*.
 
 References
