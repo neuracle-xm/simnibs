@@ -134,7 +134,8 @@ init_transform = CommandLineArgument(
                     template to the subject MRI, i.e., it takes the MNI
                     template *to* subject space. Supplied as a path to a
                     space delimited .txt file containing a 4x4
-                    transformation matrix (default = None)."""
+                    transformation matrix (default = None). This is only used
+                    when `init_type` is 'atlas' in charm.ini."""
     ),
 )
 force_qform = CommandLineArgument(
