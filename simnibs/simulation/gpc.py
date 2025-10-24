@@ -95,7 +95,7 @@ class gPC_regression(Reg):
     data_file: str, optional
         Path to file with raw data
     '''
-    def __init__(self, problem, regularization_factors, multi_indices, coords_norm, sim_type, data_file=None):
+    def __init__(self, problem, regularization_factors, multi_indices, coords_norm, sim_type, data_file=None,n_cpu=None):
 
         if sim_type in ["TMS", "TCS"]:
             self._sim_type = sim_type
@@ -356,7 +356,7 @@ class gPC_regression(Reg):
 
 
     @classmethod
-    def read_hdf5(cls, fn_hdf5):
+    def read_hdf5(cls, fn_hdf5, cpus=None):
         """Reads gPC information from hdf5 file
         Information must have the same format as in gPC_regression.save_hdf5
 
@@ -394,7 +394,7 @@ class gPC_regression(Reg):
             problem = pygpc.Problem(model, parameters)
 
         return cls(problem, regularization_factors, poly_idx, coords_norm,
-                   sim_type,data_file=fn_hdf5)
+                   sim_type,data_file=fn_hdf5, n_cpu=cpus)
 
     def visualize(self):
         """Creates a mesh file for visualization
