@@ -524,10 +524,6 @@ def run_tms_gpc(poslist, fn_simu, cpus=1, tissues=[ElementTags.GM], eps=1e-2,
     '''
     poslist._prepare()
     fn_simu = os.path.abspath((os.path.expanduser(fn_simu)))
-    if cpus > 1:
-        logger.warning("Can't run GPC with multiprocessing (for now)")
-        logger.warning("Setting cpus=1")
-        cpus = 1
 
     logger.info('Running a gPC expansion with tolerance: {0:1e}'.format(eps))
     path, basename = os.path.split(fn_simu)
@@ -566,7 +562,7 @@ def run_tms_gpc(poslist, fn_simu, cpus=1, tissues=[ElementTags.GM], eps=1e-2,
         gpc_reg = gPC_regression(problem=gpc_session.problem, regularization_factors=[0],
                                  multi_indices=gpc_session.basis.multi_indices,
                                  coords_norm=gpc_session.grid.coords_norm,
-                                 sim_type='TMS', data_file=fn_hdf5)
+                                 sim_type='TMS', data_file=fn_hdf5, n_cpu=cpus)
         gpc_reg.save_hdf5()
         gpc_reg.postprocessing(poslist.postprocess)
         gpc_reg.visualize()
@@ -607,10 +603,6 @@ def run_tcs_gpc(poslist, fn_simu, cpus=1, tissues=[2], eps=1e-2,
 
     poslist._prepare()
     fn_simu = os.path.abspath(os.path.expanduser(fn_simu))
-    if cpus > 1:
-        logger.warning("Can't run GPC with multiprocessing (for now)")
-        logger.warning("Setting cpus=1")
-        cpus = 1
     logger.info("Running a gPC expansion with tolerance: {0:1e}".format(eps))
     fn_hdf5 = fn_simu + "_gpc.hdf5"
     if os.path.isfile(fn_hdf5):
@@ -643,7 +635,7 @@ def run_tcs_gpc(poslist, fn_simu, cpus=1, tissues=[2], eps=1e-2,
     gpc_session, _ , _ = algorithm.run()
     gpc_reg = gPC_regression(problem=gpc_session.problem, regularization_factors=regularization_factors,
                    multi_indices=gpc_session.basis.multi_indices,coords_norm=gpc_session.grid.coords_norm,
-                   sim_type='TCS', data_file=fn_hdf5)
+                   sim_type='TCS', data_file=fn_hdf5, n_cpu=cpus)
     # postprocessing
     gpc_reg.save_hdf5()
     gpc_reg.postprocessing(poslist.postprocess)
@@ -1009,38 +1001,41 @@ class TMSgPCSampler(gPCSampler):
         del v
 
         return np.atleast_1d(qois[0]).reshape(-1)
-    
-    
+
+
+class NIBS_Model(AbstractModel):
+    def __init__(self, fname_matlab=None, matlab_model=False):
+        super(type(self), self).__init__(matlab_model=matlab_model)
+        self.fname = inspect.getfile(inspect.currentframe())
+
+    def validate(self):
+        pass
+
+    def simulate(self, process_id=None, matlab_engine=None):
+
+        para_temp = OrderedDict()
+        n_grid = len(next(iter(self.p.values())))
+        qoi_list = []
+
+        for i in range(n_grid):
+            for key, value in self.p.items():
+                para_temp[key] = value[i]
+
+            current_qoi = self.sampler.run_simulation(para_temp)
+            qoi_list.append(current_qoi)
+
+        qoi = np.array(qoi_list)
+
+        return qoi
+
 def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps= 1E-2,
                         regularization_factors=np.logspace(-5, 3, 9),n_cpus=1, min_iter=2):
     """ Setup the algorithm to build up a gPC model for the sampler. """
     # Convert the sampler to a pygpc model.
-    class NIBS_Model(AbstractModel):
-        def __init__(self, fname_matlab=None, matlab_model=False):
-            super(type(self), self).__init__(matlab_model=matlab_model)
-            self.fname = inspect.getfile(inspect.currentframe())
 
-        def validate(self):
-            pass
-
-        def simulate(self, process_id=None, matlab_engine=None):
-
-            para_temp = OrderedDict()
-            n_grid = len(next(iter(self.p.values())))
-            qoi_list = []
-
-            for i in range(n_grid):
-                for key, value in self.p.items():
-                    para_temp[key] = value[i]
-
-                current_qoi = sampler.run_simulation(para_temp)
-                qoi_list.append(current_qoi)
-
-            qoi = np.array(qoi_list)
-
-            return qoi
 
     model = NIBS_Model()
+    model.sampler = sampler
     # define the gPC problem
     problem = pygpc.Problem(model, parameters)
     # define the algorithm options
@@ -1050,7 +1045,7 @@ def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps
     options["solver"] = "Tikhonov"
     options["settings"] = {"alpha": regularization_factors}
     options["interaction_order"] = 3
-    options["n_cpu"] = 0
+    options["n_cpu"] = n_cpus
     options["fn_results"] = None
     options["matrix_ratio"] = data_poly_ratio
     options["grid"] = pygpc.Random
