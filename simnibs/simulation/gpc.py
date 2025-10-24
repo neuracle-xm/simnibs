@@ -108,6 +108,8 @@ class gPC_regression(Reg):
         options["error_type"] = "kcv"
         options["solver"] = "Tikhonov"
         options["backend"] = "python"
+        options["n_cpu_comp"] = n_cpu
+        options["n_cpu_basis"] = 1
         super().__init__(problem, 0, 0 * np.zeros(problem.dim), 1,
                          problem.dim, options, problem.dim, None)
         # initialize grid class
@@ -1056,7 +1058,11 @@ def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps
     options["error_type"] = "kcv"
     options["eps"] = eps
     options["max_iter"] = max_iter
-    options["n_cpus"] = n_cpus
+    options["n_cpu_comp"] = n_cpus
+    if n_cpus == 1:
+        options["n_cpu_basis"] = 1
+    else:
+        options["n_cpu_basis"] = 0
     options["min_iter"] = min_iter
     options["print_function"] = logger.info
     algorithm = pygpc.RegAdaptiveOldSet(problem=problem, options=options)
