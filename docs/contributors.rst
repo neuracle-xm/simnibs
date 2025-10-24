@@ -61,6 +61,9 @@ Current Contributors
    * First version of the TMS optimization (3.1)
    * UQ functionality (3.0)
 
+* Sicheng An
+   * Update of GPC code (4.6)
+
 * Bianka Rumi
    * Coil models for Brainsway H1, H4 and H7 (4.5)
    * Testing and debugging of the flexible TMS optimization (4.5)
