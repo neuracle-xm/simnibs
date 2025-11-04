@@ -13,6 +13,8 @@ These open-source software packages and workflows build upon SimNIBS or interfac
 
 **BrainStorm** (`website <https://neuroimage.usc.edu/brainstorm>`_, `reference <https://doi.org/10.1155/2011/879716>`_) is a package for the analysis of brain signal recordings and uses SimNIBS for the `creation of FEM head meshes <https://neuroimage.usc.edu/brainstorm/Tutorials/FemMesh>`_ .
 
+**FASTANS** (`website <https://github.com/mlueckel/FASTANS>`_) is a faster version of **TMS_targeting** listed below, leveraging improvements implemented in SimNIBS 4.5
+
 **FieldTrip** (`website <https://www.fieldtriptoolbox.org/`_, `reference <https://onlinelibrary.wiley.com/doi/10.1155/2011/156869>`_) supports `EEG source localization based on SimNIBS head models and leadfields <https://www.fieldtriptoolbox.org/getting_started/othersoftware/simnibs/>`_ .
 
 **Metamodeling** (`website <https://github.com/Miles2708/Metamodeling_WM>`_, `reference <https://www.sciencedirect.com/science/article/pii/S0149763421003602?via%3Dihub>`_) introduces a new way to do meta-analyses of brain stimulation effects
@@ -22,6 +24,8 @@ These open-source software packages and workflows build upon SimNIBS or interfac
 **NHP modeling pipeline** (`website <https://github.com/ngoswami1/nhp-modeling-pipeline>`_, `reference <https://www.sciencedirect.com/science/article/pii/S0165027024001213>`_) uses SimNIBS to calculate electric fields in NHP head models.
 
 **PlanTUS** (`website <https://github.com/mlueckel/PlanTUS>`_) uses SimNIBS charm to create head models for TUS planning.
+
+**PrecisionTMSPlanning** (`website <https://github.com/bucknerlab/PrecisionTMSPlanning>`_, `reference <https://onlinelibrary.wiley.com/doi/full/10.1002/hbm.70266>`_) aims to identify an optimal TMS target based on rs-fMRI connectivity and e-field modelling.
 
 **TAP (TMS_Targeting_And_Analysis_Pipeline)** (`website <https://github.com/moritzdannhauer/TAP>`_, `reference <https://iopscience.iop.org/article/10.1088/1741-2552/ac63a4/meta>`_) is a pipeline to optimize and verify coil placements in transcranial magnetic stimulation.
 
