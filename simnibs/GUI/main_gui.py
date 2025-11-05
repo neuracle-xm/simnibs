@@ -17,13 +17,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 import copy
-import sys
-import os
-import time
 import logging
+import os
+import subprocess
+import sys
+import time
+
 import numpy as np
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from simnibs import SIMNIBSDIR
 from simnibs.simulation import sim_struct

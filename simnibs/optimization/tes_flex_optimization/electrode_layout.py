@@ -3,6 +3,7 @@ import nibabel
 import numpy as np
 import os
 
+from simnibs import RegionOfInterest
 from simnibs.mesh_tools.mesh_io import make_surface_mesh
 from .current_estimator import CurrentEstimator
 from simnibs.simulation.sim_struct import SESSION
@@ -785,9 +786,9 @@ class LayoutElectrode:
     @node_current.setter
     def node_current(self, value):
         if value is not None:
-            assert (
-                len(value) == self.n_nodes
-            ), "Number of node currents does not match total number of nodes!"
+            assert len(value) == self.n_nodes, (
+                "Number of node currents does not match total number of nodes!"
+            )
 
             self._node_current = value
 
@@ -816,9 +817,9 @@ class LayoutElectrode:
     @node_voltage.setter
     def node_voltage(self, value):
         if value is not None:
-            assert (
-                len(value) == self.n_nodes
-            ), "Number of node voltages does not match total number of nodes!"
+            assert len(value) == self.n_nodes, (
+                "Number of node voltages does not match total number of nodes!"
+            )
 
             self._node_voltage = value
 
@@ -990,21 +991,21 @@ class ElectrodeArray:
         else:
             self.current = current
 
-        assert (
-            center.shape[0] == self.n_ele
-        ), "Number of elements in 'center' does not match number of electrodes!"
-        assert (
-            len(radius) == self.n_ele
-        ), "Number of elements in 'radius' does not match number of electrodes!"
-        assert (
-            len(length_x) == self.n_ele
-        ), "Number of elements in 'length_x' does not match number of electrodes!"
-        assert (
-            len(length_y) == self.n_ele
-        ), "Number of elements in 'length_y' does not match number of electrodes!"
-        assert (
-            len(self.current) == self.n_ele
-        ), "Number of elements in 'current' does not match number of electrodes!"
+        assert center.shape[0] == self.n_ele, (
+            "Number of elements in 'center' does not match number of electrodes!"
+        )
+        assert len(radius) == self.n_ele, (
+            "Number of elements in 'radius' does not match number of electrodes!"
+        )
+        assert len(length_x) == self.n_ele, (
+            "Number of elements in 'length_x' does not match number of electrodes!"
+        )
+        assert len(length_y) == self.n_ele, (
+            "Number of elements in 'length_y' does not match number of electrodes!"
+        )
+        assert len(self.current) == self.n_ele, (
+            "Number of elements in 'current' does not match number of electrodes!"
+        )
 
         for i_ele in range(self.n_ele):
             self.distance[i_ele] = np.linalg.norm(center[i_ele, :] - self.array_center)
@@ -1307,7 +1308,7 @@ class ElectrodeArrayPair(ElectrodeLayout):
 
         if self.length_x_bounds is not None and np.sum(self.length_x_bounds) != 0:
             assert len(self.length_x_bounds) == 2, (
-                "Dimension mismatch! " "Please provide [min, max] values for length_x."
+                "Dimension mismatch! Please provide [min, max] values for length_x."
             )
             self._length_x_free = True
             self.length_x_bounds = self.length_x_bounds
@@ -1321,7 +1322,7 @@ class ElectrodeArrayPair(ElectrodeLayout):
 
         if self.length_y_bounds is not None and np.sum(self.length_y_bounds) != 0:
             assert len(self.length_y_bounds) == 2, (
-                "Dimension mismatch! " "Please provide [min, max] values for length_y."
+                "Dimension mismatch! Please provide [min, max] values for length_y."
             )
             self._length_y_free = True
             self.length_y_bounds = self.length_y_bounds

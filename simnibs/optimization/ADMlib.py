@@ -80,7 +80,7 @@ def recipcode(rv, jv, rs, ks, A):
     logger.debug("Computing H-primary")
     Hprimary = computeHprimary(rv, jv, robs, prec)
     end = time.time()
-    logger.debug(f"H-primary time: {end-start:.2f}s")
+    logger.debug(f"H-primary time: {end - start:.2f}s")
     kp = ks
     Etotal = np.zeros(npos)
     for i in range(0, npos):
@@ -128,7 +128,7 @@ def ADM(rv, jv, rs, ks, A, coildir):
     logger.debug("Computing H-primary")
     Hprimary = computeHprimary(rv, jv, robs, prec)
     end = time.time()
-    logger.debug(f"H-primary time: {end-start:.2f}s")
+    logger.debug(f"H-primary time: {end - start:.2f}s")
     kp = kaux[:, :, 0]
 
     Etotal = np.zeros([Nj, npos])
@@ -177,7 +177,7 @@ def recipcodemag(rv, jvx, jvy, jvz, rs, ks, A):
     logger.debug("Computing H-primary")
     Hprimary = computeHprimary(rv, jvx, robs, prec)
     end = time.time()
-    logger.info(f"H-primary time: {end-start:.2f}s")
+    logger.info(f"H-primary time: {end - start:.2f}s")
     start = end
     for i in range(0, npos):
         st = i * ncoil
@@ -188,7 +188,7 @@ def recipcodemag(rv, jvx, jvy, jvz, rs, ks, A):
     logger.debug("Computing H-primary")
     Hprimary = computeHprimary(rv, jvy, robs, prec)
     end = time.time()
-    logger.info(f"H-primary time: {end-start:.2f}s")
+    logger.info(f"H-primary time: {end - start:.2f}s")
     start = end
     for i in range(0, npos):
         st = i * ncoil
@@ -199,7 +199,7 @@ def recipcodemag(rv, jvx, jvy, jvz, rs, ks, A):
     logger.debug("Computing H-primary")
     Hprimary = computeHprimary(rv, jvz, robs, prec)
     end = time.time()
-    logger.info(f"H-primary time: {end-start:.2f}s")
+    logger.info(f"H-primary time: {end - start:.2f}s")
     start = end
     for i in range(0, npos):
         st = i * ncoil
@@ -248,7 +248,7 @@ def ADMmag(rv, jvx, jvy, jvz, rs, ks, A, coildir):
     logger.debug("Computing H-primary")
     Hprimary = computeHprimary(rv, jvx, robs, prec)
     end = time.time()
-    logger.info(f"H-primary time: {end-start:.2f}s")
+    logger.info(f"H-primary time: {end - start:.2f}s")
     start = end
     kp = kaux[:, :, 0]
     for i in range(0, npos):
@@ -261,7 +261,7 @@ def ADMmag(rv, jvx, jvy, jvz, rs, ks, A, coildir):
             Etotal[j, i, 0] = -np.inner(Hprimary[:, st:en].flatten(), kp.flatten())
     Hprimary = computeHprimary(rv, jvy, robs, prec)
     end = time.time()
-    logger.info(f"H-primary time: {end-start:.2f}s")
+    logger.info(f"H-primary time: {end - start:.2f}s")
     start = end
     for i in range(0, npos):
         st = i * ncoil
@@ -273,7 +273,7 @@ def ADMmag(rv, jvx, jvy, jvz, rs, ks, A, coildir):
             Etotal[j, i, 1] = -np.inner(Hprimary[:, st:en].flatten(), kp.flatten())
     Hprimary = computeHprimary(rv, jvz, robs, prec)
     end = time.time()
-    logger.info(f"H-primary time: {end-start:.2f}s")
+    logger.info(f"H-primary time: {end - start:.2f}s")
     start = end
     for i in range(0, npos):
         st = i * ncoil
@@ -412,7 +412,3 @@ def lagrange(x, pointx):
                     L[i, :], (x - pointx[j]) / (pointx[i] - pointx[j])
                 )
     return L
-
-
-if __name__ == "__main__":
-    test_computeHprimary()

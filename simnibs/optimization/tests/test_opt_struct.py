@@ -35,7 +35,7 @@ def sphere_w_elec_msh():
     fn = os.path.join(
         SIMNIBSDIR, "_internal_resources", "testing_files", "sphere_w_electrodes.msh"
     )
-    return Msh(fn=fn)
+    return mesh_io.Msh(fn=fn)
 
 
 @pytest.fixture
@@ -1212,10 +1212,9 @@ class TestTDCSDistributedoptimize:
     @pytest.mark.parametrize(["max_el_c", "max_tot_c"], [(1e-3, 2e-3), (2e-3, 4e-3)])
     @pytest.mark.parametrize("max_ac", [None, 3])
     def test_optimize(self, intensity, max_el_c, max_tot_c, max_ac, fn_surf_real):
-
-        target_img = np.zeros((10,10,10))
-        target_img[3:5,3:5,7:9] = 1.0
-        target_img[7:9,3:5,3:5] = 1.0
+        target_img = np.zeros((10, 10, 10))
+        target_img[3:5, 3:5, 7:9] = 1.0
+        target_img[7:9, 3:5, 3:5] = 1.0
         target_img = scipy.ndimage.zoom(target_img, 10, order=1)
 
         affine = np.eye(4)
