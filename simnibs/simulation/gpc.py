@@ -136,7 +136,7 @@ class gPC_regression(Reg):
         """Name of mesh file"""
         return os.path.splitext(self.data_file)[0] + ".msh"
 
-    def postprocessing(self, postprocessing_type, order_sobol_max=1):
+    def postprocessing(self, postprocessing_type, order_sobol_max=1, normalize_sobol=False):
         ''' Postprocessing for TMS/tDCS gPC operation
         Makes the operation for the postprodesssing and saves in in the data_file
 
@@ -149,6 +149,10 @@ class gPC_regression(Reg):
 
         order_sobol_max: int (Optional)
             Maximum number of components for Sobol coefficients. Default: 1
+            
+        normalize_sobol: bool (Optional)
+            whether to normalize the Sobol indices relative to the variance. Default: False
+            
         Returns
         -----------------------
         Writes mean, std, expansion coefficiets, sobol coefficiets, sensitivity and
@@ -259,10 +263,10 @@ class gPC_regression(Reg):
             else:
                 dtype = "elmdata"
             self._postprocessing_core(
-                f, "mesh_roi/" + dtype + "/", FIELD_NAME[p], order_sobol_max
+                f, "mesh_roi/" + dtype + "/", FIELD_NAME[p], order_sobol_max, normalize_sobol
             )
 
-    def _postprocessing_core(self, data, path, name, order_sobol_max, algorithm="standard", n_samples=1e5):
+    def _postprocessing_core(self, data, path, name, order_sobol_max, algorithm="standard", n_samples=1e5, normalize_sobol=False):
         ''' Convinience function to calculate postprocessing output '''
         with h5py.File(self.data_file, 'a') as f:
             try:
@@ -285,8 +289,8 @@ class gPC_regression(Reg):
         mean = self.get_mean(coeffs=coeffs)
         std = self.get_std(coeffs=coeffs)
         # Sobol
-        sobol, sobol_idx, _ = self.get_sobol_indices(coeffs)
-
+        sobol, sobol_idx, _ = self.get_sobol_indices(coeffs, normalize_sobol=normalize_sobol)
+            
         # Filter sobol
         sobol_order = np.array([len(idx) for idx in sobol_idx])
         sobol = sobol[sobol_order <= order_sobol_max]
