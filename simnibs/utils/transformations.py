@@ -115,7 +115,8 @@ def volumetric_nonlinear(
     # If the resolution is to be changed
     if target_dimensions is None:
         target_dimensions = df_data.shape[:3]
-    if target_space_affine is not None:
+
+    if target_space_affine is not None and not np.allclose(target_space_affine, df_affine):
         # Create grid in target space
         xyzvox = np.array(
             np.meshgrid(
