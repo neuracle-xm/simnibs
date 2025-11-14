@@ -12,6 +12,7 @@ from simnibs import SIMNIBSDIR
 from simnibs.simulation import gpc as simnibs_gpc
 from simnibs.simulation import sim_struct
 from simnibs.mesh_tools import mesh_io
+from simnibs.simulation.sim_struct import TDCSLIST
 
 
 @pytest.fixture(scope="module")
@@ -388,3 +389,117 @@ class TestRunGPC:
                 np.testing.assert_equal(param.pdf_limits, props['pdf_limits'])
 
 
+
+class TestRegressionTestGPC:
+    def test_regression_test_gpc(self, sphere3):
+        tdcs = TDCSLIST()
+        tdcs.currents = [0.001, -0.001]
+        tdcs.mesh = sphere3
+
+        electrode = tdcs.add_electrode()
+        electrode.channelnr = 1
+        electrode.centre = [95, 0, 0]
+        electrode.shape = "ellipse"
+        electrode.dimensions = [20, 20]
+        electrode.thickness = 4
+
+        electrode = tdcs.add_electrode()
+        electrode.channelnr = 2
+        electrode.centre = [-95, 0, 0]
+        electrode.shape = "ellipse"
+        electrode.dimensions = [20, 20]
+        electrode.thickness = 4
+
+        # Set-up the uncertain conductivities
+        # intracranial
+        tdcs.cond[2].distribution_type = "beta"
+        tdcs.cond[2].distribution_parameters = [3, 3, 0.2, 0.4]
+        # bone
+        tdcs.cond[3].distribution_type = "beta"
+        tdcs.cond[3].distribution_parameters = [3, 3, 0.001, 0.012]
+        # scalp
+        tdcs.cond[4].distribution_type = "beta"
+        tdcs.cond[4].distribution_parameters = [3, 3, 0.4, 0.6]
+
+        # Run the UQ calling with intracranial and bone as ROIs and tolerance of 1e-2
+        fn_out = tempfile.TemporaryDirectory()
+        simnibs_gpc.run_tcs_gpc(tdcs, os.path.join(fn_out.name,'sphere'), tissues=[3, 4], eps=1e-2)
+
+        with h5py.File(os.path.join(fn_out.name,'sphere_gpc.hdf5'), "r") as f:
+            assert len(f.keys()) == 8
+            
+            hlpVar = f['random_var_samples'][()]
+            assert hlpVar.shape[0] <= 16
+
+            hlpVar=f['gpc_object']['poly_idx'][()]
+            assert hlpVar.shape == (8,3)
+            assert np.all(hlpVar == np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1],
+                                            [0, 2, 0], [0, 3, 0], [0, 1, 1], [0, 0, 2]]))
+            
+            hlpVar = f['mesh_roi/data_matrices/E_samples'][()]
+            assert hlpVar.shape[0] <= 16
+            assert hlpVar.shape[1:] == (14435, 3)
+            
+            hlpVar = f['mesh_roi/elmdata/'].keys()
+            assert len(hlpVar) == 32
+            for k in ['E_mean', 'E_sensitivity_3', 'E_sensitivity_4', 'E_sensitivity_5', 
+                    'E_sobol_3', 'E_sobol_4', 'E_sobol_5', 'E_std', 'J_mean',
+                    'J_sensitivity_3', 'J_sensitivity_4', 'J_sensitivity_5', 'J_sobol_3',
+                    'J_sobol_4', 'J_sobol_5', 'J_std', 'magnE_mean', 'magnE_sensitivity_3', 
+                    'magnE_sensitivity_4', 'magnE_sensitivity_5', 'magnE_sobol_3', 'magnE_sobol_4',
+                    'magnE_sobol_5', 'magnE_std', 'magnJ_mean', 'magnJ_sensitivity_3', 
+                    'magnJ_sensitivity_4', 'magnJ_sensitivity_5', 'magnJ_sobol_3', 'magnJ_sobol_4', 
+                    'magnJ_sobol_5', 'magnJ_std']:
+                assert k in hlpVar
+            
+            hlpVar = f['mesh_roi/elmdata/E_mean'][()]
+            assert hlpVar.shape == (14435, 3)
+            assert np.isclose(np.max(hlpVar),2.5408,rtol=5e-03, atol=5e-03)
+            assert np.isclose(np.min(hlpVar),-17.595,rtol=5e-03, atol=5e-03)
+            
+            hlpVar = f['mesh_roi/elmdata/E_std'][()]
+            assert hlpVar.shape == (14435, 3)
+            assert np.isclose(np.max(hlpVar),2.081,rtol=5e-03, atol=5e-03)
+            
+            hlpVar = f['mesh_roi/elmdata/E_sobol_3'][()]
+            assert hlpVar.shape == (14435, 3)
+            assert np.isclose(np.max(hlpVar),0.02125,rtol=5e-03, atol=1e-04)
+            assert np.isclose(np.mean(hlpVar),0.0002517,rtol=5e-03, atol=1e-07)
+            
+            hlpVar = f['mesh_roi/elmdata/E_sensitivity_4'][()]
+            assert hlpVar.shape == (14435, 3)
+            assert np.isclose(np.max(hlpVar),4.9689,rtol=5e-03, atol=5e-03)
+            assert np.isclose(np.min(hlpVar),-1.6340,rtol=5e-03, atol=5e-03)
+            
+            hlpVar = f['mesh_roi/elmdata/magnJ_mean'][()]
+            assert hlpVar.shape == (14435, )
+            assert np.isclose(np.max(hlpVar),0.1110,rtol=5e-03, atol=5e-04)
+            
+            hlpVar = f['mesh_roi/elmdata/magnJ_std'][()]
+            assert hlpVar.shape == (14435, )
+            assert np.isclose(np.max(hlpVar),0.0264,rtol=5e-03, atol=5e-04)
+            
+            hlpVar = f['mesh_roi/elmdata/magnJ_sobol_5'][()]
+            assert hlpVar.shape == (14435, )
+            assert np.isclose(np.max(hlpVar), 3.2435e-05,rtol=5e-03, atol=1e-08)
+            assert np.isclose(np.mean(hlpVar),1.0668e-06,rtol=5e-03, atol=1e-09)
+            
+            hlpVar = f['mesh_roi/elmdata/magnJ_sensitivity_3'][()]
+            assert hlpVar.shape == (14435, )
+            assert np.isclose(np.max(hlpVar),0.003164,rtol=5e-03, atol=5e-05)
+            assert np.isclose(np.min(hlpVar),-0.00015512,rtol=5e-03, atol=5e-07)
+            
+            hlpVar = f['mesh_roi/elmdata/E_mean'][()]
+            hlpVar2 = f['mesh_roi/elmdata/magnE_mean'][()]
+            assert hlpVar.shape == (14435, 3)
+            assert hlpVar2.shape == (14435,)
+            assert np.allclose(np.sqrt(np.sum(hlpVar**2,1)), hlpVar2, rtol=5e-03, atol=5e-03)
+            
+            hlpVar = f['mesh_roi/elmdata/J_mean'][()]
+            hlpVar2 = f['mesh_roi/elmdata/magnJ_mean'][()]
+            assert hlpVar.shape == (14435, 3)
+            assert hlpVar2.shape == (14435,)
+            assert np.allclose(np.sqrt(np.sum(hlpVar**2,1)), hlpVar2, rtol=5e-03, atol=5e-03)
+                    
+        if os.path.exists(fn_out.name):
+                fn_out.cleanup()

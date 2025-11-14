@@ -34,7 +34,7 @@ Current Contributors
 
 * Jesper D. Nielsen
    * Debugging and maintenance across the complete code.
-   * Main author of the DL-based brain surface reconstruction (4.6)
+   * Main author of the DL-based brain surface reconstruction and atlas affine registration (4.6)
    * Update of installation procedure (4.5)
    * Debugging and deprecation removal (4.5)
    * Update to *charm* to optionally use FreeSurfer surfaces (4.1)
