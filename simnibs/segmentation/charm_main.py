@@ -272,6 +272,7 @@ def run(
             segment_parameters_and_inputs,
             tissue_settings,
             csf_factor,
+            sub_files.template_coregistered
         )
 
         fn_LUT = sub_files.labeling.rsplit(".", 2)[0] + "_LUT.txt"
