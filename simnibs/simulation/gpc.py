@@ -237,7 +237,7 @@ class gPC_regression(Reg):
                 for rv, g in zip(self.random_vars, gr):
                     if isinstance(rv, int):
                         lst.cond[rv - 1].value = g
-                    elmdata = lst.cond2elmdata(logger_level=10)
+                elmdata = lst.cond2elmdata(logger_level=10)
                 # sets the potential
                 pot = mesh_io.NodeData(phi, mesh=msh)
                 # calclate the remaining fields
