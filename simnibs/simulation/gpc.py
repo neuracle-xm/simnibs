@@ -759,7 +759,7 @@ class gPCSampler(object):
     def run_simulation(self, random_vars):
         raise NotImplementedError("This method is to be implemented in a subclass!")
 
-    def _calc_E(self, v, dAdt=None):
+    def _calc_E(self, v, random_vars, dAdt=None):
         grad = v.gradient()
         grad.assign_triangle_values()
         E = -grad.value * 1e3
@@ -859,7 +859,7 @@ class TDCSgPCSampler(gPCSampler):
 
         qois = []
         for qoi_name, qoi_f in self.qoi_function.items():
-            qois.append(qoi_f(v_c))
+            qois.append(qoi_f(v_c, random_vars))
 
         random_vars = np.array(list(parameters.values()))
         self.record_data_matrix(random_vars, 'random_var_samples', '/')
@@ -1031,9 +1031,10 @@ class NIBS_Model(AbstractModel):
         qoi = np.array(qoi_list)
 
         return qoi
-
+#def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps= 1E-2,
+#                        regularization_factors=np.logspace(-5, 3, 9),n_cpus=1, min_iter=2):
 def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps= 1E-2,
-                        regularization_factors=np.logspace(-5, 3, 9),n_cpus=1, min_iter=2):
+                        regularization_factors=np.logspace(-5, 3, 9),n_cpus=1, min_iter=2, order_end=20, interaction_order=3):
     """ Setup the algorithm to build up a gPC model for the sampler. """
     # Convert the sampler to a pygpc model.
 
@@ -1045,10 +1046,10 @@ def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps
     # define the algorithm options
     options = dict()
     options["order_start"] = 0
-    options["order_end"] = 20
+    options["order_end"] = order_end
     options["solver"] = "Tikhonov"
     options["settings"] = {"alpha": regularization_factors}
-    options["interaction_order"] = 3
+    options["interaction_order"] = interaction_order
     options["n_cpu"] = n_cpus
     options["fn_results"] = None
     options["matrix_ratio"] = data_poly_ratio
