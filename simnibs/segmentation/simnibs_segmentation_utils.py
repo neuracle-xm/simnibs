@@ -1,7 +1,7 @@
 import samseg
 from samseg import gems
 from samseg.ProbabilisticAtlas import ProbabilisticAtlas
-from samseg.SamsegUtility import undoLogTransformAndBiasField, writeImage, logTransform
+from samseg.SamsegUtility import writeImage, logTransform
 from samseg.io import kvlReadCompressionLookupTable, kvlReadSharedGMMParameters
 import os
 from samseg.GMM import GMM
@@ -183,6 +183,7 @@ def writeBiasCorrectedImagesAndSegmentation(
     parameters_and_inputs,
     tissue_settings,
     csf_factor,
+    template_coregistered
 ):
     # We need an init of the probabilistic segmentation class
     # to call instance methods
@@ -196,15 +197,9 @@ def writeBiasCorrectedImagesAndSegmentation(
     exampleImageFileName = parameters_and_inputs["imageFileNames"]
     exampleImage = gems.KvlImage(exampleImageFileName[0])
     cropping = parameters_and_inputs["cropping"]
-    expImageBuffers, expBiasFields = undoLogTransformAndBiasField(
+    _, expBiasFields = undoLogTransformAndBiasField(
         imageBuffers, biasFields, mask
     )
-    expImageBuffers[~mask] = 0
-    for contrastNumber, out_name in enumerate(output_names_bias):
-        # Bias field correct and write
-        writeImage(
-            out_name, expImageBuffers[..., contrastNumber], cropping, exampleImage
-        )
 
     # Next do the segmentation, first read in the mesh
     modelSpecifications = parameters_and_inputs["modelSpecifications"]
@@ -250,6 +245,36 @@ def writeBiasCorrectedImagesAndSegmentation(
 
     writeImage(output_name_segmentation, segmentation, cropping, exampleImage)
 
+    unmaskedBuffers, _, _, _ = (
+        readCroppedImages(parameters_and_inputs["imageFileNames"], template_coregistered)
+    )
+
+    biasCorrectedBuffers = unmaskedBuffers / expBiasFields
+    biasCorrectedBuffers[segmentation == FreeSurferLabels[bg_label]] = 0
+    for contrastNumber, out_name in enumerate(output_names_bias):
+        # Bias field correct and write
+        writeImage(
+            out_name, biasCorrectedBuffers[..., contrastNumber], cropping, exampleImage
+        )
+
+def undoLogTransformAndBiasField(imageBuffers, biasFields, mask):
+    #
+    expBiasFields = np.zeros(biasFields.shape, order='F')
+    numberOfContrasts = imageBuffers.shape[-1]
+    for contrastNumber in range(numberOfContrasts):
+        # We're computing it also outside of the mask, but clip the intensities there to the range
+        # observed inside the mask (with some margin) to avoid crazy extrapolation values
+        biasField = biasFields[:, :, :, contrastNumber]
+        clippingMargin = np.log(2)
+        clippingMin = biasField[mask].min() - clippingMargin
+        clippingMax = biasField[mask].max() + clippingMargin
+        biasField[biasField < clippingMin] = clippingMin
+        biasField[biasField > clippingMax] = clippingMax
+        expBiasFields[:, :, :, contrastNumber] = np.exp(biasField)
+
+    #
+    expImageBuffers = np.exp(imageBuffers) / expBiasFields
+    return expImageBuffers, expBiasFields
 
 def segmentUpsampled(
     input_bias_corrected,
