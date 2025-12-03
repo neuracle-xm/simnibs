@@ -499,7 +499,7 @@ class gPC_regression(Reg):
         return coeffs, eps
 
 def run_tms_gpc(poslist, fn_simu, cpus=1, tissues=[ElementTags.GM], eps=1e-2,
-                max_iter=1000, min_iter=2, data_poly_ratio=2):
+                max_iter=1000, min_iter=2, data_poly_ratio=2, regularization_factors=[0]):
     '''Run one TMS gPC for each position in the current TMSLIST
 
     Parameters
@@ -561,9 +561,10 @@ def run_tms_gpc(poslist, fn_simu, cpus=1, tissues=[ElementTags.GM], eps=1e-2,
                                         max_iter=max_iter,
                                         eps=eps,
                                         n_cpus=cpus,
-                                        min_iter=min_iter)
+                                        min_iter=min_iter,
+                                        regularization_factors=np.array(regularization_factors))
         gpc_session, _, _ = algorithm.run()
-        gpc_reg = gPC_regression(problem=gpc_session.problem, regularization_factors=[0],
+        gpc_reg = gPC_regression(problem=gpc_session.problem, regularization_factors=regularization_factors,
                                  multi_indices=gpc_session.basis.multi_indices,
                                  coords_norm=gpc_session.grid.coords_norm,
                                  sim_type='TMS', data_file=fn_hdf5, n_cpu=cpus)
@@ -635,7 +636,8 @@ def run_tcs_gpc(poslist, fn_simu, cpus=1, tissues=[2], eps=1e-2,
                                     max_iter=max_iter,
                                     eps=eps,
                                     n_cpus=cpus,
-                                    min_iter=min_iter)
+                                    min_iter=min_iter,
+                                    regularization_factors=np.array(regularization_factors)) 
     gpc_session, _ , _ = algorithm.run()
     gpc_reg = gPC_regression(problem=gpc_session.problem, regularization_factors=regularization_factors,
                    multi_indices=gpc_session.basis.multi_indices,coords_norm=gpc_session.grid.coords_norm,
