@@ -34,7 +34,7 @@ Current Contributors
 
 * Jesper D. Nielsen
    * Debugging and maintenance across the complete code.
-   * Main author of the DL-based brain surface reconstruction (4.6)
+   * Main author of the DL-based brain surface reconstruction and atlas affine registration (4.6)
    * Update of installation procedure (4.5)
    * Debugging and deprecation removal (4.5)
    * Update to *charm* to optionally use FreeSurfer surfaces (4.1)
@@ -60,6 +60,9 @@ Current Contributors
    * Integration of mmg to improve tetrahedral mesh quality (4.1)
    * First version of the TMS optimization (3.1)
    * UQ functionality (3.0)
+
+* Sicheng An
+   * Update of GPC code (4.6)
 
 * Bianka Rumi
    * Coil models for Brainsway H1, H4 and H7 (4.5)

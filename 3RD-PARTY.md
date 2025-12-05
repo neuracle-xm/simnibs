@@ -26,7 +26,7 @@ www.netlib.org/blas/#_licensing\
 
 
 brainnet
-=======
+========
 github.com/simnibs/brainnet
 **License and link to online license text (if existing):**\
 GNU General Public License (GPL), Version 3 or later
@@ -34,16 +34,7 @@ GNU General Public License (GPL), Version 3 or later
 ?
 
 
- brainnet
-=======
-github.com/simnibs/brainnet
-**License and link to online license text (if existing):**\
-GNU General Public License (GPL), Version 3 or later
-**Copyright**\
-?
-
-
- brainsynth
+brainsynth
 ==========
 github.com/simnibs/brainsynth
 **License and link to online license text (if existing):**\
@@ -82,7 +73,7 @@ GNU General Public License (GPL), Version 3 or later
 
 
 Cygwin API library
-===============
+==================
 www.cygwin.com\
 **License and link to online license text (if existing):**\
 GNU LGPLv3\
@@ -138,7 +129,7 @@ used for results visualisation
 
 
 Intel MKL
-=======
+=========
 www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html\
 **License and link to online license text (if existing):**\
 Intel Simplified Software License\
@@ -150,7 +141,7 @@ Intel MKL Pardiso solver is used for FEM on Windows and Linux
 
 
 Jupyterlab
-=======
+==========
 jupyterlab.readthedocs.io/en/latest\
 **License and link to online license text (if existing):**\
 revised BSD license\
@@ -160,7 +151,7 @@ Project Jupyter
 
 
 Matplotlib
-=======
+==========
 matplotlib.org\
 **License and link to online license text (if existing):**\
 PSF license\
@@ -330,7 +321,7 @@ github.com/freesurfer/samseg
 
 
 SCIKIT-IMAGE
-===========
+============
 scikit-image.org\
 **License and link to online license text (if existing):**\
 BSD-3-Clause\

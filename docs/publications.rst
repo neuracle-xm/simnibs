@@ -12,7 +12,7 @@ Improved segmentation
 * `Diedrichsen M, Merhout J, Nielsen JD, Greve DN, Thielscher A, Puonti O, Modeling subcutaneous fat improves skull segmentation for individualized volume conductor head models, IEEE EMBS 2025, Copenhagen, Denmark <https://hmpg.net/>`_
 
 Improved pial and white matter surface reconstruction
-''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 * `Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://arxiv.org/abs/2505.14017>`_
 
 Version 4.5

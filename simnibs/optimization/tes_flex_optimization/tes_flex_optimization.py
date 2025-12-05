@@ -96,7 +96,7 @@ class TesFlexOptimization:
             where ROI and non-ROI are combined into a single goal function value
 
     Electrode Mapping Parameters
-    ---------------------------
+    ----------------------------
     map_to_net_electrodes : bool, optional, default: False
         If True, maps optimized electrode positions to nearest positions in an EEG net.
         

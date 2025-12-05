@@ -15,11 +15,11 @@ These open-source software packages and workflows build upon SimNIBS or interfac
 
 **FASTANS** (`website <https://github.com/mlueckel/FASTANS>`_) is a faster version of **TMS_targeting** listed below, leveraging improvements implemented in SimNIBS 4.5
 
-**FieldTrip** (`website <https://www.fieldtriptoolbox.org/`_, `reference <https://onlinelibrary.wiley.com/doi/10.1155/2011/156869>`_) supports `EEG source localization based on SimNIBS head models and leadfields <https://www.fieldtriptoolbox.org/getting_started/othersoftware/simnibs/>`_ .
+**FieldTrip** (`website <https://www.fieldtriptoolbox.org/>`_, `reference <https://onlinelibrary.wiley.com/doi/10.1155/2011/156869>`_) supports `EEG source localization based on SimNIBS head models and leadfields <https://www.fieldtriptoolbox.org/getting_started/othersoftware/simnibs/>`_ .
 
 **Metamodeling** (`website <https://github.com/Miles2708/Metamodeling_WM>`_, `reference <https://www.sciencedirect.com/science/article/pii/S0149763421003602?via%3Dihub>`_) introduces a new way to do meta-analyses of brain stimulation effects
 
-**NaviNIBS** (`website <https://precisionneurolab.github.io/navinibs-docs/`_, `reference <https://www.biorxiv.org/content/10.1101/2024.11.26.625446>`_) is an open-source neuronavigation solution that builds on SimNIBS head models.
+**NaviNIBS** (`website <https://precisionneurolab.github.io/navinibs-docs/>`_, `reference <https://www.biorxiv.org/content/10.1101/2024.11.26.625446>`_) is an open-source neuronavigation solution that builds on SimNIBS head models.
 
 **NHP modeling pipeline** (`website <https://github.com/ngoswami1/nhp-modeling-pipeline>`_, `reference <https://www.sciencedirect.com/science/article/pii/S0165027024001213>`_) uses SimNIBS to calculate electric fields in NHP head models.
 
@@ -31,7 +31,7 @@ These open-source software packages and workflows build upon SimNIBS or interfac
 
 **Targeted Functional Network Stimulation (TANS)** (`website <https://github.com/cjl2007/Targeted-Functional-Network-Stimulation>`_, `reference <https://www.cell.com/neuron/fulltext/S0896-6273(22)00744-9>`_) aims to optimize the network-specificity of TMS stimulation.
 
-**Temporal Interference Toolbox** (`website <https://idossha.github.io/TI-Toolbox/`_) for the planning and analyses of TI montages.
+**Temporal Interference Toolbox** (`website <https://idossha.github.io/TI-Toolbox/>`_) for the planning and analyses of TI montages.
 
 **TMSloc_proto** (`website <https://gitlab.gwdg.de/tms-localization/papers/tmsloc_proto>`_, `reference <https://www.nature.com/articles/s41596-022-00776-6>`_) integrates SimNIBS field calculations into an analysis pipeline for TMS motor mapping data
 

@@ -68,7 +68,7 @@ After scanning and having the MRI images in NifTI format, the next step is to cr
 
   \
 
-Optionally, charm can use the results of FreeSurfer's recon-all instead of the internally created pial and white matter surfaces for fine-grained reconstructions of the sulci and gyri of the head meshes (*--fs-dir RECONALL_RESULTS_DIR*). As of SimNIBS version 4.6, the differences will be minor. Please see :ref:`charm_docs` for details and the command line help for all available options.
+  Optionally, charm can use the results of FreeSurfer's recon-all instead of the internally created pial and white matter surfaces for fine-grained reconstructions of the sulci and gyri of the head meshes (*--fs-dir RECONALL_RESULTS_DIR*). As of SimNIBS version 4.6, the differences will be minor. Please see :ref:`charm_docs` for details and the command line help for all available options.
 
 4. Check the segmentation. Open the `charm_report.html` document inside the m2m-folder of the subject. The viewer shows the outlines of the reconstructed tissue compartments, enabling a visual check whether the outlines are accurate.
 
@@ -86,3 +86,5 @@ For more information on head meshing, please see:
 
 
 `Puonti O, Van Leemput K, Saturnino GB, Siebner HR, Madsen KH, Thielscher A. (2020). Accurate and robust whole-head segmentation from magnetic resonance images for individualized head modeling. Neuroimage, 219:117044. <https://doi.org/10.1016/j.neuroimage.2020.117044>`_
+
+`Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://arxiv.org/abs/2505.14017>`_

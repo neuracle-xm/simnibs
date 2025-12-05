@@ -20,6 +20,7 @@
       ~Msh.any_pts_inside_surface
       ~Msh.calc_matsimnibs
       ~Msh.compact_ordering
+      ~Msh.compute_normalized_gamma
       ~Msh.crop_mesh
       ~Msh.elements_baricenters
       ~Msh.elements_volumes_and_areas
@@ -34,7 +35,6 @@
       ~Msh.fix_surface_orientation
       ~Msh.fix_th_node_ordering
       ~Msh.fix_tr_node_ordering
-      ~Msh.gamma_metric
       ~Msh.gaussian_curvature
       ~Msh.get_AABBTree
       ~Msh.get_min_distance_on_grid

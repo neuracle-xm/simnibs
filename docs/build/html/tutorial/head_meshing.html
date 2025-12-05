@@ -10,8 +10,8 @@
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
     <script src="../_static/documentation_options.js?v=cc8a4273"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="icon" href="../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -77,7 +77,7 @@
 </figure>
 <p></p>
 <figure class="align-default" id="id3">
-<a class="reference internal image-reference" href="../_images/bad_t1.png"><img alt="../_images/bad_t1.png" src="../_images/bad_t1.png" style="width: 450.0px; height: 404.5px;" />
+<a class="reference internal image-reference" href="../_images/bad_t1.png"><img alt="../_images/bad_t1.png" height="404" src="../_images/bad_t1.png" width="450" />
 </a>
 <figcaption>
 <p><span class="caption-text"><strong>Bad</strong> T1w image. The spongy bone is in part very bright (indicated by the red arrows) and a dark CSF region to separate GM and skull is missing at several positions (purple arrows indicate example positions).</span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
@@ -107,8 +107,8 @@
 </pre></div>
 </div>
 <p></p>
-</div></blockquote>
 <p>Optionally, charm can use the results of FreeSurfer’s recon-all instead of the internally created pial and white matter surfaces for fine-grained reconstructions of the sulci and gyri of the head meshes (<em>–fs-dir RECONALL_RESULTS_DIR</em>). As of SimNIBS version 4.6, the differences will be minor. Please see <a class="reference internal" href="../documentation/command_line/charm.html#charm-docs"><span class="std std-ref">charm</span></a> for details and the command line help for all available options.</p>
+</div></blockquote>
 <ol class="arabic simple" start="4">
 <li><p>Check the segmentation. Open the <cite>charm_report.html</cite> document inside the m2m-folder of the subject. The viewer shows the outlines of the reconstructed tissue compartments, enabling a visual check whether the outlines are accurate.</p></li>
 </ol>
@@ -125,6 +125,7 @@
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Link to this heading">¶</a></h2>
 <p>For more information on head meshing, please see:</p>
 <p><a class="reference external" href="https://doi.org/10.1016/j.neuroimage.2020.117044">Puonti O, Van Leemput K, Saturnino GB, Siebner HR, Madsen KH, Thielscher A. (2020). Accurate and robust whole-head segmentation from magnetic resonance images for individualized head modeling. Neuroimage, 219:117044.</a></p>
+<p><a class="reference external" href="https://arxiv.org/abs/2505.14017">Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images</a></p>
 </section>
 </section>
 
@@ -227,7 +228,7 @@
       &#169;2020, SimNIBS Developers.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
