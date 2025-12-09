@@ -2,15 +2,15 @@ import numpy as np
 import h5py
 import os
 import tempfile
+import functools
 from mock import Mock, patch
-
+from copy import deepcopy
 import pytest
-
 import pygpc
 from collections import OrderedDict
+
 from simnibs import SIMNIBSDIR
-from simnibs.simulation import gpc as simnibs_gpc
-from simnibs.simulation import sim_struct
+from simnibs.simulation import fem, sim_struct, gpc as simnibs_gpc
 from simnibs.mesh_tools import mesh_io
 from simnibs.simulation.sim_struct import TDCSLIST
 
@@ -501,5 +501,115 @@ class TestRegressionTestGPC:
             assert hlpVar2.shape == (14435,)
             assert np.allclose(np.sqrt(np.sum(hlpVar**2,1)), hlpVar2, rtol=5e-03, atol=5e-03)
                     
+        if os.path.exists(fn_out.name):
+                fn_out.cleanup()
+                
+                
+    def test_regression_test_gpc_custom_QoI(self, sphere3):     
+        
+        # define custom QoI function (J^2 computed from v and cond)
+        def _calc_J_sq(v, parameters, tdcslist, identifiers):
+            tdcslist = deepcopy(tdcslist)
+            for i, iden in enumerate(identifiers):
+                tdcslist.cond[iden-1].value = parameters[f"cond_{iden}"]
+            
+            cond = tdcslist.cond2elmdata(mesh=v.mesh, logger_level=10)
+            m = fem.calc_fields(v, 'J', cond=cond)
+            
+            return m.field['J'].value**2
+
+        tdcs = TDCSLIST()
+        tdcs.currents = [0.001, -0.001]
+        tdcs.mesh = sphere3
+        
+        electrode = tdcs.add_electrode()
+        electrode.channelnr = 1
+        electrode.centre = [95, 0, 0]
+        electrode.shape = "ellipse"
+        electrode.dimensions = [20, 20]
+        electrode.thickness = 4
+        
+        electrode = tdcs.add_electrode()
+        electrode.channelnr = 2
+        electrode.centre = [-95, 0, 0]
+        electrode.shape = "ellipse"
+        electrode.dimensions = [20, 20]
+        electrode.thickness = 4
+        
+        # Set-up the uncertain conductivities
+        # intracranial
+        tdcs.cond[2].distribution_type = "beta"
+        tdcs.cond[2].distribution_parameters = [3, 3, 0.2, 0.4]
+        # bone
+        tdcs.cond[3].distribution_type = "beta"
+        tdcs.cond[3].distribution_parameters = [3, 3, 0.001, 0.012]
+                
+        fn_out = tempfile.TemporaryDirectory()
+        
+        tdcs._prepare()
+        mesh_w_elect, elect_surface_tags = tdcs._place_electrodes()
+        parameters, random_vars = simnibs_gpc.prep_gpc(tdcs)
+        J_sq = functools.partial(_calc_J_sq, tdcslist=tdcs, identifiers=random_vars) # J_sq has only 2 variables: v, cond_values
+        
+        sampler = simnibs_gpc.TDCSgPCSampler(mesh_w_elect,
+                                            tdcs,
+                                            os.path.join(fn_out.name,'tst.hdf5'),
+                                            elect_surface_tags,
+                                            tdcs.currents,
+                                            roi=[3, 4]
+                                            )
+        sampler.create_hdf5()
+        sampler.qoi_function = {'J_sq': J_sq, 'E': sampler._calc_E}
+        
+        algorithm = simnibs_gpc.setup_gpc_algorithm(sampler=sampler,
+                                                    parameters=parameters,
+                                                    data_poly_ratio=2,
+                                                    eps=1e-3, # newer version's stopping criteria is seemingly k-fold CV 
+                                                    n_cpus=1,
+                                                    min_iter=2,
+                                                    regularization_factors=np.array([0]),
+                                                    order_end=10,
+                                                    interaction_order=len(random_vars)
+                                                    )
+        algorithm.options['error_type'] = 'loocv'
+        gpc_session, _ , _ = algorithm.run()
+            
+        gpc_reg = simnibs_gpc.gPC_regression(problem=gpc_session.problem, regularization_factors=[0],
+                                             multi_indices=gpc_session.basis.multi_indices,coords_norm=gpc_session.grid.coords_norm,
+                                             sim_type='TCS', data_file=os.path.join(fn_out.name,'tst.hdf5'), n_cpu=1)
+        gpc_reg.save_hdf5()
+        gpc_reg.postprocessing('J')
+        
+        assert len(gpc_session.relative_error_loocv)
+        assert gpc_session.relative_error_loocv[-1] < 1e-3
+        assert gpc_session.grid.coords.shape[0] < 23
+        
+        assert gpc_reg.multi_indices.shape == (11,2)
+        assert np.all(gpc_reg.multi_indices == np.array([[0, 0], [1, 0], [0, 1], [0, 2], [0, 3],
+                                                         [2, 0], [1, 1], [1, 2], [0, 4], [3, 0], [2, 1]]))
+        
+        with h5py.File(os.path.join(fn_out.name,'tst.hdf5'), "r") as f:
+            assert 'J_sq_samples' in  f['mesh_roi']['data_matrices']
+            data = f['mesh_roi']['data_matrices']['J_sq_samples'][()]
+            assert data.shape[0] <= 23
+            assert data.shape[1:] == (14435, 3)
+             
+            data_dims = data.shape[1:]
+            if data.ndim == 3:
+                data = data.reshape(data.shape[0], -1)
+            
+            coeffs, error = gpc_reg.expand(data)
+            assert error < 0.00034
+            
+            # mean
+            mean = gpc_reg.get_mean(coeffs=coeffs).reshape(data_dims)
+            assert 'J_mean' in  f['mesh_roi']['elmdata']
+            assert f['mesh_roi']['elmdata']['J_mean'][()].shape == (14435, 3)
+            assert np.allclose(mean, f['mesh_roi']['elmdata']['J_mean'][()]**2, rtol=5e-03, atol=5e-03)
+        
+            std = gpc_reg.get_std(coeffs=coeffs)
+            assert std.shape == (43305,)
+            assert np.isclose(np.max(std),6.0182e-3,rtol=1e-05, atol=1e-05)
+                        
         if os.path.exists(fn_out.name):
                 fn_out.cleanup()

@@ -9,7 +9,7 @@ Version 4.6
 
 Improved segmentation
 ''''''''''''''''''''''''''''''''
-* `Diedrichsen M, Merhout J, Nielsen JD, Greve DN, Thielscher A, Puonti O, Modeling subcutaneous fat improves skull segmentation for individualized volume conductor head models, IEEE EMBS 2025, Copenhagen, Denmark <https://hmpg.net/>`_
+* `Diedrichsen M, Merhout J, Nielsen JD, Greve DN, Thielscher A, Puonti O, Modeling subcutaneous fat improves skull segmentation for individualized volume conductor head models, IEEE EMBS 2025, Copenhagen, Denmark <https://doi.org/10.1109/EMBC58623.2025.11254267>`_
 
 Improved pial and white matter surface reconstruction
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''
