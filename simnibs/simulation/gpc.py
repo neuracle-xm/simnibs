@@ -1036,7 +1036,7 @@ class NIBS_Model(AbstractModel):
 
 
 def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps= 1E-2,
-                        regularization_factors=np.logspace(-5, 3, 9),n_cpus=1, min_iter=2, order_end=20, interaction_order=3):
+                        regularization_factors=np.logspace(-5, 3, 9),n_cpus=1, min_iter=2, order_end=20, interaction_order=3, error_type="kcv"):
     """ Setup the algorithm to build up a gPC model for the sampler. """
     # Convert the sampler to a pygpc model.
 
@@ -1057,7 +1057,7 @@ def setup_gpc_algorithm(sampler,parameters,data_poly_ratio=2, max_iter=1000, eps
     options["matrix_ratio"] = data_poly_ratio
     options["grid"] = pygpc.Random
     options["grid_options"] = {"seed": 1}
-    options["error_type"] = "kcv"
+    options["error_type"] = error_type
     options["eps"] = eps
     options["max_iter"] = max_iter
     options["n_cpu_comp"] = n_cpus
