@@ -312,7 +312,12 @@ def test_segmentation(tmpdir, testcube_nii, testcubenoise_nii, testcubeatlas_pat
     seg = os.path.join(str(seg_dir), "seg.nii.gz")
     mock_tissue_settings = {"segmentation_tissues": {"CSF": -1}}
     writeBiasCorrectedImagesAndSegmentation(
-        [bias_corr], seg, param_estimates, mock_tissue_settings, 1
+        [bias_corr],
+        seg,
+        param_estimates,
+        mock_tissue_settings,
+        1,
+        os.path.join(testcubeatlas_path, "template.nii.gz"),
     )
 
     orig_cube = nib.load(testcube_nii)
@@ -526,9 +531,9 @@ def test_q_and_sform():
     assert np.equal(
         scan_forced.get_qform(coded=True)[1], scan_forced.get_sform(coded=True)[1]
     ), "Q- and S-form codes should be the same but they're not!"
-    assert np.allclose(
-        scan_forced.get_qform(), scan_forced.get_sform()
-    ), "Q- and S-form matrices should be the same but they're not!"
+    assert np.allclose(scan_forced.get_qform(), scan_forced.get_sform()), (
+        "Q- and S-form matrices should be the same but they're not!"
+    )
 
     # And the other way around (force sfrom), even if qform = 0
     tmp_im_copy = copy.deepcopy(tmp_im)
@@ -538,9 +543,9 @@ def test_q_and_sform():
     assert np.equal(
         scan_forced.get_qform(coded=True)[1], scan_forced.get_sform(coded=True)[1]
     ), "Q- and S-form codes should be the same but they're not!"
-    assert np.allclose(
-        scan_forced.get_qform(), scan_forced.get_sform()
-    ), "Q- and S-form matrices should be the same but they're not!"
+    assert np.allclose(scan_forced.get_qform(), scan_forced.get_sform()), (
+        "Q- and S-form matrices should be the same but they're not!"
+    )
 
     # Finally if you force sform when q- and s-form matrices are different but the s-form code is zero this should throw
     scan_forced.set_sform(scan_forced.get_sform(), code=0)
