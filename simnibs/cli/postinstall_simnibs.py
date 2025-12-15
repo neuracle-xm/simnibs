@@ -84,7 +84,7 @@ def create_scripts(dest_dir):
         basename = os.path.splitext(os.path.basename(s))[0]
         if basename == "run_simnibs":
             basename = "simnibs"
-        if basename == "simnibs_gui":
+        if basename == "simnibs_gui" or basename == "gmsh_cli":
             gui = True
         else:
             gui = False
@@ -430,9 +430,12 @@ def setup_shortcut_icons(scripts_dir, force=False, silent=False):
 
     os.makedirs(shortcut_folder, exist_ok=True)
 
+    fn_gmsh_script = os.path.join(scripts_dir, "gmsh")
+    if sys.platform == "win32":
+        fn_gmsh_script += ".cmd"
     _create_shortcut(
         os.path.join(shortcut_folder, "Gmsh"),
-        os.path.join(scripts_dir, "gmsh"),
+        fn_gmsh_script,
         "Gmsh is a free 3D finite element mesh generator with a built-in CAD engine and"
         " post-processor",
         mime_type="model/x.stl-binary",
