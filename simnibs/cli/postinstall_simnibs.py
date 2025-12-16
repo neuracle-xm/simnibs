@@ -91,7 +91,7 @@ def create_scripts(dest_dir):
 
         bash_name = os.path.join(dest_dir, basename)
         if basename == "gmsh_cli":
-            bash_name = "gmsh"
+            bash_name = os.path.join(dest_dir, "gmsh")
             
         if sys.platform == "win32":
             _write_windows_cmd(s, bash_name, gui)
@@ -400,8 +400,10 @@ def setup_shortcut_icons(scripts_dir, force=False, silent=False):
             "Start Menu",
             "Programs",
             f"SimNIBS {MINOR_VERSION}",
-        )
-        gmsh_icon = None
+        )        
+        gmsh_icon = os.path.join(
+            SIMNIBSDIR, "_internal_resources", "icons", "gmsh", "Gmsh.ico"
+        )        
         simnibs_icon = os.path.join(
             SIMNIBSDIR, "_internal_resources", "icons", "simnibs", "gui_icon.ico"
         )
