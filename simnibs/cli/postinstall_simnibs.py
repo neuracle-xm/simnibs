@@ -90,6 +90,9 @@ def create_scripts(dest_dir):
             gui = False
 
         bash_name = os.path.join(dest_dir, basename)
+        if basename == "gmsh_cli":
+            bash_name = "gmsh"
+            
         if sys.platform == "win32":
             _write_windows_cmd(s, bash_name, gui)
         else:
