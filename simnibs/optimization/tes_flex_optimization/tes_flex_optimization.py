@@ -6,7 +6,6 @@ import h5py
 import types
 import logging
 import sys
-import nibabel
 import json
 
 import numpy as np
@@ -20,7 +19,7 @@ from scipy.optimize import (
 )
 
 from simnibs import __version__
-from simnibs.mesh_tools import mesh_io
+from simnibs.mesh_tools import mesh_io, gmsh_view
 from simnibs.simulation.fem import get_dirichlet_node_index_cog
 from simnibs.simulation.onlinefem import FemTargetPointCloud, OnlineFEM
 from simnibs.utils import simnibs_logger
@@ -30,10 +29,6 @@ from simnibs.utils.roi_result_visualization import RoiResultVisualization
 from simnibs.utils.TI_utils import get_maxTI, get_dirTI
 from simnibs.utils.file_finder import SubjectFiles, Templates
 from simnibs.utils.csv_reader import read_csv_positions
-from simnibs.utils.transformations import (
-    subject2mni_coords,
-    create_new_connectivity_list_point_mask,
-)
 from simnibs.utils.mesh_element_properties import ElementTags, tissue_names
 
 from .ellipsoid import Ellipsoid, subject2ellipsoid, ellipsoid2subject
@@ -1352,7 +1347,7 @@ class TesFlexOptimization:
             
             if self.open_in_gmsh:
                 for i in fn_vis:
-                    mesh_io.open_in_gmsh(i, True)
+                    gmsh_view.open_in_gmsh(i)
         
         # Map electrodes to nearest positions in EEG net and run simulation if enabled
         #########################################################################################################
@@ -1423,7 +1418,7 @@ class TesFlexOptimization:
                 
                 if self.open_in_gmsh:
                     for i in fn_vis_mapped:
-                        mesh_io.open_in_gmsh(i, True)
+                        gmsh_view.open_in_gmsh(i)
         
         self._log_summary_postopt()
         

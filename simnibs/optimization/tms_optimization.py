@@ -18,7 +18,7 @@ from simnibs.simulation.sim_struct import (
     SimuList,
     save_matlab_sim_struct,
 )
-from simnibs.mesh_tools import mesh_io
+from simnibs.mesh_tools import mesh_io, gmsh_view
 from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.file_finder import SubjectFiles
 from simnibs.utils.matlab_read import try_to_read_matlab_field, remove_None
@@ -378,7 +378,7 @@ class TMSoptimize:
             )
             v.write_opt(fn_target)
             if self.open_in_gmsh:
-                mesh_io.open_in_gmsh(fn_target, True)
+                gmsh_view.open_in_gmsh(fn_target)
             E_roi = self._direct_optimize(cond_field, target_region, pos_matrices, cpus)
         elif self.method.lower() == "adm":
             E_roi, pos_matrices = self._ADM_optimize(cond_field, target_region)
@@ -423,7 +423,7 @@ class TMSoptimize:
         v.add_view(VectorType=4, CenterGlyphs=0)
         v.write_opt(fn_out)
         if self.open_in_gmsh:
-            mesh_io.open_in_gmsh(fn_out, True)
+            gmsh_view.open_in_gmsh(fn_out)
 
         logger.info("\n" + self.summary(pos_matrices[np.argmax(E_roi)]))
 

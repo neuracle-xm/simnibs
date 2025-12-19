@@ -41,7 +41,7 @@ import simnibs.utils.cond_utils
 from simnibs.utils.cond_utils import COND
 from simnibs.utils.mesh_element_properties import ElementTags
 
-from simnibs.mesh_tools import mesh_io
+from simnibs.mesh_tools import mesh_io, gmsh_view
 from simnibs.utils import transformations
 from simnibs.utils import simnibs_logger
 from simnibs.utils import file_finder
@@ -1274,7 +1274,7 @@ class TMSLIST(SimuList):
             m = mesh_io.read_msh(n)
 
             if view:
-                mesh_io.open_in_gmsh(n, True)
+                gmsh_view.open_in_gmsh(n)
 
             summary += f"\n{os.path.split(s)[1][:-1]}\n"
             summary += len(os.path.split(s)[1][:-1]) * "=" + "\n"
@@ -1885,7 +1885,7 @@ class TDCSLIST(SimuList):
         v.write_opt(final_name)
 
         if view:
-            mesh_io.open_in_gmsh(final_name, True)
+            gmsh_view.open_in_gmsh(final_name)
 
         summary = f"\n{os.path.split(fn_simu)[1]}\n"
         summary += len(os.path.split(fn_simu)[1]) * "=" + "\n"

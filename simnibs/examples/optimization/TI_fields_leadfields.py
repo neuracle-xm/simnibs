@@ -8,6 +8,8 @@ import copy
 
 import simnibs
 from simnibs.utils import TI_utils as TI
+from simnibs.mesh_tools.gmsh_view import open_in_gmsh
+
 
 # load lead field
 leadfield_hdf = "leadfield/ernie_leadfield_EEG10-10_UI_Jurak_2007.hdf5"
@@ -62,4 +64,4 @@ v = mout.view(
     visible_fields="TImax",
 )
 v.write_opt("TI_via_leadfields.msh")
-simnibs.mesh_io.open_in_gmsh("TI_via_leadfields.msh", True)
+open_in_gmsh("TI_via_leadfields.msh")

@@ -5,39 +5,27 @@ Copyright (c) 2019-2024 SimNIBS developers. Licensed under the GPL v3.
 
 import sys
 import os
-import stat
 import subprocess
 import shutil
 import glob
 
 import pytest
-from simnibs.utils.file_finder import path2envbin
 import simnibs
+from simnibs import SIMNIBSDIR
 
 EXAMPLES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 @pytest.fixture
 def replace_gmsh():
-    fn_gmsh = path2envbin("gmsh")
-    fn_gmsh_tmp = path2envbin("gmsh_tmp")
-    # move
-    if sys.platform == "win32":
-        fn_gmsh += ".exe"
+    fn_gmsh = os.path.join(SIMNIBSDIR, "cli", "gmsh_cli.py")
+    fn_gmsh_tmp = os.path.join(SIMNIBSDIR, "cli", "gmsh_cli_tmp.py")
+    # move & replace
     shutil.move(fn_gmsh, fn_gmsh_tmp)
-    # replace
-    if sys.platform == "win32":
-        # replace gmsh with an .exe that does not to anything
-        shutil.copy(r"C:\Windows\System32\rundll32.exe", fn_gmsh)
-    else:
-        with open(fn_gmsh, "w") as f:
-            f.write("#! /bin/bash -e\n")
-            f.write('"echo" "$@"')
-        os.chmod(
-            fn_gmsh,
-            os.stat(fn_gmsh).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
-        )
+    with open(fn_gmsh, "w") as f:
+        f.write("")
     yield
+    # move back in the end
     shutil.move(fn_gmsh_tmp, fn_gmsh)
 
 

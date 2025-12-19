@@ -12,7 +12,7 @@ import scipy.optimize as opt
 import scipy
 import numpy as np
 
-from simnibs.mesh_tools import mesh_io
+from simnibs.mesh_tools import mesh_io, gmsh_view
 from simnibs.simulation.onlinefem import FemTargetPointCloud
 from simnibs.utils.region_of_interest import (
     RegionOfInterest,
@@ -614,7 +614,7 @@ class TmsFlexOptimization:
 
         if self.run_simulation and self.open_in_gmsh:
             for vis_msh_file_name in vis_msh_file_names:
-                mesh_io.open_in_gmsh(vis_msh_file_name, True)
+                gmsh_view.open_in_gmsh(vis_msh_file_name)
                 
         return opt_matsimnibs
 

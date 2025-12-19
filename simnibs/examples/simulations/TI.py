@@ -10,6 +10,7 @@ import os
 import numpy as np
 
 from simnibs import sim_struct, run_simnibs, mesh_io, ElementTags
+from simnibs.mesh_tools.gmsh_view import open_in_gmsh
 from simnibs.utils import TI_utils as TI
 
 
@@ -88,4 +89,4 @@ v = mout.view(
     visible_fields="TImax",
 )
 v.write_opt(os.path.join(S.pathfem, "TI.msh"))
-mesh_io.open_in_gmsh(os.path.join(S.pathfem, "TI.msh"), True)
+open_in_gmsh(os.path.join(S.pathfem, "TI.msh"))

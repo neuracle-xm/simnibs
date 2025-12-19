@@ -1,11 +1,12 @@
 import os
+import sys
 import tempfile
 import subprocess
-import threading
 import numpy as np
 import shutil
 
-from simnibs.utils.file_finder import path2envbin, Templates
+from simnibs import SIMNIBSDIR
+from simnibs.utils.file_finder import Templates
 from simnibs.utils.mesh_element_properties import ElementTags
 
 
@@ -56,13 +57,12 @@ class Visualization:
             string += str(self.View)
         return string
 
-    def show(self, new_thread=False):
-        """Shows the mesh in gmsh
+    def show(self):
+        """Shows the mesh in gmsh in blocking mode
 
         Parameters
         -----------
-        new_thread: bool (optional)
-            Wether to show the mesh in a new thread. Default: False
+        None
         """
         if self.mesh is None:
             raise ValueError("Mesh not set!")
@@ -72,18 +72,22 @@ class Visualization:
         self.mesh.write(mesh_fn)
         geo_fn = mesh_fn + ".opt"
         self._write(geo_fn)
-        command = [path2envbin("gmsh"), mesh_fn]
-
         fn_list = [mesh_fn, geo_fn]
+        
         if hasattr(self.General, "BackgroundImageFileName"):
-            fn_list.append(os.path.join(os.path.dirname(mesh_fn), ".lg.png"))
-
-        if new_thread:
-            t = threading.Thread(target=_run, args=(command, fn_list))
-            t.start()
-        else:
-            _run(command, fn_list)
-
+            try:
+                shutil.copyfile(
+                    Templates().simnibs_logo,
+                    os.path.join(os.path.dirname(mesh_fn), ".lg.png"),
+                )
+                fn_list.append(os.path.join(os.path.dirname(mesh_fn), ".lg.png"))
+            except:
+                pass
+        
+        print(fn_list)
+        open_in_gmsh(fn_list, blocking = True)
+        [os.remove(r) for r in fn_list]
+        
     def write_opt(self, fn_mesh):
         """Writes a .opt file
 
@@ -217,21 +221,22 @@ class Visualization:
             f.write("Exit;\n")
             geo_fn = f.name
 
+        fn_list = [mesh_fn, geo_fn]
+        
         if hasattr(self.General, "BackgroundImageFileName"):
             try:
                 shutil.copyfile(
                     Templates().simnibs_logo,
                     os.path.join(os.path.dirname(mesh_fn), ".lg.png"),
                 )
+                fn_list.append(os.path.join(os.path.dirname(mesh_fn), ".lg.png"))
             except:
                 pass
 
-        fn_list = [mesh_fn, geo_fn]
-        if hasattr(self.General, "BackgroundImageFileName"):
-            fn_list.append(os.path.join(os.path.dirname(mesh_fn), ".lg.png"))
-
-        _run([path2envbin("gmsh"), geo_fn], fn_list)
-
+        print(fn_list)
+        open_in_gmsh(geo_fn, blocking = True)
+        [os.remove(r) for r in fn_list]
+            
 
 class General(object):
     """General Gmsh visualization options.
@@ -624,12 +629,52 @@ class PhysicalNames(object):
         return string
 
 
-def _run(command, remove=[]):
-    try:
-        subprocess.call(command)
-    finally:
-        [os.remove(r) for r in remove]
+def open_in_gmsh(fn_msh = "", blocking = False):
+    """
+    Opens the mesh in gmsh
 
+    Parameters
+    ----------
+    fn_msh : str or list of str, optional
+        Name of mesh file(s). The default is "" (opens an empty gmsh window).
+    blocking : bool, optional
+        whether to wait until gmsh has been closed. The default is False.
+
+    Returns
+    -------
+    None.
+    
+    Note
+    ----
+    Calling the gmsh module directly causes python to crash when gmsh is closed
+    on Windows. Therefore, also blocking calls are done by spawning a subprocess.
+    """    
+    if sys.platform == 'win32':
+        PATH_TO_EXEC = os.path.dirname(os.path.abspath(sys.executable))
+        fn_executable = os.path.join(PATH_TO_EXEC,'pythonw.exe')
+        assert os.path.exists(fn_executable), "Could not locate "+fn_executable
+    else:
+        fn_executable = sys.executable
+    
+    fn_gmsh_cli = os.path.join(SIMNIBSDIR, "cli", "gmsh_cli.py")
+    
+    cmd = [fn_executable, "-E", "-u", fn_gmsh_cli]
+    
+    if len(fn_msh):
+        if type(fn_msh) == str:
+            cmd.append(fn_msh)
+        elif type(fn_msh) == list:
+            cmd += fn_msh
+        else:
+            raise TypeError("fn_msh has to be str or list")
+            
+    p = subprocess.Popen(cmd)
+    if blocking:
+        p.wait()
+    # Note: In case blocking is changed to a direct gmsh call,
+    #       also examples.tests.examples.replace_gmsh needs to be changed
+    return p.returncode
+    
 
 def _coolwarm_cm():
     # from http://www.kennethmoreland.com/color-maps/

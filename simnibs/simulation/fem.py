@@ -1758,7 +1758,7 @@ def _run_tms(mesh, cond, cond_list, fn_coil, fields, matsimnibs, didt, fn_out, f
         v.write_opt(fn_out)
 
     # if view:
-    #    mesh_io.open_in_gmsh(fn_out, True)
+    #    gmsh_view.open_in_gmsh(fn_out)
     #
     # summary += f'\n{os.path.split(s)[1][:-1]}\n'
     # summary += len(os.path.split(s)[1][:-1]) * '=' + '\n'

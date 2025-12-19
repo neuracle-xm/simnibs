@@ -42,7 +42,7 @@ from simnibs.utils.file_finder import (
     get_fsaverage_template,
 )
 from simnibs.utils.csv_reader import write_csv_positions, read_csv_positions
-
+from simnibs.mesh_tools import gmsh_view
 
 __all__ = [
     "warp_volume",
@@ -2028,7 +2028,7 @@ def middle_gm_interpolation(
         v.write_opt(fn_out)
 
         if open_in_gmsh:
-            mesh_io.open_in_gmsh(fn_out, True)
+            gmsh_view.open_in_gmsh(fn_out)
 
     join_and_write(
         middle_surf,

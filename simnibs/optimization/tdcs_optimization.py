@@ -523,7 +523,7 @@ class TDCSoptimize:
             )
             v.write_opt(fn_out_mesh)
             if self.open_in_gmsh:
-                mesh_io.open_in_gmsh(fn_out_mesh, True)
+                gmsh_view.open_in_gmsh(fn_out_mesh)
 
         if fn_out_csv is not None:
             self.write_currents_csv(currents, fn_out_csv)
@@ -1979,7 +1979,7 @@ class TDCSDistributedOptimize:
             )
             v.write_opt(fn_out_mesh)
             if self.open_in_gmsh:
-                mesh_io.open_in_gmsh(fn_out_mesh, True)
+                gmsh_view.open_in_gmsh(fn_out_mesh)
 
         if fn_out_csv is not None:
             self._tdcs_opt_obj.write_currents_csv(currents, fn_out_csv)

@@ -20,26 +20,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy
 import logging
 import os
-import subprocess
 import sys
 import time
 
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from simnibs import SIMNIBSDIR
+from simnibs import SIMNIBSDIR, __version__
 from simnibs.simulation import sim_struct
-from simnibs.utils.cond_utils import standard_cond
 from simnibs.simulation.run_simnibs import run_simnibs
+from simnibs.utils.cond_utils import standard_cond
+from simnibs.utils.simnibs_logger import logger
+from simnibs.utils.file_finder import SubjectFiles
+from simnibs.utils.matlab_read import read_mat
+from simnibs.utils.mesh_element_properties import ElementTags
+#from simnibs.mesh_tools.gmsh_view import open_in_gmsh
+
 from . import electrodeGUI
 from . import head_model_OGL
 from . import simulation_menu
-from simnibs import __version__
-from simnibs.utils.simnibs_logger import logger
-from simnibs.utils.file_finder import SubjectFiles, path2envbin
-from simnibs.utils.matlab_read import read_mat
-from simnibs.utils.mesh_element_properties import ElementTags
-
 
 class TDCS_GUI(QtWidgets.QMainWindow):
     def __init__(self):
@@ -456,7 +455,6 @@ class TDCS_GUI(QtWidgets.QMainWindow):
                 return None
 
             file_full_path = os.path.abspath(fn)
-            path = os.path.split(file_full_path)[0]
             fn_no_extension, file_extension = os.path.splitext(file_full_path)
 
         else:
@@ -503,21 +501,21 @@ class TDCS_GUI(QtWidgets.QMainWindow):
             elif poslist.type == "TMSLIST":
                 self.addTmsPoslistTab(poslist)
 
-    # Opens a .msh file in gmsh
-    def openSimulation(self):
-        dialog = QtWidgets.QFileDialog(self)
-        dialog.setWindowTitle("Open GMSH File")
-        dialog.setNameFilter("GMSH files (*.msh)")
-        dialog.setDirectory(QtCore.QDir.currentPath())
-        dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            file_full_path = str(dialog.selectedFiles()[0])
+    # # Opens a .msh file in gmsh
+    # def openSimulation(self):
+    #     dialog = QtWidgets.QFileDialog(self)
+    #     dialog.setWindowTitle("Open GMSH File")
+    #     dialog.setNameFilter("GMSH files (*.msh)")
+    #     dialog.setDirectory(QtCore.QDir.currentPath())
+    #     dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
+    #     if dialog.exec_() == QtWidgets.QDialog.Accepted:
+    #         file_full_path = str(dialog.selectedFiles()[0])
 
-        else:
-            return None
+    #     else:
+    #         return None
 
-        self.thread = openGmshThread(file_full_path)
-        self.thread.start()
+    #     self.thread = openGmshThread(file_full_path)
+    #     self.thread.start()
 
     # Generates a sim_struct.session() structure, for saving and running
     def generateNNAVSession(self):
@@ -1915,16 +1913,15 @@ class runSimThread(QtCore.QThread):
         return self._stop
 
 
-class openGmshThread(QtCore.QThread):
-    def __init__(self, fn):
-        QtCore.QThread.__init__(self)
-        self.fn = fn
+# class openGmshThread(QtCore.QThread):
+#     def __init__(self, fn):
+#         QtCore.QThread.__init__(self)
+#         self.fn = fn
 
-    def run(self):
-        gmsh = path2envbin("gmsh")
-        gmsh_return = subprocess.run([gmsh, self.fn])
-        self.exit(gmsh_return.returncode)
-        self.exec_()
+#     def run(self):        
+#         gmsh_return = open_in_gmsh(self.fn)
+#         self.exit(gmsh_return.returncode)
+#         self.exec_()
 
 
 def except_hook(cls, exception, traceback):

@@ -63,9 +63,6 @@ fs_res_mapper = dict(zip(fs_resolutions, fs_resolutions_names))
 coil_models = os.path.join(SIMNIBSDIR, "resources", "coil_models")
 ElectrodeCaps_MNI = os.path.join(SIMNIBSDIR, "resources", "ElectrodeCaps_MNI")
 
-# Path to the environment bin-folder
-PATH_TO_ENV_BIN = Path(sys.executable).parent
-
 def _validate_hemi_arg(hemi: list[str] | str | tuple = HEMISPHERES):
     hemi = (hemi,) if isinstance(hemi, str) else hemi
     assert all(h in HEMISPHERES for h in hemi)
@@ -676,24 +673,3 @@ def path2bin(program):
 
     return path_to_binary
 
-
-def path2envbin(program):
-    """Return the full path to a specified program contained within the SIMNIBS python environment.
-
-    PARAMETERS
-    ----------
-    program : str
-        Name of the executable for which to return the full path. Must be in
-        the binary directory of the SIMNIBS environment.
-
-    RETURNS
-    ----------
-    path to binary : str
-        Full path to the binary.
-    """
-    # input must be string
-    assert type(program) is str
-
-    path_to_binary = os.path.join(PATH_TO_ENV_BIN, program)
-
-    return path_to_binary

@@ -25,11 +25,8 @@ import gc
 import hashlib
 import itertools
 import os
-from pathlib import Path
 import struct
-import subprocess
 import tempfile
-import threading
 import warnings
 
 import numpy as np
@@ -46,20 +43,18 @@ import cortech
 
 from simnibs.utils import file_finder
 from simnibs.utils.mesh_element_properties import ElementTags, ElementTypes
-
 from simnibs.utils.spawn_process import spawn_process
 from simnibs.utils.transformations import nifti_transform
-from . import gmsh_view
 from simnibs.utils.file_finder import (
     HEMISPHERES,
     get_fsaverage_template,
-    path2envbin,
     SubjectFiles,
     FreeSurferSubject,
     SURFACE_FILE_NAME_TO_ELEMENT_TAG,
 )
 from . import cython_msh
 from . import cgal
+from . import gmsh_view
 
 
 class InvalidMeshError(ValueError):
@@ -1419,7 +1414,7 @@ class Msh:
         """Opens the mesh in gmsh"""
         f, fn_tmp = tempfile.mkstemp(suffix=".msh")
         os.close(f)
-        open_in_gmsh(fn_tmp)
+        gmsh_view.open_in_gmsh(fn_tmp, blocking = True)
         os.remove(fn_tmp)
 
     def __eq__(self, other):
@@ -7280,28 +7275,6 @@ def read_medit(fn):
 
         elm.tag2 = elm.tag1.copy()
         return Msh(nodes, elm)
-
-
-def open_in_gmsh(fn, new_thread=False):
-    """Opens the mesh in gmsh
-
-    Parameters
-    ------------
-    fn: str
-        Name of mesh file
-    new_thread: bool
-        Wether to open gmsh in a new thread. Defaut: False
-
-    """
-    gmsh_bin = path2envbin("gmsh")
-    if new_thread:
-        t = threading.Thread(
-            target=subprocess.run, args=([gmsh_bin, fn],), kwargs={"check": True}
-        )
-        t.daemon = False  # thread dies with the program
-        t.start()
-    else:
-        subprocess.run([gmsh_bin, fn], check=True)
 
 
 def _hash_rows(array, mult=1000003, dtype=np.uint64):
