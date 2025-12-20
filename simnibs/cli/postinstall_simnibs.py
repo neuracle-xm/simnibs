@@ -615,7 +615,8 @@ def shortcut_icons_clenup():
 
 
 def setup_file_association(scripts_dir, force=False, silent=False):
-    # Linux and OSX file associations are done together with desktop items
+    # Linux file associations are done together with desktop items
+    # MacOS file associations are set using the .app files
     if sys.platform != "win32":
         return
     
@@ -623,8 +624,8 @@ def setup_file_association(scripts_dir, force=False, silent=False):
     gmsh_icon = os.path.join(
             SIMNIBSDIR, "_internal_resources", "icons", "gmsh", "Gmsh.ico"
         ) 
-    
     extensions = [".msh", ".geo", ".stl"]
+    
     associate = dict.fromkeys(extensions)
     for ext in extensions:
         if _is_associated(ext):
@@ -696,11 +697,12 @@ def _is_associated(ext):
 
 
 def file_associations_cleanup():
-    extensions = [".msh", ".geo", ".stl"]
     # Linux file associations are done together with desktop items
     # MacOS file associations are set using the .app files
     if sys.platform != "win32":
         return
+
+    extensions = [".msh", ".geo", ".stl"]
 
     with winreg.OpenKey(
         winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
@@ -1094,7 +1096,8 @@ def install(
         setup_shortcut_icons(scripts_dir, force, silent)
     if associate_files:
         if sys.platform == "win32":
-            # Linux and OSX file associations are done together with desktop items
+            # Linux file associations are done together with desktop items
+            # MacOS file associations are set using the .app files
             print("Associating Files", flush=True)
             setup_file_association(scripts_dir, force, silent)
     if setup_links:
