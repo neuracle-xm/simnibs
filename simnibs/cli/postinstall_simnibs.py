@@ -620,6 +620,9 @@ def setup_file_association(scripts_dir, force=False, silent=False):
         return
     
     gmsh_bin = os.path.join(scripts_dir, "gmsh.cmd")
+    gmsh_icon = os.path.join(
+            SIMNIBSDIR, "_internal_resources", "icons", "gmsh", "Gmsh.ico"
+        ) 
     
     extensions = [".msh", ".geo", ".stl"]
     associate = dict.fromkeys(extensions)
@@ -651,7 +654,7 @@ def setup_file_association(scripts_dir, force=False, silent=False):
             reg,
             rf"SimNIBS.Gmsh.v{MINOR_VERSION}\DefaultIcon",
             winreg.REG_SZ,
-            r"C:\Users\axthi\SimNIBS-4.6\simnibs_env\Lib\site-packages\simnibs\_internal_resources\icons\gmsh\Gmsh.ico",
+            gmsh_icon,
         )        
         for ext in extensions:
             if force:
