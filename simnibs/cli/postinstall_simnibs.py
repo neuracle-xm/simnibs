@@ -1159,6 +1159,7 @@ def uninstall(install_dir):
         try_remove(os.path.join(install_dir, "examples.lnk"))
         try_remove(os.path.join(install_dir, "simnibs.lnk"))
         try_remove(os.path.join(install_dir, "matlab_tools.lnk"))
+        try_remove(os.path.join(install_dir, "resources.lnk"))
         try_remove(os.path.join(install_dir, "Activate SimNIBS.lnk"))
         try_remove(os.path.join(install_dir, "Uninstall SimNIBS.lnk"))
         conda_uninstaller = os.path.join(
