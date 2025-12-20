@@ -98,7 +98,7 @@ def create_scripts(dest_dir):
         else:
             _write_unix_sh(s, bash_name)
 
-    # meshfix and gmsh binaries
+    # meshfix and mmg3d_O3 binaries
     for basename in ["meshfix", "mmg3d_O3"]:
         bash_name = os.path.join(dest_dir, basename)
         if sys.platform == "win32":
@@ -614,11 +614,13 @@ def shortcut_icons_clenup():
             pass
 
 
-def setup_file_association(force=False, silent=False):
+def setup_file_association(scripts_dir, force=False, silent=False):
     # Linux and OSX file associations are done together with desktop items
     if sys.platform != "win32":
         return
-    gmsh_bin = os.path.join(SIMNIBSDIR, "bin", "gmsh")
+    
+    gmsh_bin = os.path.join(scripts_dir, "gmsh.cmd")
+    
     extensions = [".msh", ".geo", ".stl"]
     associate = dict.fromkeys(extensions)
     for ext in extensions:
@@ -635,39 +637,44 @@ def setup_file_association(force=False, silent=False):
     if not any(associate.values()):
         return
 
-    if sys.platform == "win32":
-        with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
-        ) as reg:
-            winreg.CreateKey(reg, rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command")
-            winreg.SetValue(
-                reg,
-                rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command",
-                winreg.REG_SZ,
-                f'"{gmsh_bin}" "%1"',
-            )
-            for ext in extensions:
-                if force:
+    with winreg.OpenKey(
+        winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
+    ) as reg:
+        winreg.CreateKey(reg, rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command")
+        winreg.SetValue(
+            reg,
+            rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command",
+            winreg.REG_SZ,
+            f'"{gmsh_bin}" "%1"',
+        )
+        winreg.SetValue(
+            reg,
+            rf"SimNIBS.Gmsh.v{MINOR_VERSION}\DefaultIcon",
+            winreg.REG_SZ,
+            r"C:\Users\axthi\SimNIBS-4.6\simnibs_env\Lib\site-packages\simnibs\_internal_resources\icons\gmsh\Gmsh.ico",
+        )        
+        for ext in extensions:
+            if force:
+                register = True
+            else:
+                try:
+                    value = winreg.QueryValue(reg, ext)
+                except FileNotFoundError:
                     register = True
                 else:
-                    try:
-                        value = winreg.QueryValue(reg, ext)
-                    except FileNotFoundError:
-                        register = True
+                    if value:
+                        register = _get_input(
+                            f'Found other association for "{ext}" files, overwrite it?',
+                            silent,
+                        )
                     else:
-                        if value:
-                            register = _get_input(
-                                f'Found other association for "{ext}" files, overwrite it?',
-                                silent,
-                            )
-                        else:
-                            register = True
+                        register = True
 
-                if register:
-                    winreg.CreateKey(reg, ext)
-                    winreg.SetValue(
-                        reg, ext, winreg.REG_SZ, rf"SimNIBS.Gmsh.v{MINOR_VERSION}"
-                    )
+            if register:
+                winreg.CreateKey(reg, rf"{ext}\OpenWithProgids")
+                winreg.SetValue(
+                    reg, rf"{ext}\OpenWithProgids", winreg.REG_SZ, rf"SimNIBS.Gmsh.v{MINOR_VERSION}"
+                )
 
 
 def _is_associated(ext):
@@ -689,37 +696,39 @@ def file_associations_cleanup():
     extensions = [".msh", ".geo", ".stl"]
     # Linux file associations are done together with desktop items
     # MacOS file associations are set using the .app files
-    if sys.platform in ["linux", "darwin"]:
+    if sys.platform != "win32":
         return
 
-    if sys.platform == "win32":
-        with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
-        ) as reg:
-            # Remove SimNIBS Gmsh call from the registry
+    with winreg.OpenKey(
+        winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
+    ) as reg:
+        # Remove SimNIBS Gmsh call from the registry
+        try:
+            winreg.QueryValue(
+                reg, rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command"
+            )
+        except FileNotFoundError:
+            pass
+        else:
+            path = rf"SimNIBS.Gmsh.v{MINOR_VERSION}\DefaultIcon"
+            winreg.DeleteKey(reg, path)
+            # Delete recursivelly
+            paths = rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command".split("\\")
+            for i in reversed(range(len(paths))):
+                try:
+                    winreg.DeleteKey(reg, "\\".join(paths[: i + 1]))
+                except OSError:
+                    break
+            
+        # Remove the extensions from the registry
+        for ext in extensions:
             try:
-                winreg.QueryValue(
-                    reg, rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command"
-                )
+                entry = winreg.QueryValue(reg, rf"{ext}\OpenWithProgids")
             except FileNotFoundError:
                 pass
             else:
-                # Delete recursivelly
-                paths = rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command".split("\\")
-                for i in reversed(range(len(paths))):
-                    try:
-                        winreg.DeleteKey(reg, "\\".join(paths[: i + 1]))
-                    except OSError:
-                        break
-            # Remove the extensions from the registry
-            for ext in extensions:
-                try:
-                    entry = winreg.QueryValue(reg, ext)
-                except FileNotFoundError:
-                    pass
-                else:
-                    if entry == rf"SimNIBS.Gmsh.v{MINOR_VERSION}":
-                        winreg.SetValue(reg, ext, winreg.REG_SZ, "")
+                if entry == rf"SimNIBS.Gmsh.v{MINOR_VERSION}":
+                    winreg.SetValue(reg, rf"{ext}\OpenWithProgids", winreg.REG_SZ, "")
 
 
 def uninstaller_setup(install_dir, force, silent):
@@ -1081,8 +1090,10 @@ def install(
         print("Adding Shortcut Icons", flush=True)
         setup_shortcut_icons(scripts_dir, force, silent)
     if associate_files:
-        print("Associating Files", flush=True)
-        setup_file_association(force, silent)
+        if sys.platform == "win32":
+            # Linux and OSX file associations are done together with desktop items
+            print("Associating Files", flush=True)
+            setup_file_association(scripts_dir, force, silent)
     if setup_links:
         links_setup(install_dir)
     activator_setup(install_dir)
@@ -1124,7 +1135,10 @@ def uninstall(install_dir):
     if sys.platform == "darwin":
         path_cleanup(os.path.join(install_dir, "bin"), shell_type="zsh")
     shortcut_icons_clenup()
-    file_associations_cleanup()
+    if sys.platform == "win32":
+        # Linux file associations are done together with desktop items
+        # MacOS file associations are set using the .app files
+        file_associations_cleanup()
     shutil.rmtree(os.path.join(install_dir, "documentation"), True)
     shutil.rmtree(os.path.join(install_dir, "bin"), True)
 
