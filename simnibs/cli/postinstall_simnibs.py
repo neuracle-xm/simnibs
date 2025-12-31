@@ -644,7 +644,6 @@ def setup_file_association(scripts_dir, force=False, silent=False):
     with winreg.OpenKey(
         winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
     ) as reg:
-        winreg.CreateKey(reg, rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command")
         winreg.SetValue(
             reg,
             rf"SimNIBS.Gmsh.v{MINOR_VERSION}\shell\open\command",
@@ -675,10 +674,16 @@ def setup_file_association(scripts_dir, force=False, silent=False):
                         register = True
 
             if register:
-                winreg.CreateKey(reg, rf"{ext}\OpenWithProgids")
-                winreg.SetValue(
-                    reg, rf"{ext}\OpenWithProgids", winreg.REG_SZ, rf"SimNIBS.Gmsh.v{MINOR_VERSION}"
+                reg2 = winreg.CreateKey(reg, rf"{ext}\OpenWithProgids")                
+                winreg.SetValueEx(
+                    reg2, 
+                    rf"SimNIBS.Gmsh.v{MINOR_VERSION}", 
+                    0,
+                    winreg.REG_SZ,
+                    ""
                 )
+                if reg2:
+                    winreg.CloseKey(reg2)
 
 
 def _is_associated(ext):
@@ -701,9 +706,9 @@ def file_associations_cleanup():
     # MacOS file associations are set using the .app files
     if sys.platform != "win32":
         return
-
+    
     extensions = [".msh", ".geo", ".stl"]
-
+    
     with winreg.OpenKey(
         winreg.HKEY_CURRENT_USER, r"Software\Classes", access=winreg.KEY_WRITE
     ) as reg:
@@ -727,13 +732,18 @@ def file_associations_cleanup():
             
         # Remove the extensions from the registry
         for ext in extensions:
-            try:
-                entry = winreg.QueryValue(reg, rf"{ext}\OpenWithProgids")
+            try:                
+                reg2 = winreg.OpenKey(reg, rf"{ext}\OpenWithProgids")
+                winreg.QueryValueEx(reg2, rf"SimNIBS.Gmsh.v{MINOR_VERSION}")
+                if reg2:
+                    winreg.CloseKey(reg2)
             except FileNotFoundError:
                 pass
             else:
-                if entry == rf"SimNIBS.Gmsh.v{MINOR_VERSION}":
-                    winreg.SetValue(reg, rf"{ext}\OpenWithProgids", winreg.REG_SZ, "")
+                reg2 = winreg.OpenKey(reg, rf"{ext}\OpenWithProgids",access=winreg.KEY_SET_VALUE)
+                winreg.DeleteValue(reg2, rf"SimNIBS.Gmsh.v{MINOR_VERSION}")
+                if reg2:
+                    winreg.CloseKey(reg2)
 
 
 def uninstaller_setup(install_dir, force, silent):
