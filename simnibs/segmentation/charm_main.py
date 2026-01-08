@@ -272,7 +272,7 @@ def run(
             segment_parameters_and_inputs,
             tissue_settings,
             csf_factor,
-            sub_files.template_coregistered
+            sub_files.template_coregistered,
         )
 
         fn_LUT = sub_files.labeling.rsplit(".", 2)[0] + "_LUT.txt"
@@ -359,7 +359,7 @@ def run(
             )
             # only one subject
             cortex = cortex[0]
-            curv = curv[0]
+            curv = curv[0]  # uncertainty estimates etc.
             cortex.lh.registration = None
             cortex.rh.registration = None
         else:
@@ -369,6 +369,7 @@ def run(
             cortex = cortech.Cortex.from_freesurfer_subject_dir(
                 fs_dir, sphere="sphere", registration="sphere.reg"
             )
+            curv = {}  # no uncertainty etc.
             for hemi in cortex:
                 hemi.white.to_scanner_ras()
                 hemi.pial.to_scanner_ras()
@@ -384,7 +385,7 @@ def run(
         _write_cortex_as_gifti(cortex, sub_files)
         _write_gifti(central.lh, sub_files, "central", "lh")
         _write_gifti(central.rh, sub_files, "central", "rh")
-        _write_vertex_data_as_curv(curv, sub_files)  # uncertainty estimates etc.
+        _write_vertex_data_as_curv(curv, sub_files)
 
         if not cortex.lh.has_registration():  # only check lh
             logger.info("Generating spherical registrations")
@@ -447,7 +448,7 @@ def run(
         mmg_noinsert = mesh_settings["mmg_noinsert"]
 
         logger.info(f"Using skin tag: {skin_tag}")
-        
+
         # Meshing
 
         debug_path = None
@@ -497,14 +498,14 @@ def run(
         for fn in cap_files:
             fn_out = os.path.splitext(os.path.basename(fn))[0]
             fn_out = os.path.join(sub_files.eeg_cap_folder, fn_out)
-            transformations.warp_coordinates( 
+            transformations.warp_coordinates(
                 fn,
                 sub_files.subpath,
                 transformation_direction="mni2subject",
                 out_name=fn_out + ".csv",
                 out_geo=fn_out + ".geo",
                 mesh_in=mesh,
-                skin_tag=skin_tag
+                skin_tag=skin_tag,
             )
 
         logger.info("Write label image from mesh")
