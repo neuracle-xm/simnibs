@@ -191,7 +191,7 @@ class Wheel(Dependency):
 
     platform_tags: dict
     # We use cpython so this is the python tag
-    CPYTHON_VERSION_TAG = f"cp{PYTHON_VERSION.replace('.','')}"
+    CPYTHON_VERSION_TAG = f"cp{PYTHON_VERSION.replace('.', '')}"
 
     def build(self, platform):
         platform_tag = self.platform_tags[platform]
@@ -437,7 +437,6 @@ DEPENDENCIES = Dependencies(
     # Runtime
     # =========================================================================
     CondaPackage("freeglut", platforms=["linux", "windows"]),
-    CondaPackage("h5py"),
     CondaPackage("jsonschema"),
     CondaPackage("jupyterlab"),
     CondaPackage("libwebp"),
@@ -445,23 +444,24 @@ DEPENDENCIES = Dependencies(
     CondaPackage("mesa-libgl-cos6-x86_64", platforms="linux"),
     CondaPackage("mkl","2024", comparison="eq", platforms=["linux", "windows"]),
     CondaPackage("mpfr"),
-    CondaPackage("nibabel"),
-    CondaPackage("numba"),
     CondaPackage("pillow"),
     CondaPackage("pip"),
     CondaPackage("pyopengl"),
     CondaPackage("python-mumps"),
     CondaPackage("requests"),
-    CondaPackage("scipy"),
     CondaPackage("tbb", platforms=["linux", "windows"]),
     CondaPackage("vs2015_runtime", platforms="windows"),
     CondaPackage("zlib"),
 
-    PipPackage("pyqt5", platforms=["darwin","linux"]),
+    PipPackage("h5py"),
     PipPackage("gmsh", "4.14", comparison="eq"),
-    PipPackage("PyQt5", platforms="windows"),
+    PipPackage("nibabel"),
+    PipPackage("numba"),
     PipPackage("numpy", "2", comparison="geq"),
     PipPackage("pygpc", "0.4", comparison="geq"),
+    PipPackage("pyqt5", platforms=["darwin","linux"]),
+    PipPackage("PyQt5", platforms="windows"),
+    PipPackage("scipy"),
     IndexURL("torch", "2.6.0+cpu", ["linux", "windows"], url="https://download.pytorch.org/whl/cpu", platform_tags=dict(linux="linux_x86_64", windows="win_amd64")),
     # On MacOS, torch+cpu is simply the default package
     PipPackage("torch", "2.6.0", "darwin", comparison="eq"),
@@ -479,11 +479,12 @@ DEPENDENCIES = Dependencies(
     # Build
     # =========================================================================
     CondaPackage("conda-pack", tag="build"),
-    PipPackage("cython", tag="build"),
     CondaPackage("cgal-cpp", "5.5", comparison="eq", tag="build"),
     CondaPackage("packaging", tag="build"),
     CondaPackage("setuptools-scm", tag="build"),
     CondaPackage("tbb-devel", platforms=["linux", "windows"], tag="build"),
+
+    PipPackage("cython", tag="build"),
 
     # Test
     # =========================================================================
