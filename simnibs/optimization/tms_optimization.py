@@ -409,19 +409,39 @@ class TMSoptimize:
             [pos_matrices[np.argmax(E_roi)]],
             [self.didt],
             [fn_out],
-            [fn_geo],
+            [None],
         )
         # Write the target to the final simulation file
         m = mesh_io.read_msh(fn_out)
         m.add_element_field(target, "Target")
         m.write(fn_out)
-        v = m.view(visible_tags=self.tissues, visible_fields=["magnE"])
-        v.View[-1].CustomMax = 1
-        v.View[-1].CustomMin = 0
+        
+        # write .geo and .opt-file
+        skin_mesh = m.crop_mesh(tags=[ElementTags.SCALP_TH_SURFACE])
+        v = m.view(
+            visible_tags=[ElementTags.GM_TH_SURFACE.value],
+            visible_fields=["magnE"],
+            cond_list=self.cond,
+            add_logo=True,
+        )
+        TmsCoil.from_file(self.fnamecoil).append_simulation_visualization(
+            v, fn_geo, skin_mesh, pos_matrices[np.argmax(E_roi)]
+        )
+
+        mesh_io.write_geo_triangles(
+            skin_mesh.elm.node_number_list - 1,
+            skin_mesh.nodes.node_coord,
+            fn_geo,
+            name="scalp",
+            mode="ba",
+        )
+        v.add_view(ColormapNumber=8, ColormapAlpha=0.3, Visible=0, ShowScale=0)  # scalp
         v.add_merge(fn_geo)
+       
         v.add_merge(os.path.join(self.pathfem, "coil_positions.geo"))
         v.add_view(VectorType=4, CenterGlyphs=0)
         v.write_opt(fn_out)
+        
         if self.open_in_gmsh:
             gmsh_view.open_in_gmsh(fn_out)
 

@@ -1206,7 +1206,6 @@ class TMSLIST(SimuList):
         geo_names: list
             List with the names of the geo-files that accompany the output files.
         """
-        add_scalp_to_geo = True
         if len(self.pos) == 0:
             raise ValueError("There are no positions defined for this poslist!")
         fn_simu = os.path.abspath(os.path.expanduser(fn_simu))
