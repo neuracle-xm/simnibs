@@ -57,8 +57,8 @@ mout.add_node_field(TIamp, "TIamp_localnorm")  # for visualization
 simnibs.mesh_io.write_msh(mout, "TI_via_leadfields.msh")
 v = mout.view(
     visible_tags=[
-        simnibs.ElementTags.WM,
-        simnibs.ElementTags.GM,
+        simnibs.ElementTags.LH_CENTRAL_SURFACE,
+        simnibs.ElementTags.RH_CENTRAL_SURFACE,
         simnibs.ElementTags.EYE_BALLS_TH_SURFACE,
     ],
     visible_fields="TImax",

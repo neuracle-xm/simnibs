@@ -1741,6 +1741,7 @@ def _run_tms(mesh, cond, cond_list, fn_coil, fields, matsimnibs, didt, fn_out, f
             visible_tags=[ElementTags.GM_TH_SURFACE.value],
             visible_fields=["magnE"],
             cond_list=cond_list,
+            add_logo=True,
         )
         TmsCoil.from_file(fn_coil).append_simulation_visualization(
             v, fn_geo, skin_mesh, matsimnibs

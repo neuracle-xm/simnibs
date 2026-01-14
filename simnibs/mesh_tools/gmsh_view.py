@@ -208,6 +208,7 @@ class Visualization:
             f.write('Merge "{0}";\n'.format(mesh_fn))
             f.write(str(self.General))
             f.write(str(self.Mesh))
+            f.write(self._visibility_str())
             for fn, v in zip(fn_out, view):
                 if v.indx is None:
                     raise ValueError("Please assign an index to all views")
