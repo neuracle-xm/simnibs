@@ -130,9 +130,11 @@ def create_scripts(dest_dir):
     if sys.platform == "win32":
         executables_dir = os.path.dirname(sys.executable)
         python_interpreter = f'"{os.path.join(executables_dir, "python.exe")}"'
+        scripts_dir = os.path.join(executables_dir, "Scripts")
+        jupyter_script = os.path.join(scripts_dir, "jupyter-lab-script.py")
         with open(os.path.join(dest_dir, "simnibs_jupyter.cmd"), "w") as f:
             f.write("@echo off\n")
-            f.write(f'"{python_interpreter}" -m jupyter lab')
+            f.write(f'"{python_interpreter}" "{jupyter_script}"')
     else:
         if os.path.lexists(os.path.join(dest_dir, "simnibs_jupyter")):
             os.remove(os.path.join(dest_dir, "simnibs_jupyter"))
