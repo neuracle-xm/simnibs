@@ -1208,7 +1208,7 @@ class TestTDCSDistributedoptimize:
         )
         assert np.allclose(m.field["target_map"][:], sphere_surf.nodes[:, 0], atol=1e-3)
 
-    @pytest.mark.parametrize("intensity", [3e-5, -2e-5])
+    @pytest.mark.parametrize("intensity", [0.003, -0.001])
     @pytest.mark.parametrize(["max_el_c", "max_tot_c"], [(1e-3, 2e-3), (2e-3, 4e-3)])
     @pytest.mark.parametrize("max_ac", [None, 3])
     def test_optimize(self, intensity, max_el_c, max_tot_c, max_ac, fn_surf_real):
