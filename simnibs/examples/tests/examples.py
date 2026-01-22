@@ -429,7 +429,7 @@ class TestTESflexoptimize:
         print(fn)
         return subprocess.run([sys.executable, fn])
 
-    def test_tes_flex_hdtes_focality(self, example_dataset):
+    def test_tes_flex_hdtes_focality(self, example_dataset, replace_gmsh):
         os.chdir(example_dataset)
         ret = self.run_script(
             "tes_flex_optimization",
@@ -438,7 +438,7 @@ class TestTESflexoptimize:
         )
         assert ret.returncode == 0
 
-    def test_tes_flex_hdtes_intensity(self, example_dataset):
+    def test_tes_flex_hdtes_intensity(self, example_dataset, replace_gmsh):
         os.chdir(example_dataset)
         ret = self.run_script(
             "tes_flex_optimization",
@@ -447,7 +447,7 @@ class TestTESflexoptimize:
         )
         assert ret.returncode == 0
 
-    def test_tes_flex_ttf_intensity(self, example_dataset):
+    def test_tes_flex_ttf_intensity(self, example_dataset, replace_gmsh):
         os.chdir(example_dataset)
         ret = self.run_script(
             "tes_flex_optimization",
@@ -456,14 +456,14 @@ class TestTESflexoptimize:
         )
         assert ret.returncode == 0
 
-    def test_tes_flex_ti_intensity(self, example_dataset):
+    def test_tes_flex_ti_intensity(self, example_dataset, replace_gmsh):
         os.chdir(example_dataset)
         ret = self.run_script(
             "tes_flex_optimization", "tes_flex_ti_intensity.py", "tes_flex_ti_intensity"
         )
         assert ret.returncode == 0
 
-    def test_tes_flex_tes_Enormal_intensity(self, example_dataset):
+    def test_tes_flex_tes_Enormal_intensity(self, example_dataset, replace_gmsh):
         os.chdir(example_dataset)
         ret = self.run_script(
             "tes_flex_optimization",
