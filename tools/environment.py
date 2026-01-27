@@ -457,7 +457,7 @@ DEPENDENCIES = Dependencies(
     PipPackage("gmsh", "4.14", comparison="eq"),
     PipPackage("nibabel"),
     PipPackage("numba"),
-    PipPackage("numpy", "2", comparison="geq"),
+    PipPackage("numpy", "2.3", comparison="eq"),
     PipPackage("pygpc", "0.4", comparison="geq"),
     PipPackage("pyqt5", platforms=["darwin","linux"]),
     PipPackage("PyQt5", platforms="windows"),
