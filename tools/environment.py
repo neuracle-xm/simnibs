@@ -437,6 +437,7 @@ DEPENDENCIES = Dependencies(
     # Runtime
     # =========================================================================
     CondaPackage("freeglut", platforms=["linux", "windows"]),
+    CondaPackage("numpy", "2.3", comparison="eq"),
     CondaPackage("jsonschema"),
     CondaPackage("jupyterlab"),
     CondaPackage("libwebp"),
