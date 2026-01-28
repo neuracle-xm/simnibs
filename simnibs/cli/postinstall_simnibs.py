@@ -565,7 +565,7 @@ def _create_apps(install_dir):
     ):
         _copy_and_log(icns, resouces_dir)
 
-    _copy_and_log(os.path.join(install_dir, "bin", "gmsh"), os.path.join(macos_dir))
+    _copy_and_log(os.path.join(install_dir, "simnibs_env", "bin", "gmsh"), os.path.join(macos_dir))
 
 
 def _create_app(app_name, executable, icon, plist):
