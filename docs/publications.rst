@@ -13,7 +13,7 @@ Improved segmentation
 
 Improved pial and white matter surface reconstruction
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-* `Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://arxiv.org/abs/2505.14017>`_
+* `Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://doi.org/10.1007/978-3-032-09513-8_21>`_
 
 Version 4.5
 -----------

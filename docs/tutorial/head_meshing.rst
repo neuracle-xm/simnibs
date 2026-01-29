@@ -87,4 +87,4 @@ For more information on head meshing, please see:
 
 `Puonti O, Van Leemput K, Saturnino GB, Siebner HR, Madsen KH, Thielscher A. (2020). Accurate and robust whole-head segmentation from magnetic resonance images for individualized head modeling. Neuroimage, 219:117044. <https://doi.org/10.1016/j.neuroimage.2020.117044>`_
 
-`Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://arxiv.org/abs/2505.14017>`_
+`Nielsen JD, Gopinath K, Hoopes A, Dalca A, Magdamo C, Arnold S, Das S, Thielscher A, Iglesias JE, Puonti O. End-to-end Cortical Surface Reconstruction from Clinical Magnetic Resonance Images <https://doi.org/10.1007/978-3-032-09513-8_21>`_
