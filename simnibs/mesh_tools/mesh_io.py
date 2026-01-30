@@ -2037,13 +2037,16 @@ class Msh:
 
         """
         if not skin_surface:
-            skin_surface = [5, 1005]
+            skin_surface = ElementTags.SCALP_TH_SURFACE
         if not msh_surf:
-            msh_surf = self.crop_mesh(elm_type=2)
-        msh_skin = msh_surf.crop_mesh(skin_surface)
-        closest = np.argmin(np.linalg.norm(msh_skin.nodes.node_coord - center, axis=1))
-        center = msh_skin.nodes.node_coord[closest]
-
+            msh_surf = self.crop_mesh(elm_type=ElementTypes.TRIANGLE)
+        if not msh_surf.elm.get_tags(ElementTags.INTERNAL_AIR_TH_SURFACE).any():
+            msh_skin = msh_surf.relabel_internal_air().crop_mesh(skin_surface)
+        else:
+            msh_skin = msh_surf.crop_mesh(skin_surface)
+        
+        center, elm_idx = msh_skin.project_points_on_surface(center, return_element_index=True)  
+        
         # Y axis
         y = pos_ydir - center
         if np.isclose(np.linalg.norm(y), 0.0):
@@ -2053,7 +2056,7 @@ class Msh:
         y /= np.linalg.norm(y)
 
         # Normal
-        normal = msh_skin.nodes_normals().value[closest]
+        normal = msh_skin.triangle_normals(smooth=1).value[elm_idx-1][0]
         if np.isclose(np.abs(y.dot(normal)), 1.0):
             raise ValueError("The coil Y axis normal to the surface! ")
         z = -normal
@@ -2876,6 +2879,7 @@ class Msh:
         points,
         surface_tags: int | list[int] | tuple | np.ndarray | None = None,
         distance: float | np.ndarray = 0.0,
+        return_element_index: bool | np.ndarray = False
     ):
         """Find the position on the surface closest to each coordinate
 
@@ -2890,6 +2894,9 @@ class Msh:
             Distance (normal) to the surface to be enforced. Default: 0
             Note: negative values will move the point inside, positive values
             outside the volume defined by the surface
+        return_element_index: bool (optional)
+            whether to return the elm index (one-based) of the triangle
+            containing the closest surface point
 
         Returns
         ------
@@ -2929,7 +2936,10 @@ class Msh:
 
             projs += distance[:, None] * n
 
-        return projs
+        if return_element_index:
+            return projs, np.flatnonzero(tri_mask)[tris]+1
+        else:
+            return projs
 
     def get_AABBTree(self):
         """
