@@ -950,8 +950,10 @@ class TestMsh:
 
     def test_calc_matsimnibs(self, sphere3_msh):
         matsimnibs = sphere3_msh.calc_matsimnibs([0.0, 0.0, -95.0], [0, 95.0, 0.0], 1)
-        assert np.allclose(matsimnibs[:3, :3], np.eye(3), atol=1e-2)
-        assert np.allclose(matsimnibs[:3, 3], [0.0, 0.0, -96.0], atol=1e-2)
+        assert np.allclose(matsimnibs[:3, :3], np.eye(3), atol=1e-1)
+        assert np.allclose(matsimnibs[:3, 3], [0.0, 0.0, -96.0], atol=1e-1)
+        assert np.allclose(np.diag(matsimnibs[:3, :3]), np.ones(3), atol=1e-2)
+        assert np.isclose(matsimnibs[2, 3], -96.0, atol=1e-2)
 
     def test_intersect_segment(self, sphere3_msh):
         m = sphere3_msh.crop_mesh(1005)

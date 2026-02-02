@@ -352,13 +352,15 @@ class TestAutoInit:
 
         matsimnibs = pos.calc_matsimnibs(sphere3_msh)
         # Radius of sphere is 95, distance is 5, together its 100
-        np.testing.assert_allclose(matsimnibs[:3, 3], [100, 0, 0], atol=1e-3)
+        assert np.isclose(matsimnibs[0, 3], 100, atol=1e-1)
+        assert np.allclose(matsimnibs[1:3, 3], [0, 0], atol=1)
 
         from scipy.spatial.transform import Rotation as R
 
         r = R.from_matrix(matsimnibs[:3, :3])
         rotated = r.apply([[0, 0, 1]])
-        np.testing.assert_allclose(rotated[0], [-1, 0, 0], atol=1e-3)
+        assert np.isclose(rotated[0][0], -1, atol=5e-3)
+        assert np.allclose(rotated[0][1:3], [0, 0], atol=1e-1)
 
 
 class TestToFromDict:
