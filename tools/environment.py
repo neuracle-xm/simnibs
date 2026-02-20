@@ -442,18 +442,24 @@ DEPENDENCIES = Dependencies(
     CondaPackage("jupyterlab"),
     CondaPackage("libwebp"),
     CondaPackage("matplotlib-base"),
-    CondaPackage("mesa-libgl-cos6-x86_64", platforms="linux"),
     CondaPackage("mkl","2024", comparison="eq", platforms=["linux", "windows"]),
     CondaPackage("mpfr"),
     CondaPackage("pillow"),
     CondaPackage("pip"),
-    CondaPackage("pyopengl"),
+    CondaPackage("pyopengl", platforms=["darwin", "windows"]),
+    # on linux, newer versions include additional libraries which causes
+    # compatibility issues with gmsh package
+    CondaPackage("pyopengl", "3.1.7", "linux", comparison="leq"),
     CondaPackage("python-mumps"),
     CondaPackage("requests"),
     CondaPackage("tbb", platforms=["linux", "windows"]),
     CondaPackage("vs2015_runtime", platforms="windows"),
     CondaPackage("zlib"),
 
+    # NOTE some packages which depends on numpy have been moved to pip because
+    # of compatibility issues with torch on windows. torch is built against mkl
+    # as is numpy on pypi but numpy on conda-forge is built against openblas
+    # which seems to cause to openmp/openmpi library issues
     PipPackage("h5py"),
     PipPackage("gmsh", "4.14", comparison="eq"),
     PipPackage("nibabel"),
@@ -471,9 +477,13 @@ DEPENDENCIES = Dependencies(
     # PyPIPackage("samseg", "0.5a0", comparison="eq"),
     GitHubRelease("samseg", "0.5a0", platform_tags=DEFAULT_PLAT_TAGS, user="oulap", repository="samseg_wheels", release="dev"),
 
+    # used for layer placement and general FreeSurfer compatible IO of surface
+    # files
     GitHubRelease("cortech", "0.1", platform_tags=dict(darwin="macosx_11_0_arm64", linux="manylinux_2_24_x86_64.manylinux_2_28_x86_64", windows="win_amd64"), user="simnibs"),
     GitHubRelease("fmm3dpy", "1.0.4", platform_tags=DEFAULT_PLAT_TAGS, user="simnibs"),
     GitHubRelease("petsc4py", "3.22.2", platform_tags=DEFAULT_PLAT_TAGS, user="simnibs"),
+    # used for brain surface prediction. brainsynth handles preprocessing,
+    # brainnet does the actual prediction
     GitHubCommit("brainsynth", "v0.1", user="simnibs"),
     GitHubCommit("brainnet", "v0.2", user="simnibs"),
 
