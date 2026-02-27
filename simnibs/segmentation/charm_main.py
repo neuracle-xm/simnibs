@@ -1,40 +1,71 @@
+import glob
 import logging
 import os
+import re
 import shutil
-import time
 import subprocess
-import nibabel as nib
-import glob
 import sys
 import tempfile
-import re
+import time
+
+import nibabel as nib
 import numpy as np
 
 from simnibs import SIMNIBSDIR
+from simnibs.segmentation import brain_surface
 
-from . import simnibs_samseg
-from . import charm_utils
-from .. import __version__
-from .. import utils
-from ..utils.simnibs_logger import logger
-from ..utils import file_finder
-from ..utils import transformations
-from ..utils.transformations import crop_vol
-from ..utils.spawn_process import spawn_process
-from ..mesh_tools.meshing import create_mesh
+from .. import __version__, utils
 from ..mesh_tools.mesh_io import (
+    ElementData,
+    Msh,
     load_freesurfer_surfaces,
     read_gifti_surface,
+    read_off,
     write_gifti_surface,
     write_msh,
-    read_off,
     write_off,
-    Msh,
-    ElementData,
 )
-from ..utils import cond_utils
-from ..utils import html_writer
-from simnibs.segmentation import brain_surface
+from ..mesh_tools.meshing import create_mesh
+from ..utils import cond_utils, file_finder, html_writer, transformations
+from ..utils.simnibs_logger import logger
+from ..utils.spawn_process import spawn_process
+from ..utils.transformations import crop_vol
+from . import charm_utils, simnibs_samseg
+
+
+def _get_python_executable():
+    """Get the correct Python executable for subprocess calls.
+
+    In a frozen environment (PyInstaller), sys.executable points to the
+    bundle executable (e.g., charm.exe) which cannot run Python scripts.
+    This function returns the actual Python interpreter.
+
+    Returns:
+        str: Path to Python executable
+    """
+    if getattr(sys, "frozen", False):
+        # We're in a PyInstaller bundle
+        # Try to find Python in the system
+        # First check if python is in PATH
+        import shutil
+
+        python_exe = shutil.which("python")
+        if python_exe:
+            return python_exe
+        # Fallback to python3
+        python_exe = shutil.which("python3")
+        if python_exe:
+            return python_exe
+        # Last resort: use the Python that created the bundle
+        # This is stored in sys._base_executable if available
+        if hasattr(sys, "_base_executable"):
+            return sys._base_executable
+        # If all else fails, return sys.executable and hope for the best
+        return sys.executable
+    else:
+        # Not frozen, use sys.executable
+        return sys.executable
+
 
 def run(
     subject_dir: str,
@@ -51,7 +82,7 @@ def run(
     use_transform=None,
     force_qform=False,
     force_sform=False,
-    fs_dir = None,
+    fs_dir=None,
     options_str=None,
     debug=False,
 ):
@@ -106,7 +137,9 @@ def run(
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
 
     if force_qform and force_sform:
-        raise ValueError("Can't force both q- and s-forms, please use only one of the flags.")
+        raise ValueError(
+            "Can't force both q- and s-forms, please use only one of the flags."
+        )
 
     _setup_logger(sub_files.charm_log)
     logger.info(f"simnibs version {__version__}")
@@ -126,7 +159,14 @@ def run(
         use_transform = _read_transform(use_transform)
 
     _prepare_t1(T1, sub_files.reference_volume, force_qform, force_sform)
-    _prepare_t2(sub_files.reference_volume, T2, registerT2, sub_files.T2_reg, force_qform, force_sform)
+    _prepare_t2(
+        sub_files.reference_volume,
+        T2,
+        registerT2,
+        sub_files.T2_reg,
+        force_qform,
+        force_sform,
+    )
 
     # -------------------------PIPELINE STEPS---------------------------------
     # TODO: denoise T1 here with the sanlm filter, T2 denoised after coreg.
@@ -188,7 +228,6 @@ def run(
                 logger.info("Affine initialization type unknown. Defaulting to 'atlas'")
                 trans_mat = None
 
-
         charm_utils._register_atlas_to_input_affine(
             inputT1,
             template_name,
@@ -214,7 +253,9 @@ def run(
         # for further post-processing
         # The bias field kernel size has to be changed based on input
         input_images = []
-        input_images.append(sub_files.T1_denoised if do_denoise else sub_files.reference_volume)
+        input_images.append(
+            sub_files.T1_denoised if do_denoise else sub_files.reference_volume
+        )
         if os.path.exists(sub_files.T2_reg):
             input_images.append(
                 sub_files.T2_reg_denoised if do_denoise else sub_files.T2_reg
@@ -230,7 +271,11 @@ def run(
             segment_settings,
             gmm_parameters,
             visualizer,
-            parameter_filename = os.path.join(sub_files.segmentation_folder, "parameters.p") if debug else None,
+            parameter_filename=os.path.join(
+                sub_files.segmentation_folder, "parameters.p"
+            )
+            if debug
+            else None,
         )
 
         # Okay now the parameters have been estimated, and we can segment the
@@ -298,29 +343,31 @@ def run(
         )
 
         # Write to disk, fix the form codes
-        im_tmp = nib.load(sub_files.reference_volume)
+        # Re-import nibabel to ensure it's available in frozen environment
+        import nibabel as nib_local
+        im_tmp = nib_local.load(sub_files.reference_volume)
         scode = im_tmp.get_sform(coded=True)[1]
         qcode = im_tmp.get_qform(coded=True)[1]
-        upsampled_image = nib.load(sub_files.T1_upsampled)
+        upsampled_image = nib_local.load(sub_files.T1_upsampled)
         affine_upsampled = upsampled_image.affine
-        upsampled_tissues = nib.Nifti1Image(cleaned_upsampled_tissues, affine_upsampled)
+        upsampled_tissues = nib_local.Nifti1Image(cleaned_upsampled_tissues, affine_upsampled)
 
         # Set the tissue labeling codes and matrices
         upsampled_tissues.set_qform(affine_upsampled, qcode)
         upsampled_tissues.set_sform(affine_upsampled, scode)
-        nib.save(upsampled_tissues, sub_files.tissue_labeling_upsampled)
+        nib_local.save(upsampled_tissues, sub_files.tissue_labeling_upsampled)
 
         # Set the upsampled image codes and matrices correctly
         upsampled_image.set_qform(affine_upsampled, qcode)
         upsampled_image.set_sform(affine_upsampled, scode)
-        nib.save(upsampled_tissues, sub_files.T1_upsampled)
+        nib_local.save(upsampled_tissues, sub_files.T1_upsampled)
 
         # And also for the T2 if needed
         if len(bias_corrected_image_names) > 1:
-            upsampled_image = nib.load(sub_files.T2_upsampled)
+            upsampled_image = nib_local.load(sub_files.T2_upsampled)
             upsampled_image.set_qform(affine_upsampled, qcode)
             upsampled_image.set_sform(affine_upsampled, scode)
-            nib.save(upsampled_tissues, sub_files.T2_upsampled)
+            nib_local.save(upsampled_tissues, sub_files.T2_upsampled)
 
         del cleaned_upsampled_tissues
 
@@ -341,9 +388,9 @@ def run(
             logger.info(f"FreeSurfer subject directory is {fs_sub.root.resolve()}")
 
             surfaces = {
-                "white" : load_freesurfer_surfaces(fs_sub, "white", coord="ras"),
-                "sphere" : load_freesurfer_surfaces(fs_sub, "sphere"),
-                "sphere.reg" : load_freesurfer_surfaces(fs_sub, "sphere.reg"),
+                "white": load_freesurfer_surfaces(fs_sub, "white", coord="ras"),
+                "sphere": load_freesurfer_surfaces(fs_sub, "sphere"),
+                "sphere.reg": load_freesurfer_surfaces(fs_sub, "sphere.reg"),
             }
             surfaces["pial"] = _load_freesurfer_pial_surface(fs_sub)
 
@@ -421,11 +468,106 @@ def run(
                 argslist += ["--debug"]
             # fmt: on
 
-            proc = subprocess.run(
-                [sys.executable] + multithreading_script + argslist, stderr=subprocess.PIPE
-            )  # stderr: standard stream for simnibs logger
-            logger.debug(proc.stderr.decode("ASCII", errors="ignore").replace("\r", ""))
-            proc.check_returncode()
+            # In frozen environment (PyInstaller), we need to import and run directly
+            # instead of using subprocess, because subprocess cannot access bundled modules
+            if getattr(sys, "frozen", False):
+                logger.info(
+                    "Running surface creation in frozen mode (sequential processing)"
+                )
+                # Import the functions and run sequentially (no multiprocessing in frozen env)
+                import nibabel as nib
+
+                from simnibs.mesh_tools.mesh_io import (
+                    read_curv,
+                    read_gifti_surface,
+                    write_gifti_surface,
+                )
+                from simnibs.segmentation.brain_surface import createCS, expandCS
+
+                # Re-import nibabel to ensure it's available in frozen environment
+                import nibabel as nib_local
+                Ymf = nib_local.load(sub_files.norm_image)
+                Yleft = nib_local.load(sub_files.hemi_mask)
+                Yhemis = nib_local.load(sub_files.cereb_mask)
+
+                Ymf_data = Ymf.get_fdata()
+                Yleft_data = Yleft.get_fdata()
+                Yhemis_data = Yhemis.get_fdata()
+                vox2mm = Ymf.affine
+
+                logger.info(f"Processing {len(surf)} surfaces sequentially")
+
+                # Process each surface sequentially instead of using multiprocessing.Pool
+                for actualsurf in surf:
+                    logger.info(f"Processing surface: {actualsurf}")
+                    result = createCS(
+                        Ymf_data,
+                        Yleft_data,
+                        Yhemis_data,
+                        vox2mm,
+                        actualsurf,
+                        surffolder=sub_files.surface_folder,
+                        fsavgDir=fsavgDir,
+                        vdist=vdist,
+                        voxsize_pbt=voxsize_pbt,
+                        voxsize_refineCS=voxsize_refineCS,
+                        th_initial=th_initial,
+                        no_selfintersections=no_selfintersections,
+                        debug=debug,
+                    )
+                    logger.info(f"Completed surface: {actualsurf}")
+
+                # Process pial surfaces if needed
+                if len(pial) > 0:
+                    assert all(elem in surf for elem in pial)
+                    logger.info(f"Processing {len(pial)} pial surfaces sequentially")
+
+                    for actualsurf in pial:
+                        logger.info(f"Processing pial surface: {actualsurf}")
+                        Pcentral = os.path.join(
+                            sub_files.surface_folder, actualsurf + ".central.gii"
+                        )
+                        Ppial = os.path.join(
+                            sub_files.surface_folder, actualsurf + ".pial.gii"
+                        )
+                        Pthickness = os.path.join(
+                            sub_files.surface_folder, actualsurf + ".thickness"
+                        )
+
+                        m = read_gifti_surface(Pcentral)
+                        thickness = read_curv(Pthickness)
+                        m.nodes.node_coord = expandCS(
+                            m.nodes[:],
+                            m.elm[:, :3] - 1,
+                            thickness / 2,
+                            ensure_distance=0.2,
+                            nsteps=5,
+                            deform="expand",
+                            smooth_mesh=True,
+                            skip_lastsmooth=True,
+                            smooth_mm2move=True,
+                            despike_nonmove=True,
+                            fix_faceflips=True,
+                            actualsurf=actualsurf,
+                            debug=debug,
+                        )
+                        write_gifti_surface(m, Ppial)
+                        logger.info(f"Completed pial surface: {actualsurf}")
+
+                logger.info("All surfaces processed successfully")
+            else:
+                # Non-frozen environment: use subprocess as original code
+                env = os.environ.copy()
+
+                proc = subprocess.run(
+                    [_get_python_executable()] + multithreading_script + argslist,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                )  # stderr: standard stream for simnibs logger
+                logger.debug(
+                    proc.stderr.decode("ASCII", errors="ignore").replace("\r", "")
+                )
+                proc.check_returncode()
             elapsed = time.time() - starttime
             logger.info("Total time surface creation (HH:MM:SS):")
             logger.info(time.strftime("%H:%M:%S", time.gmtime(elapsed)))
@@ -438,15 +580,19 @@ def run(
                 if debug:
                     shutil.copyfile(
                         sub_files.tissue_labeling_upsampled,
-                        os.path.join(sub_files.label_prep_folder, "before_surfmorpho.nii.gz"),
+                        os.path.join(
+                            sub_files.label_prep_folder, "before_surfmorpho.nii.gz"
+                        ),
                     )
 
-                label_nii = nib.load(sub_files.tissue_labeling_upsampled)
+                # Re-import nibabel to ensure it's available in frozen environment
+                import nibabel as nib_local
+                label_nii = nib_local.load(sub_files.tissue_labeling_upsampled)
                 label_img = np.asanyarray(label_nii.dataobj)
                 label_affine = label_nii.affine
 
                 # orginal label mask
-                label_nii = nib.load(sub_files.labeling)
+                label_nii = nib_local.load(sub_files.labeling)
                 labelorg_img = np.asanyarray(label_nii.dataobj)
                 labelorg_affine = label_nii.affine
 
@@ -454,9 +600,13 @@ def run(
                     # GM central surfaces
                     m = Msh()
                     if "lh" in surf:
-                        m = m.join_mesh(read_gifti_surface(sub_files.get_surface("lh", "central")))
+                        m = m.join_mesh(
+                            read_gifti_surface(sub_files.get_surface("lh", "central"))
+                        )
                     if "rh" in surf:
-                        m = m.join_mesh(read_gifti_surface(sub_files.get_surface("rh", "central")))
+                        m = m.join_mesh(
+                            read_gifti_surface(sub_files.get_surface("rh", "central"))
+                        )
                         # fill in GM and save updated mask
                     if m.nodes.nr > 0:
                         label_img = charm_utils._fillin_gm_layer(
@@ -468,8 +618,10 @@ def run(
                             exclusion_tissues=exclusion_tissues_fillinGM,
                         )
 
-                        label_nii = nib.Nifti1Image(label_img, label_affine)
-                        nib.save(label_nii, sub_files.tissue_labeling_upsampled)
+                        # Re-import nibabel to ensure it's available in frozen environment
+                        import nibabel as nib_local
+                        label_nii = nib_local.Nifti1Image(label_img, label_affine)
+                        nib_local.save(label_nii, sub_files.tissue_labeling_upsampled)
                     else:
                         logger.warning(
                             "Neither lh nor rh reconstructed. Filling in from GM surface skipped"
@@ -479,9 +631,7 @@ def run(
                     # GM pial surfaces
                     m = Msh()
                     if "lh" in pial:
-                        m2 = read_gifti_surface(
-                            sub_files.get_surface("lh", "pial")
-                        )
+                        m2 = read_gifti_surface(sub_files.get_surface("lh", "pial"))
                         # remove self-intersections using meshfix
                         with tempfile.NamedTemporaryFile(suffix=".off") as f:
                             mesh_fn = f.name
@@ -494,9 +644,7 @@ def run(
                         if os.path.isfile("meshfix_log.txt"):
                             os.remove("meshfix_log.txt")
                     if "rh" in pial:
-                        m2 = read_gifti_surface(
-                            sub_files.get_surface("rh", "pial")
-                        )
+                        m2 = read_gifti_surface(sub_files.get_surface("rh", "pial"))
                         # remove self-intersections using meshfix
                         with tempfile.NamedTemporaryFile(suffix=".off") as f:
                             mesh_fn = f.name
@@ -517,8 +665,10 @@ def run(
                             m,
                             exclusion_tissues=exclusion_tissues_openCSF,
                         )
-                        label_nii = nib.Nifti1Image(label_img, label_affine)
-                        nib.save(label_nii, sub_files.tissue_labeling_upsampled)
+                        # Re-import nibabel to ensure it's available in frozen environment
+                        import nibabel as nib_local
+                        label_nii = nib_local.Nifti1Image(label_img, label_affine)
+                        nib_local.save(label_nii, sub_files.tissue_labeling_upsampled)
                     else:
                         logger.warning(
                             "Neither lh nor rh pial reconstructed. Opening up of sulci skipped."
@@ -532,7 +682,9 @@ def run(
     if mesh_image:
         # create mesh from label image
         logger.info("Starting mesh")
-        label_image = nib.load(sub_files.tissue_labeling_upsampled)
+        # Re-import nibabel to ensure it's available in frozen environment
+        import nibabel as nib_local
+        label_image = nib_local.load(sub_files.tissue_labeling_upsampled)
         label_buffer = np.round(label_image.get_fdata()).astype(
             np.uint16
         )  # Cast to uint16, otherwise meshing complains
@@ -564,7 +716,7 @@ def run(
         mmg_noinsert = mesh_settings["mmg_noinsert"]
 
         logger.info(f"Using skin tag: {skin_tag}")
-        
+
         # Meshing
 
         debug_path = None
@@ -593,7 +745,7 @@ def run(
             num_threads=num_threads,
             mmg_noinsert=mmg_noinsert,
             debug_path=debug_path,
-            debug=debug
+            debug=debug,
         )
 
         logger.info("Writing mesh")
@@ -612,14 +764,14 @@ def run(
         for fn in cap_files:
             fn_out = os.path.splitext(os.path.basename(fn))[0]
             fn_out = os.path.join(sub_files.eeg_cap_folder, fn_out)
-            transformations.warp_coordinates( 
+            transformations.warp_coordinates(
                 fn,
                 sub_files.subpath,
                 transformation_direction="mni2subject",
                 out_name=fn_out + ".csv",
                 out_geo=fn_out + ".geo",
                 mesh_in=mesh,
-                skin_tag=skin_tag
+                skin_tag=skin_tag,
             )
 
         logger.info("Write label image from mesh")
@@ -715,19 +867,21 @@ def _prepare_t1(T1, reference_volume, force_qform, force_sform):
     # copy T1 (as nii.gz) if supplied
     if T1:
         if os.path.exists(T1):
+            # Re-import nibabel to ensure it's available in frozen environment
+            import nibabel as nib_local
             # Cast to float32 and save
-            T1_tmp = nib.load(T1)
+            T1_tmp = nib_local.load(T1)
             T1_tmp = _check_q_and_s_form(T1_tmp, force_qform, force_sform)
 
             # Check for singleton dimensions and squeeze those out
             # Note: do this after the s-g-form check so affine is correct
             if (np.array(T1_tmp.shape) == 1).any():
                 data_tmp = np.squeeze(T1_tmp.get_fdata())
-                T1_tmp = nib.Nifti1Image(data_tmp, T1_tmp.affine)
+                T1_tmp = nib_local.Nifti1Image(data_tmp, T1_tmp.affine)
 
             T1_tmp.set_data_dtype(np.float32)
 
-            nib.save(T1_tmp, reference_volume)
+            nib_local.save(T1_tmp, reference_volume)
         else:
             raise FileNotFoundError(f"Could not find input T1 file: {T1}")
 
@@ -737,41 +891,49 @@ def _prepare_t2(T1, T2, registerT2, T2_reg, force_qform, force_sform):
         T2_exists = os.path.exists(T2)
         if registerT2:
             if T2_exists:
+                # Re-import nibabel to ensure it's available in frozen environment
+                import nibabel as nib_local
                 # Abuse the T2_reg filename to save a temporary
                 # file in case the q and sform need to be fixed
-                T2_tmp = nib.load(T2)
+                T2_tmp = nib_local.load(T2)
                 T2_tmp = _check_q_and_s_form(T2_tmp, force_qform, force_sform)
 
                 if (np.array(T2_tmp.shape) == 1).any():
                     data_tmp = np.squeeze(T2_tmp.get_fdata())
-                    T2_tmp = nib.Nifti1Image(data_tmp, T2_tmp.affine)
+                    T2_tmp = nib_local.Nifti1Image(data_tmp, T2_tmp.affine)
 
-                nib.save(T2_tmp, T2_reg)
+                nib_local.save(T2_tmp, T2_reg)
                 charm_utils._registerT1T2(T1, T2_reg, T2_reg)
             else:
                 raise FileNotFoundError(f"Could not find input T2 file: {T2}")
         else:
             if T2_exists:
-                T2_tmp = nib.load(T2)
+                # Re-import nibabel to ensure it's available in frozen environment
+                import nibabel as nib_local
+                T2_tmp = nib_local.load(T2)
                 T2_tmp = _check_q_and_s_form(T2_tmp, force_qform, force_sform)
 
                 if (np.array(T2_tmp.shape) == 1).any():
                     data_tmp = np.squeeze(T2_tmp.get_fdata())
-                    T2_tmp = nib.Nifti1Image(data_tmp, T2_tmp.affine)
+                    T2_tmp = nib_local.Nifti1Image(data_tmp, T2_tmp.affine)
 
                 T2_tmp.set_data_dtype(np.float32)
-                nib.save(T2_tmp, T2_reg)
+                nib_local.save(T2_tmp, T2_reg)
 
 
 def _check_q_and_s_form(scan, force_qform=False, force_sform=False):
     # If the q-form code is zero there is likely something wrong
     if not scan.get_qform(coded=True)[1] > 0 and force_sform is False:
-        raise ValueError("The qform_code is 0. Please check the header of the input scan. You can use the sform instead by running charm with the --forcesform option.")
+        raise ValueError(
+            "The qform_code is 0. Please check the header of the input scan. You can use the sform instead by running charm with the --forcesform option."
+        )
 
     # Even if the qform code is okay, check if the matrices are close
     if not np.allclose(scan.get_qform(), scan.get_sform(), rtol=1e-5, atol=1e-6):
         if not (force_qform or force_sform):
-            raise ValueError("The qform and sform matrices do not match. Please run charm with the --forceqform (preferred) or --forcesform option")
+            raise ValueError(
+                "The qform and sform matrices do not match. Please run charm with the --forceqform (preferred) or --forcesform option"
+            )
         elif force_qform:
             # Force both the matrix *and* the code
             (qmat, qcode) = scan.get_qform(coded=True)
@@ -780,7 +942,9 @@ def _check_q_and_s_form(scan, force_qform=False, force_sform=False):
         elif force_sform:
             # Check that sform code is not zero
             if not scan.get_sform(coded=True)[1] > 0:
-                raise ValueError("The sform_code is 0, but you are forcing it. Please fix the sform_code or use the qform instead.")
+                raise ValueError(
+                    "The sform_code is 0, but you are forcing it. Please fix the sform_code or use the qform instead."
+                )
             # Force both the matrix and the code.
             # NOTE: set_qform will strip shears silently per nibabel documentation
             else:
@@ -823,7 +987,9 @@ def _setup_atlas(samseg_settings, T2_reg, usesettings):
         settings_dir = os.path.dirname(usesettings)
         gmm_parameters = os.path.join(settings_dir, custom_gmm_parameters)
         if not os.path.exists(gmm_parameters):
-            raise FileNotFoundError(f"Could not find gmm parameter file: {gmm_parameters}")
+            raise FileNotFoundError(
+                f"Could not find gmm parameter file: {gmm_parameters}"
+            )
 
     return (
         template_name,
@@ -844,6 +1010,7 @@ def _denoise_inputs(T1, T2, sub_files):
         logger.info("Denoising the registered T2 and saving.")
         charm_utils._denoise_input_and_save(sub_files.T2_reg, sub_files.T2_reg_denoised)
 
+
 def _read_transform(transform_file):
     transform = np.loadtxt(transform_file)
     assert transform.shape == (
@@ -862,9 +1029,9 @@ def _load_freesurfer_pial_surface(fs_sub):
     # seem to work currently, hence this workaround
     try:
         m = load_freesurfer_surfaces(fs_sub, "pial", coord="ras")
-    except OSError: # invalid argument
+    except OSError:  # invalid argument
         try:
             m = load_freesurfer_surfaces(fs_sub, "pial.T2", coord="ras")
-        except FileNotFoundError: # -T2pial was not used
+        except FileNotFoundError:  # -T2pial was not used
             m = load_freesurfer_surfaces(fs_sub, "pial.T1", coord="ras")
     return m

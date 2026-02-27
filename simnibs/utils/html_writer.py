@@ -272,8 +272,12 @@ def write_report(sub_files):
     """
 
     # get simnibs logo
-    im = Image.open(simnibs_logo)
-    imdata = 'data:image/webp;base64,' + _get_im_data(im)
+    if os.path.exists(simnibs_logo):
+        im = Image.open(simnibs_logo)
+        imdata = 'data:image/webp;base64,' + _get_im_data(im)
+    else:
+        # Use a simple text fallback if logo is not available
+        imdata = ''
 
     t1_text = "Charm was run on a T1-weighted scan"
     t1_t2_text = "Charm was run on a combination of T1- and T2-weighted scans"
