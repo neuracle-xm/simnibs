@@ -159,3 +159,4 @@ tbb/*
 private_gitignore/
 data/
 .env
+neuracle/log

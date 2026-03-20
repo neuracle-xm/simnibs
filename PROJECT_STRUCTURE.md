@@ -20,6 +20,15 @@ simnibs/
 ├── neuracle/                            # Neuracle 定制化代码（新代码目录）
 │   ├── .env                              # 环境变量配置文件
 │   ├── __pycache__/                      # Python 字节码缓存
+│   ├── charm/                            # CHARM Pipeline 步骤脚本
+│   │   ├── __init__.py                  # 包初始化，导出公共 API
+│   │   ├── prepare_t1.py                # 步骤1: T1 图像准备
+│   │   ├── prepare_t2.py                # 步骤2: T2 图像配准
+│   │   ├── denoise.py                   # 步骤3: 输入图像降噪
+│   │   ├── init_atlas.py                # 步骤4: Atlas 仿射配准
+│   │   ├── segment.py                   # 步骤5: 体积与表面分割
+│   │   ├── create_surfaces.py           # 步骤6: 皮层表面重建
+│   │   └── mesh.py                      # 步骤7: 四面体网格生成
 │   ├── demo/                             # 示例代码
 │   │   ├── oss_example.py               # OSS 上传下载示例
 │   │   ├── rabbitmq_example.py          # RabbitMQ 监听器使用示例
