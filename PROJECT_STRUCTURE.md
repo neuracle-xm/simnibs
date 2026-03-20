@@ -18,6 +18,24 @@ simnibs/
 │   ├── installation/                    # 安装说明文档
 │   └── tutorial/                        # 教程文档
 ├── neuracle/                            # Neuracle 定制化代码（新代码目录）
+│   ├── .env                              # 环境变量配置文件
+│   ├── __pycache__/                      # Python 字节码缓存
+│   ├── demo/                             # 示例代码
+│   │   ├── rabbitmq_example.py          # RabbitMQ 监听器使用示例
+│   │   └── logger_example.py            # Logger 使用示例
+│   ├── docs/                             # 方案文档
+│   ├── env.py                            # 环境变量读取模块
+│   ├── log/                              # 日志文件目录（自动创建）
+│   │   ├── debug.log                     # DEBUG 级别日志
+│   │   ├── info.log                      # INFO 级别日志
+│   │   ├── warning.log                   # WARNING 级别日志
+│   │   └── error.log                     # ERROR 级别日志
+│   ├── logger/                           # 日志配置模块
+│   │   └── __init__.py                  # 日志配置和导出
+│   └── rabbitmq/                         # RabbitMQ 消息功能
+│       ├── __init__.py                  # 包初始化文件，导出公共 API
+│       ├── listener.py                  # RabbitMQ 监听器实现
+│       └── sender.py                    # RabbitMQ 发送器实现
 ├── packing/                             # 安装包打包脚本
 │   └── macOS_installer/                 # macOS 安装包构建脚本
 ├── private_gitignore/                   # 临时脚本/文件/工具（本地私有）
