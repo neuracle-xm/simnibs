@@ -36,6 +36,8 @@ dependencies = [
   "samseg",
   "scipy",
   "tbb ; sys_platform != 'darwin'",
+  "oss2",
+  "alibabacloud_sts20150401",
 ]
 
 [project.urls] # Optional

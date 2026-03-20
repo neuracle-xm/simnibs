@@ -21,6 +21,7 @@ simnibs/
 │   ├── .env                              # 环境变量配置文件
 │   ├── __pycache__/                      # Python 字节码缓存
 │   ├── demo/                             # 示例代码
+│   │   ├── oss_example.py               # OSS 上传下载示例
 │   │   ├── rabbitmq_example.py          # RabbitMQ 监听器使用示例
 │   │   └── logger_example.py            # Logger 使用示例
 │   ├── docs/                             # 方案文档
@@ -32,6 +33,8 @@ simnibs/
 │   │   └── error.log                     # ERROR 级别日志
 │   ├── logger/                           # 日志配置模块
 │   │   └── __init__.py                  # 日志配置和导出
+│   ├── oss_tool/                          # OSS 工具模块
+│   │   └── __init__.py                  # OSS 上传下载工具函数
 │   └── rabbitmq/                         # RabbitMQ 消息功能
 │       ├── __init__.py                  # 包初始化文件，导出公共 API
 │       ├── listener.py                  # RabbitMQ 监听器实现

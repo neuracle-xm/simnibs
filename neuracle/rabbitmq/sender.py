@@ -12,7 +12,7 @@ from pika.exceptions import AMQPConnectionError
 
 import logging
 
-logger = logging.getLogger('neuracle.rabbitmq')
+logger = logging.getLogger(__name__)
 
 
 class RabbitMQSender:
