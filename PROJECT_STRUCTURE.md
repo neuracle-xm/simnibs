@@ -30,10 +30,22 @@ simnibs/
 │   │   ├── create_surfaces.py           # 步骤6: 皮层表面重建
 │   │   └── mesh.py                      # 步骤7: 四面体网格生成
 │   ├── demo/                             # 示例代码
+│   │   ├── charm_create_surfaces_demo.py # CHARM 表面重建示例
+│   │   ├── charm_denoise_demo.py        # CHARM 图像降噪示例
+│   │   ├── charm_init_atlas_demo.py     # CHARM Atlas 初始化示例
+│   │   ├── charm_mesh_demo.py           # CHARM 网格生成示例
+│   │   ├── charm_prepare_t1_demo.py     # CHARM T1 准备示例
+│   │   ├── charm_prepare_t2_demo.py    # CHARM T2 准备示例
+│   │   ├── charm_segment_demo.py        # CHARM 分割示例
 │   │   ├── oss_example.py               # OSS 上传下载示例
 │   │   ├── rabbitmq_example.py          # RabbitMQ 监听器使用示例
-│   │   └── logger_example.py            # Logger 使用示例
+│   │   ├── logger_example.py            # Logger 使用示例
+│   │   └── ti_simulation_demo.py       # TI 时间干涉仿真示例
 │   ├── docs/                             # 方案文档
+│   │   ├── charm_pipeline_plan.md        # CHARM Pipeline 方案
+│   │   ├── logger_plan.md               # Logger 方案
+│   │   ├── rabbitmq_plan.md             # RabbitMQ 方案
+│   │   └── ti_simulation_plan.md       # TI 仿真方案
 │   ├── env.py                            # 环境变量读取模块
 │   ├── log/                              # 日志文件目录（自动创建）
 │   │   ├── debug.log                     # DEBUG 级别日志
@@ -48,6 +60,9 @@ simnibs/
 │       ├── __init__.py                  # 包初始化文件，导出公共 API
 │       ├── listener.py                  # RabbitMQ 监听器实现
 │       └── sender.py                    # RabbitMQ 发送器实现
+│   └── ti_simulation/                    # TI 时间干涉仿真模块
+│       ├── __init__.py                  # 包初始化，导出公共 API
+│       └── ti_simulation.py             # TI 仿真主函数
 ├── packing/                             # 安装包打包脚本
 │   └── macOS_installer/                 # macOS 安装包构建脚本
 ├── private_gitignore/                   # 临时脚本/文件/工具（本地私有）
