@@ -20,7 +20,9 @@ TI Optimization - Temporal Interference 逆向仿真优化
 import logging
 import os
 
-from simnibs import opt_struct
+import numpy as np
+
+from simnibs import mesh_io, opt_struct
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,7 @@ def run_ti_optimization(
     roi_radius: float | None = None,
     non_roi_center: list[float] | None = None,
     non_roi_radius: float | None = None,
+    auto_non_roi: bool = False,
     focality_threshold: list[float] | None = None,
     e_postproc: str = "max_TI",
     min_electrode_distance: float = 5.0,
@@ -87,6 +90,9 @@ def run_ti_optimization(
         Non-ROI 球形区域中心（仅 goal="focality" 时需要）
     non_roi_radius : float | None
         Non-ROI 球形区域半径（仅 goal="focality" 时需要）
+    auto_non_roi : bool
+        是否自动计算非ROI区域 (default: False)
+        当为 True 时，自动计算一个包含整个头部的球形区域作为 non-ROI
     focality_threshold : list[float] | None
         focality 阈值 [non_roi_threshold, roi_threshold]（仅 goal="focality" 时需要），单位 V/m
     e_postproc : str
@@ -233,18 +239,42 @@ def run_ti_optimization(
 
     # 配置 Non-ROI（仅 focality 需要）
     if goal in ["focality", "focality_inv"]:
-        if non_roi_center is None:
-            non_roi_center = roi_center
-        if non_roi_radius is None:
-            non_roi_radius = 25.0
-        logger.info("配置 Non-ROI: 中心=%s, 半径=%s", non_roi_center, non_roi_radius)
-        non_roi = opt.add_roi()
-        non_roi.method = "surface"
-        non_roi.surface_type = "central"
-        non_roi.roi_sphere_center_space = "subject"
-        non_roi.roi_sphere_center = non_roi_center
-        non_roi.roi_sphere_radius = non_roi_radius
-        non_roi.roi_sphere_operator = ["difference"]
+        if auto_non_roi:
+            # 自动计算非ROI区域：读取网格计算头部外接球
+            logger.info("自动计算非ROI区域")
+            msh_path = os.path.join(subject_dir, os.listdir(subject_dir)[0])
+            for f in os.listdir(subject_dir):
+                if f.endswith(".msh"):
+                    msh_path = os.path.join(subject_dir, f)
+                    break
+            mesh = mesh_io.read_msh(msh_path)
+            # 计算头部节点中心的最大距离作为外接球
+            head_nodes = mesh.nodes[mesh.nodes.tag == 1006]
+            center = head_nodes.center_of_mass()
+            distances = np.linalg.norm(head_nodes.value - center, axis=1)
+            non_roi_center_auto = center.tolist()
+            non_roi_radius_auto = float(distances.max()) + 10.0
+            logger.info("自动计算 Non-ROI: 中心=%s, 半径=%.1f", non_roi_center_auto, non_roi_radius_auto)
+            non_roi = opt.add_roi()
+            non_roi.method = "surface"
+            non_roi.surface_type = "central"
+            non_roi.roi_sphere_center_space = "subject"
+            non_roi.roi_sphere_center = non_roi_center_auto
+            non_roi.roi_sphere_radius = non_roi_radius_auto
+            non_roi.roi_sphere_operator = ["difference"]
+        else:
+            if non_roi_center is None:
+                non_roi_center = roi_center
+            if non_roi_radius is None:
+                non_roi_radius = 25.0
+            logger.info("配置 Non-ROI: 中心=%s, 半径=%s", non_roi_center, non_roi_radius)
+            non_roi = opt.add_roi()
+            non_roi.method = "surface"
+            non_roi.surface_type = "central"
+            non_roi.roi_sphere_center_space = "subject"
+            non_roi.roi_sphere_center = non_roi_center
+            non_roi.roi_sphere_radius = non_roi_radius
+            non_roi.roi_sphere_operator = ["difference"]
 
     # 运行优化
     logger.info("开始优化...")

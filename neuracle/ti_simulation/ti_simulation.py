@@ -358,4 +358,3 @@ def _setup_electrode_pair(
     electrode.thickness = electrode_thickness
 
     return tdcs
-
