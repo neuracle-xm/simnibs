@@ -12,8 +12,6 @@ CHARM 步骤1: T1 图像准备
 用法：
     python -m neuracle.charm.prepare_t1 <subid> <T1_file> [--forcesform]
 """
-
-import argparse
 import logging
 import os
 
@@ -24,8 +22,6 @@ from neuracle.charm.nifti_utils import _check_q_and_s_form
 from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
-
-
 def prepare_t1(
     subject_dir: str,
     t1: str,

@@ -20,8 +20,6 @@ CHARM 步骤5: 体积与表面分割
 用法：
     python -m neuracle.charm.segment <subid> [--debug]
 """
-
-import argparse
 import logging
 import os
 import shutil
@@ -33,8 +31,6 @@ from simnibs.segmentation import charm_utils, simnibs_samseg
 from simnibs.utils import file_finder, settings_reader
 
 logger = logging.getLogger(__name__)
-
-
 def run_segmentation(
     subject_dir: str,
     debug: bool = False,

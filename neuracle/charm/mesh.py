@@ -21,8 +21,6 @@ CHARM 步骤7: 四面体网格生成
 用法：
     python -m neuracle.charm.mesh <subid> [--debug]
 """
-
-import argparse
 import glob
 import logging
 import os
@@ -38,8 +36,6 @@ from simnibs.utils import cond_utils, file_finder, transformations
 from simnibs.utils.transformations import crop_vol
 
 logger = logging.getLogger(__name__)
-
-
 def create_mesh_step(
     subject_dir: str,
     debug: bool = False,

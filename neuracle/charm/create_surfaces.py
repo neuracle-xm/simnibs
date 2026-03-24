@@ -23,8 +23,6 @@ CHARM 步骤6: 皮层表面重建
 用法：
     python -m neuracle.charm.create_surfaces <subid> [--fs-subjects-dir <path>]
 """
-
-import argparse
 import logging
 import os
 import subprocess
@@ -50,8 +48,6 @@ from simnibs.utils import file_finder, settings_reader
 from simnibs.utils.spawn_process import spawn_process
 
 logger = logging.getLogger(__name__)
-
-
 def create_surfaces(
     subject_dir: str,
     fs_dir: str | None = None,
@@ -85,8 +81,6 @@ def create_surfaces(
         logger.info("使用 CAT12 方法创建表面")
         _create_surfaces_from_cat12(sub_files, surface_settings, atlas_settings)
     logger.info("表面重建完成")
-
-
 def _create_surfaces_from_freesurfer(
     sub_files: file_finder.SubjectFiles,
     fs_dir: str,
@@ -143,8 +137,6 @@ def _create_surfaces_from_freesurfer(
     t_end = time.perf_counter()
     time_elapsed = time.strftime("%H:%M:%S", time.gmtime(t_end - t_start))
     logger.info("表面创建耗时: %s", time_elapsed)
-
-
 def _create_surfaces_from_cat12(
     sub_files: file_finder.SubjectFiles,
     surface_settings: dict,
@@ -244,8 +236,6 @@ def _create_surfaces_from_cat12(
             exclusion_tissues_fillin_gm,
             exclusion_tissues_open_csf,
         )
-
-
 def _improve_gm_from_surfaces(
     sub_files: file_finder.SubjectFiles,
     fillin_gm_from_surf: bool,
@@ -344,8 +334,6 @@ def _improve_gm_from_surfaces(
     elapsed = time.time() - starttime
     logger.info("GM 改善总耗时 (HH:MM:SS):")
     logger.info(time.strftime("%H:%M:%S", time.gmtime(elapsed)))
-
-
 def _load_freesurfer_pial_surface(fs_sub: file_finder.FreeSurferSubject) -> dict:
     """
     加载 FreeSurfer pial 表面（处理 symlink 问题）
@@ -368,8 +356,6 @@ def _load_freesurfer_pial_surface(fs_sub: file_finder.FreeSurferSubject) -> dict
         except FileNotFoundError:
             m = load_freesurfer_surfaces(fs_sub, "pial.T1", coord="ras")
     return m
-
-
 def _get_atlas_settings(samseg_settings: dict) -> dict:
     """获取 Atlas 设置
 

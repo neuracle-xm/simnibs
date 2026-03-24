@@ -19,8 +19,6 @@ CHARM 步骤4: Atlas 初始仿射配准与颈部校正
 用法：
     python -m neuracle.charm.init_atlas <subid> [--use-transform <transform_file>]
 """
-
-import argparse
 import logging
 import os
 
@@ -31,8 +29,6 @@ from simnibs.segmentation import charm_utils, simnibs_samseg
 from simnibs.utils import file_finder, settings_reader
 
 logger = logging.getLogger(__name__)
-
-
 def init_atlas(
     subject_dir: str,
     use_transform: str | None = None,
@@ -124,8 +120,6 @@ def init_atlas(
         init_transform=init_transform,
     )
     logger.info("Atlas 配准完成")
-
-
 def _read_transform(transform_file: str) -> np.ndarray:
     """
     读取变换矩阵
