@@ -35,17 +35,20 @@ simnibs/
 │   │   ├── charm_init_atlas_demo.py     # CHARM Atlas 初始化示例
 │   │   ├── charm_mesh_demo.py           # CHARM 网格生成示例
 │   │   ├── charm_prepare_t1_demo.py     # CHARM T1 准备示例
-│   │   ├── charm_prepare_t2_demo.py    # CHARM T2 准备示例
+│   │   ├── charm_prepare_t2_demo.py     # CHARM T2 准备示例
 │   │   ├── charm_segment_demo.py        # CHARM 分割示例
+│   │   ├── charm_to_mz3_demo.py         # CHARM 头模型转 MZ3 示例
+│   │   ├── ti_simulation_demo.py       # TI 时间干涉仿真示例
+│   │   ├── ti_simulation_to_mz3_demo.py # TI 仿真结果转 MZ3 示例
 │   │   ├── oss_example.py               # OSS 上传下载示例
 │   │   ├── rabbitmq_example.py          # RabbitMQ 监听器使用示例
-│   │   ├── logger_example.py            # Logger 使用示例
-│   │   └── ti_simulation_demo.py       # TI 时间干涉仿真示例
+│   │   └── logger_example.py            # Logger 使用示例
 │   ├── docs/                             # 方案文档
 │   │   ├── charm_pipeline_plan.md        # CHARM Pipeline 方案
 │   │   ├── logger_plan.md               # Logger 方案
 │   │   ├── rabbitmq_plan.md             # RabbitMQ 方案
-│   │   └── ti_simulation_plan.md       # TI 仿真方案
+│   │   ├── ti_simulation_plan.md       # TI 仿真方案
+│   │   └── msh_to_mz3_plan.md          # MSH 转 MZ3 方案
 │   ├── env.py                            # 环境变量读取模块
 │   ├── log/                              # 日志文件目录（自动创建）
 │   │   ├── debug.log                     # DEBUG 级别日志
@@ -54,6 +57,9 @@ simnibs/
 │   │   └── error.log                     # ERROR 级别日志
 │   ├── logger/                           # 日志配置模块
 │   │   └── __init__.py                  # 日志配置和导出
+│   ├── mesh_tools/                        # 网格格式转换工具
+│   │   ├── __init__.py                  # 包初始化，导出 msh_to_mz3
+│   │   └── msn_to_mz3.py                # MSH 转 MZ3 转换器
 │   ├── oss_tool/                          # OSS 工具模块
 │   │   └── __init__.py                  # OSS 上传下载工具函数
 │   └── rabbitmq/                         # RabbitMQ 消息功能
