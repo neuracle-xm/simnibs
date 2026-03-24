@@ -16,7 +16,6 @@ TI Simulation - Temporal Interference 正向仿真
             [--n-workers <n_workers>]
 """
 
-import argparse
 import logging
 import os
 from copy import deepcopy
@@ -39,6 +38,9 @@ def run_ti_forward_simulation(
     electrode_shape: str = "ellipse",
     electrode_dimensions: list[float] | None = None,
     electrode_thickness: float = 2.0,
+    anisotropy_type: str = "scalar",
+    cond: list | None = None,
+    fname_tensor: str | None = None,
     n_workers: int = 1,
 ) -> tuple[str, str]:
     """
@@ -64,6 +66,18 @@ def run_ti_forward_simulation(
         电极尺寸 [width, height]，单位 mm (default: [40, 40])
     electrode_thickness : float, optional
         电极厚度，单位 mm (default: 2.0)
+    anisotropy_type : str, optional
+        电导率各向异性类型 (default: "scalar")
+        可选值：
+        - "scalar": 标量电导率（各向同性）
+        - "vector": 向量电导率（仅白质各向异性）
+        - "tensor": 张量电导率（基于 DWI 张量）
+    cond : list, optional
+        电导率列表，默认为标准电导率 (standard_cond)
+        每个元素为 (tissue_index, conductivity) 元组
+        如: [(1, 0.465), (2, 0.01), ...] 表示 (组织标签, 电导率 S/m)
+    fname_tensor : str, optional
+        DTI 张量文件路径 (.nii.gz)，仅当 anisotropy_type="tensor" 时需要
     n_workers : int, optional
         并行工作进程数 (default: 1)
         Note: 即使设置了多个worker，实际也还是没用
@@ -87,6 +101,20 @@ def run_ti_forward_simulation(
     S.subpath = subject_dir
     S.pathfem = output_dir
     S.open_in_gmsh = False  # 禁止自动打开 Gmsh
+    S.anisotropy_type = anisotropy_type
+    logger.info("电导率各向异性类型: %s", anisotropy_type)
+
+    # 设置电导率值
+    if cond is not None:
+        S.cond = cond
+        logger.info("使用自定义电导率值")
+    else:
+        logger.info("使用标准电导率值 (standard_cond)")
+
+    # 设置 DTI 张量文件（用于 tensor 各向异性）
+    if fname_tensor is not None:
+        S.fname_tensor = fname_tensor
+        logger.info("DTI 张量文件: %s", fname_tensor)
 
     # 创建输出目录
     os.makedirs(output_dir, exist_ok=True)
@@ -205,6 +233,9 @@ def run_ti_simulation(
     electrode_shape: str = "ellipse",
     electrode_dimensions: list[float] | None = None,
     electrode_thickness: float = 2.0,
+    anisotropy_type: str = "scalar",
+    cond: list | None = None,
+    fname_tensor: str | None = None,
     n_workers: int = 1,
 ) -> tuple[str, np.ndarray]:
     """
@@ -230,6 +261,18 @@ def run_ti_simulation(
         电极尺寸 [width, height]，单位 mm (default: [40, 40])
     electrode_thickness : float, optional
         电极厚度，单位 mm (default: 2.0)
+    anisotropy_type : str, optional
+        电导率各向异性类型 (default: "scalar")
+        可选值：
+        - "scalar": 标量电导率（各向同性）
+        - "vector": 向量电导率（仅白质各向异性）
+        - "tensor": 张量电导率（基于 DWI 张量）
+    cond : list, optional
+        电导率列表，默认为标准电导率 (standard_cond)
+        每个元素为 (tissue_index, conductivity) 元组
+        如: [(1, 0.465), (2, 0.01), ...] 表示 (组织标签, 电导率 S/m)
+    fname_tensor : str, optional
+        DTI 张量文件路径 (.nii.gz)，仅当 anisotropy_type="tensor" 时需要
     n_workers : int, optional
         并行工作进程数 (default: 1)
         Note: 即使设置了多个worker，实际也还是没用
@@ -250,6 +293,9 @@ def run_ti_simulation(
         electrode_shape=electrode_shape,
         electrode_dimensions=electrode_dimensions,
         electrode_thickness=electrode_thickness,
+        anisotropy_type=anisotropy_type,
+        cond=cond,
+        fname_tensor=fname_tensor,
         n_workers=n_workers,
     )
 
@@ -313,100 +359,3 @@ def _setup_electrode_pair(
 
     return tdcs
 
-
-def parse_arguments(argv: list | None = None) -> argparse.Namespace:
-    """
-    解析命令行参数
-
-    Parameters
-    ----------
-    argv : list or None
-        命令行参数列表
-
-    Returns
-    -------
-    argparse.Namespace
-        解析后的参数
-    """
-    parser = argparse.ArgumentParser(
-        prog="python -m neuracle.ti_simulation",
-        description="Run TI (Temporal Interference) simulation for tDCS",
-    )
-    parser.add_argument("subid", help="Subject ID (e.g., ernie)")
-    parser.add_argument(
-        "--electrode-pair1",
-        type=str,
-        nargs=2,
-        default=["F5", "P5"],
-        help="First electrode pair, e.g., F5 P5",
-    )
-    parser.add_argument(
-        "--electrode-pair2",
-        type=str,
-        nargs=2,
-        default=["F6", "P6"],
-        help="Second electrode pair, e.g., F6 P6",
-    )
-    parser.add_argument(
-        "--current1",
-        type=float,
-        default=0.001,
-        help="First electrode pair current amplitude in A (default: 0.001)",
-    )
-    parser.add_argument(
-        "--current2",
-        type=float,
-        default=0.001,
-        help="Second electrode pair current amplitude in A (default: 0.001)",
-    )
-    parser.add_argument(
-        "--electrode-shape",
-        type=str,
-        default="ellipse",
-        choices=["ellipse", "rect", "custom"],
-        help="Electrode shape (default: ellipse)",
-    )
-    parser.add_argument(
-        "--electrode-dim",
-        type=float,
-        nargs=2,
-        default=[40, 40],
-        help="Electrode dimensions [width height] in mm (default: 40 40)",
-    )
-    parser.add_argument(
-        "--electrode-thickness",
-        type=float,
-        default=2.0,
-        help="Electrode thickness in mm (default: 2.0)",
-    )
-    parser.add_argument(
-        "--n-workers",
-        type=int,
-        default=1,
-        help="Number of parallel workers (default: 1)",
-    )
-    return parser.parse_args(argv)
-
-
-def main() -> None:
-    """主函数"""
-    args = parse_arguments()
-    subject_dir = os.path.join(os.getcwd(), "m2m_" + args.subid)
-    output_dir = os.path.join(os.getcwd(), "TI_" + args.subid)
-
-    run_ti_simulation(
-        subject_dir=subject_dir,
-        output_dir=output_dir,
-        electrode_pair1=args.electrode_pair1,
-        electrode_pair2=args.electrode_pair2,
-        current1=args.current1,
-        current2=args.current2,
-        electrode_shape=args.electrode_shape,
-        electrode_dimensions=args.electrode_dim,
-        electrode_thickness=args.electrode_thickness,
-        n_workers=args.n_workers,
-    )
-
-
-if __name__ == "__main__":
-    main()

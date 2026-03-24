@@ -89,35 +89,3 @@ def _denoise_if_needed(
         logger.info("正在对 %s 进行降噪并保存。", name)
         charm_utils._denoise_input_and_save(input_path, output_path)
 
-
-def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    解析命令行参数
-
-    Parameters
-    ----------
-    argv : list[str] or None
-        命令行参数列表
-
-    Returns
-    -------
-    argparse.Namespace
-        解析后的参数
-    """
-    parser = argparse.ArgumentParser(
-        prog="python -m neuracle.charm.denoise",
-        description="Denoise input images for CHARM pipeline",
-    )
-    parser.add_argument("subid", help="Subject ID (e.g., sub001)")
-    return parser.parse_args(argv)
-
-
-def main() -> None:
-    """主函数"""
-    args = parse_arguments()
-    subject_dir = os.path.join(os.getcwd(), "m2m_" + args.subid)
-    denoise_inputs(subject_dir)
-
-
-if __name__ == "__main__":
-    main()

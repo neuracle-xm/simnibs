@@ -387,30 +387,3 @@ def _get_atlas_settings(samseg_settings: dict) -> dict:
     atlas_path = os.path.join(file_finder.templates.charm_atlas_path, atlas_name)
     return settings_reader.read_ini(os.path.join(atlas_path, atlas_name + ".ini"))
 
-
-def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    解析命令行参数
-    """
-    parser = argparse.ArgumentParser(
-        prog="python -m neuracle.charm.create_surfaces",
-        description="Create cortical surfaces for CHARM pipeline",
-    )
-    parser.add_argument("subid", help="Subject ID (e.g., sub001)")
-    parser.add_argument(
-        "--fs-subjects-dir",
-        type=str,
-        help="FreeSurfer subjects directory (if using FreeSurfer surfaces)",
-    )
-    return parser.parse_args(argv)
-
-
-def main() -> None:
-    """主函数"""
-    args = parse_arguments()
-    subject_dir = os.path.join(os.getcwd(), "m2m_" + args.subid)
-    create_surfaces(subject_dir, fs_dir=args.fs_subjects_dir)
-
-
-if __name__ == "__main__":
-    main()
