@@ -34,3 +34,4 @@ conda activate simnibs
 17. Use lazy % formatting in logging functions
 18. 函数内部变量名使用snake_case
 19. 日志都使用中文
+20. 函数内部变量名使用snake_case
