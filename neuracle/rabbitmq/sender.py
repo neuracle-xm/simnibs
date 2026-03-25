@@ -5,12 +5,11 @@ RabbitMQ 消息发送模块
 """
 
 import json
+import logging
 from typing import Any
 
-from pika import BlockingConnection, ConnectionParameters, BasicProperties, DeliveryMode
+from pika import BasicProperties, BlockingConnection, ConnectionParameters, DeliveryMode
 from pika.exceptions import AMQPConnectionError
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +17,7 @@ logger = logging.getLogger(__name__)
 class RabbitMQSender:
     """RabbitMQ 发送器类"""
 
-    def __init__(self,
-                 host: str = 'localhost',
-                 port: int = 5672,
-                 queue_name: str = ''):
+    def __init__(self, host: str = "localhost", port: int = 5672, queue_name: str = ""):
         """
         初始化 RabbitMQ 发送器
 
@@ -54,7 +50,7 @@ class RabbitMQSender:
                 self.channel.queue_declare(
                     queue=self.queue_name,
                     durable=True,
-                    arguments={'x-queue-type': 'quorum'}
+                    arguments={"x-queue-type": "quorum"},
                 )
             logger.info("发送器成功连接到 RabbitMQ 服务器: %s:%s", self.host, self.port)
             return True
@@ -65,13 +61,13 @@ class RabbitMQSender:
             logger.error("发送器连接时发生未知错误: %s", e)
             return False
 
-    def send_message(self,
-                     message: Any) -> bool:
+    def send_message(self, message: Any) -> bool:
         """
         发送消息
 
         原理：
             将消息序列化为 JSON 格式，通过 basic_publish 方法发送到指定队列或交换机。
+            如果通道已关闭，自动重连后重试发送。
 
         Args:
             message: 消息内容（可序列化为 JSON 的对象）
@@ -84,22 +80,63 @@ class RabbitMQSender:
             return False
         try:
             # 序列化消息
-            body = json.dumps(message, ensure_ascii=False).encode('utf-8')
+            body = json.dumps(message, ensure_ascii=False).encode("utf-8")
             # 设置消息属性
             properties = BasicProperties(
                 delivery_mode=DeliveryMode.Persistent,  # 持久化
             )
             # 发送消息
             self.channel.basic_publish(
-                exchange='',
+                exchange="",
                 routing_key=self.queue_name,
                 body=body,
-                properties=properties
+                properties=properties,
             )
             logger.info("消息已发送: %s", message)
             return True
         except Exception as e:
-            logger.error("发送消息失败: %s", e)
+            logger.warning("发送消息失败: %s，尝试重连...", e)
+            # 尝试重连
+            if self._reconnect():
+                try:
+                    self.channel.basic_publish(
+                        exchange="",
+                        routing_key=self.queue_name,
+                        body=body,
+                        properties=properties,
+                    )
+                    logger.info("重连后消息发送成功: %s", message)
+                    return True
+                except Exception as e2:
+                    logger.error("重连后发送消息仍然失败: %s", e2)
+                    return False
+            return False
+
+    def _reconnect(self) -> bool:
+        """重新建立连接"""
+        try:
+            logger.info("尝试重新连接 RabbitMQ...")
+            # 关闭旧连接
+            if self.connection and self.connection.is_open:
+                try:
+                    self.connection.close()
+                except Exception:
+                    pass
+            # 重新连接
+            parameters = ConnectionParameters(host=self.host, port=self.port)
+            self.connection = BlockingConnection(parameters)
+            self.channel = self.connection.channel()
+            # 重新声明队列
+            if self.queue_name:
+                self.channel.queue_declare(
+                    queue=self.queue_name,
+                    durable=True,
+                    arguments={"x-queue-type": "quorum"},
+                )
+            logger.info("重连成功")
+            return True
+        except Exception as e:
+            logger.error("重连失败: %s", e)
             return False
 
     def close(self) -> None:

@@ -4,12 +4,11 @@ RabbitMQ 消息监听器模块
 用于监听 RabbitMQ 队列，接收来自后端服务器的消息。
 """
 
-from typing import Callable, Any
+import logging
+from typing import Any, Callable
 
 from pika import BlockingConnection, ConnectionParameters
 from pika.exceptions import AMQPConnectionError
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +16,7 @@ logger = logging.getLogger(__name__)
 class RabbitMQListener:
     """RabbitMQ 监听器类"""
 
-    def __init__(self,
-                 host: str = 'localhost',
-                 port: int = 5672,
-                 queue_name: str = ''
-                 ):
+    def __init__(self, host: str = "localhost", port: int = 5672, queue_name: str = ""):
         """
         初始化 RabbitMQ 监听器
 
@@ -53,7 +48,7 @@ class RabbitMQListener:
             self.channel.queue_declare(
                 queue=self.queue_name,
                 durable=True,
-                arguments={'x-queue-type': 'quorum'}
+                arguments={"x-queue-type": "quorum"},
             )
             logger.info("成功连接到 RabbitMQ 服务器: %s:%s", self.host, self.port)
             return True
@@ -79,5 +74,17 @@ class RabbitMQListener:
                 - properties: pika.spec.BasicProperties 消息属性
                 - body: bytes 消息内容
         """
-        self.channel.basic_consume(queue=self.queue_name, on_message_callback=callback, auto_ack=False) # type: ignore
-        self.channel.start_consuming() # type: ignore
+        self.channel.basic_consume(
+            queue=self.queue_name, on_message_callback=callback, auto_ack=False
+        )  # type: ignore
+        self.channel.start_consuming()  # type: ignore
+
+    def stop_consume(self) -> None:
+        """停止消费消息"""
+        if self.channel:
+            self.channel.stop_consuming()
+
+    def close(self) -> None:
+        """关闭连接"""
+        if self.connection and not self.connection.is_closed:
+            self.connection.close()

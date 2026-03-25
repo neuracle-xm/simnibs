@@ -8,73 +8,21 @@ RabbitMQ 监听器使用示例
 
 import json
 import logging
-from queue import Queue
-import threading
-from neuracle.logger import setup_logging
-from neuracle.rabbitmq import RabbitMQListener, RabbitMQSender
-from neuracle.env import load_env, get_rabbitmq_config
 from functools import partial
+from queue import Queue
+
+from neuracle.env import get_rabbitmq_config, load_env
+from neuracle.logger import setup_logging
+from neuracle.rabbitmq import RabbitMQListener, SenderThread
 
 # 加载环境变量
 load_env()
 
 # 获取 logger
-logger = logging.getLogger('neuracle.demo')
+logger = logging.getLogger(__name__)
 
 
-class SenderThread(threading.Thread):
-    """专门用于发送消息的线程"""
-
-    def __init__(self, config: dict, message_queue:Queue):
-        """
-        初始化发送线程
-
-        Args:
-            config: RabbitMQ 配置
-            message_queue: 消息队列
-        """
-        super().__init__(daemon=True)
-        self.config = config
-        self.message_queue = message_queue
-        self.running = True
-        self.sender: RabbitMQSender | None = None
-
-    def run(self) -> None:
-        """线程运行逻辑"""
-        logger.info("发送线程启动")
-        # 创建发送器
-        self.sender = RabbitMQSender(
-            host=self.config['host'],
-            port=self.config['port'],
-            queue_name=self.config['send_queue_name']
-        )
-        # 连接 RabbitMQ
-        if not self.sender.connect():
-            logger.error("发送器连接失败，发送线程退出")
-            return
-        # 持续从队列获取消息并发送
-        while self.running:
-            try:
-                # 从队列获取消息
-                message = self.message_queue.get()
-                # 发送消息
-                if self.sender:
-                    self.sender.send_message(message)
-                self.message_queue.task_done()
-            except Exception as e:
-                if self.running:
-                    logger.error("发送线程处理消息时发生错误: %s", e)
-        # 清理资源
-        if self.sender:
-            self.sender.close()
-        logger.info("发送线程退出")
-
-    def stop(self) -> None:
-        """停止发送线程"""
-        self.running = False
-
-
-def message_callback(channel, method, properties, body, message_queue:Queue):
+def message_callback(channel, method, properties, body, message_queue: Queue):
     """
     消息处理回调函数
 
@@ -91,14 +39,14 @@ def message_callback(channel, method, properties, body, message_queue:Queue):
     """
     try:
         # 解析消息
-        message = json.loads(body.decode('utf-8'))
+        message = json.loads(body.decode("utf-8"))
         logger.info("收到消息: %s", message)
         # 构造响应消息
         response = {
-            'type': 'response',
-            'original_type': message.get('type', 'unknown'),
-            'status': 'processed',
-            'message': '已处理消息'
+            "type": "response",
+            "original_type": message.get("type", "unknown"),
+            "status": "processed",
+            "message": "已处理消息",
         }
         message_queue.put(response)
         logger.info("响应已加入发送队列")
@@ -119,14 +67,19 @@ def main():
     config = get_rabbitmq_config()
     logger.info("RabbitMQ 配置: %s", config)
     message_queue = Queue()
-    # 创建sender
-    sender_thread = SenderThread(config, message_queue)
+    # 创建 sender 线程
+    sender_thread = SenderThread(
+        host=config["host"],
+        port=config["port"],
+        queue_name=config["send_queue_name"],
+        message_queue=message_queue,
+    )
     sender_thread.start()
-    # 创建listener
+    # 创建 listener
     listener = RabbitMQListener(
-        host=config['host'],
-        port=config['port'],
-        queue_name=config['listen_queue_name']
+        host=config["host"],
+        port=config["port"],
+        queue_name=config["listen_queue_name"],
     )
     # 使用 partial 绑定自定义参数
     callback_with_args = partial(message_callback, message_queue=message_queue)
