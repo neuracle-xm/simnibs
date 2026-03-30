@@ -38,6 +38,7 @@ dependencies = [
   "tbb ; sys_platform != 'darwin'",
   "oss2",
   "alibabacloud_sts20150401",
+  "nilearn"
 ]
 
 [project.urls] # Optional
