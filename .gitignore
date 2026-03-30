@@ -160,3 +160,6 @@ private_gitignore/
 data/
 .env
 neuracle/log
+neuracle/atlas/manifests/
+neuracle/atlas/standardized/
+neuracle/atlas/validation/

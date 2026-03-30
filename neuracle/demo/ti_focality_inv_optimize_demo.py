@@ -77,7 +77,6 @@ def main():
     print("[3/5] 配置电极对和 ROI...")
     setup_electrodes_and_roi(
         opt=opt,
-        subject_dir=subject_dir,
         goal="focality_inv",
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],

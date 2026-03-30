@@ -6,6 +6,22 @@ neuracle.utils 模块
 
 import os
 
+from neuracle.utils.atlas_utils import (
+    ATLAS_COLOR_TABLE_DIR,
+    ATLAS_MANIFESTS_DIR,
+    ATLAS_REGISTRY_PATH,
+    ATLAS_ROOT,
+    ATLAS_SCRIPTS_DIR,
+    ATLAS_SOURCE_DIR,
+    ATLAS_STANDARDIZED_DIR,
+    ATLAS_VALIDATION_DIR,
+    SIMNIBS_MNI_TEMPLATE,
+    get_atlas_spec,
+    get_standardized_roi_path,
+    iter_atlas_specs,
+    load_atlas_registry,
+    write_atlas_registry,
+)
 from neuracle.utils.cond_utils import TISSUE_ORDER, cond_dict_to_list
 from neuracle.utils.env import get_aliyun_config, get_rabbitmq_config, load_env
 from neuracle.utils.params_utils import (
@@ -78,12 +94,26 @@ __all__ = [
     "NON_ROI_THRESHOLD",
     "STANDARD_COND",
     "TISSUE_ORDER",
+    "ATLAS_ROOT",
+    "ATLAS_SOURCE_DIR",
+    "ATLAS_STANDARDIZED_DIR",
+    "ATLAS_MANIFESTS_DIR",
+    "ATLAS_VALIDATION_DIR",
+    "ATLAS_SCRIPTS_DIR",
+    "ATLAS_COLOR_TABLE_DIR",
+    "ATLAS_REGISTRY_PATH",
+    "SIMNIBS_MNI_TEMPLATE",
     "cond_dict_to_list",
     "dict_to_forward_params",
     "dict_to_inverse_params",
     "dict_to_model_params",
     "get_rabbitmq_config",
     "get_aliyun_config",
+    "load_atlas_registry",
+    "write_atlas_registry",
+    "get_atlas_spec",
+    "get_standardized_roi_path",
+    "iter_atlas_specs",
     "load_env",
     "find_montage_file",
     "EEG10_10_CUTINI_2011",

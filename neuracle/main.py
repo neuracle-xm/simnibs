@@ -68,6 +68,7 @@ from neuracle.utils import (
     dict_to_inverse_params,
     dict_to_model_params,
     find_montage_file,
+    get_standardized_roi_path,
     load_env,
 )
 from neuracle.utils.env import get_rabbitmq_config
@@ -292,15 +293,27 @@ def handle_inverse_task(
     # 电极和 ROI 参数
     roi_center = None
     roi_radius = None
+    roi_center_space = "subject"
+    roi_mask_path = None
+    roi_mask_space = None
     focality_threshold = params.target_threshold
 
     if params.roi_type == "atlas" and params.roi_param.atlas_param:
-        # todo:需改成根据 atlas_param 配置
-        roi_center = [0.0, 0.0, 0.0]
-        roi_radius = 20
+        roi_mask_path = str(
+            get_standardized_roi_path(
+                params.roi_param.atlas_param.name,
+                params.roi_param.atlas_param.area,
+            )
+        )
+        if not os.path.exists(roi_mask_path):
+            raise FileNotFoundError(
+                f"标准化 ROI 不存在: {roi_mask_path}。请先运行 atlas 标准化和 ROI 生成脚本。"
+            )
+        roi_mask_space = "mni"
     elif params.roi_type == "mni_pos" and params.roi_param.mni_param:
         roi_center = params.roi_param.mni_param.center
         roi_radius = params.roi_param.mni_param.radius
+        roi_center_space = "mni"
 
     # 0% - 任务开始
     send_progress(message_queue, task_id, "inverse", 0, "任务开始")
@@ -336,6 +349,9 @@ def handle_inverse_task(
         electrode_current2=params.electrode_current2,
         roi_center=roi_center,
         roi_radius=roi_radius,
+        roi_center_space=roi_center_space,
+        roi_mask_path=roi_mask_path,
+        roi_mask_space=roi_mask_space,
         non_roi_center=None,
         non_roi_radius=None,
     )

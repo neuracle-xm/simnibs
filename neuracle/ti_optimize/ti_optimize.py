@@ -194,6 +194,9 @@ def setup_electrodes_and_roi(
     electrode_current2: list[float] | None = None,
     roi_center: list[float] | None = None,
     roi_radius: float | None = None,
+    roi_center_space: str = "subject",
+    roi_mask_path: str | None = None,
+    roi_mask_space: str | None = None,
     non_roi_center: list[float] | None = None,
     non_roi_radius: float | None = None,
 ) -> None:
@@ -220,6 +223,12 @@ def setup_electrodes_and_roi(
         ROI 球形区域中心
     roi_radius : float, optional
         ROI 球形区域半径
+    roi_center_space : str
+        ROI 球形区域坐标空间，支持 "subject" 或 "mni"
+    roi_mask_path : str, optional
+        ROI mask 文件路径。提供后优先使用 mask ROI，而不是球形 ROI
+    roi_mask_space : str, optional
+        ROI mask 所在坐标空间，支持 "subject" 或 "mni"
     non_roi_center : list[float], optional
         Non-ROI 球形区域中心
     non_roi_radius : float, optional
@@ -256,28 +265,56 @@ def setup_electrodes_and_roi(
     electrode_layout2.current = electrode_current2
 
     # 配置 ROI
-    logger.info("配置 ROI: 中心=%s, 半径=%s", roi_center, roi_radius)
+    logger.info("配置 ROI")
     roi = opt.add_roi()
     roi.method = "surface"
     roi.surface_type = "central"
-    roi.roi_sphere_center_space = "subject"
-    roi.roi_sphere_center = roi_center
-    roi.roi_sphere_radius = roi_radius
+    if roi_mask_path:
+        roi.mask_path = roi_mask_path
+        roi.mask_space = roi_mask_space or "mni"
+        roi.mask_value = 1
+        logger.info("使用 atlas ROI mask: %s (space=%s)", roi_mask_path, roi.mask_space)
+    else:
+        roi.roi_sphere_center_space = roi_center_space
+        roi.roi_sphere_center = roi_center
+        roi.roi_sphere_radius = roi_radius
+        logger.info(
+            "使用球形 ROI: 中心=%s, 半径=%s, space=%s",
+            roi_center,
+            roi_radius,
+            roi_center_space,
+        )
 
-    # 配置 Non-ROI（仅 focality 需要）- 使用 roi_sphere_operator="difference" 自动计算
+    # focality 目标的第二个 ROI 表示“除目标 ROI 外的其余 central surface”
     if goal in ["focality", "focality_inv"]:
-        if non_roi_center is None:
-            non_roi_center = roi_center
-        if non_roi_radius is None:
-            non_roi_radius = 25.0
-        logger.info("配置 Non-ROI: 中心=%s, 半径=%s", non_roi_center, non_roi_radius)
         non_roi = opt.add_roi()
         non_roi.method = "surface"
         non_roi.surface_type = "central"
-        non_roi.roi_sphere_center_space = "subject"
-        non_roi.roi_sphere_center = non_roi_center
-        non_roi.roi_sphere_radius = non_roi_radius
-        non_roi.roi_sphere_operator = ["difference"]
+        if roi_mask_path:
+            non_roi.mask_path = roi_mask_path
+            non_roi.mask_space = roi_mask_space or "mni"
+            non_roi.mask_value = 1
+            non_roi.mask_operator = ["difference"]
+            logger.info(
+                "配置 Non-ROI: 使用 atlas ROI 差集 (mask=%s, space=%s)",
+                roi_mask_path,
+                non_roi.mask_space,
+            )
+        else:
+            if non_roi_center is None:
+                non_roi_center = roi_center
+            if non_roi_radius is None:
+                non_roi_radius = 25.0
+            non_roi.roi_sphere_center_space = roi_center_space
+            non_roi.roi_sphere_center = non_roi_center
+            non_roi.roi_sphere_radius = non_roi_radius
+            non_roi.roi_sphere_operator = ["difference"]
+            logger.info(
+                "配置 Non-ROI: 中心=%s, 半径=%s, space=%s",
+                non_roi_center,
+                non_roi_radius,
+                roi_center_space,
+            )
 
     logger.info("电极对和 ROI 配置完成")
 
