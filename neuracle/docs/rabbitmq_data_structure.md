@@ -1,296 +1,125 @@
-# RabbitMQ 消息数据结构规范
+# RabbitMQ 消息数据结构
 
-本文档定义了后端（Backend）与 SimNIBS 之间的 RabbitMQ 消息传递数据结构和格式。
+本文档描述 `neuracle/main.py`、`neuracle/rabbitmq/`、`neuracle/utils/params_utils.py` 当前实现实际使用的消息结构。
 
----
+## 1. 队列与连接
 
-## 目录
+### 1.1 队列方向
 
-1. [队列设计](#1-队列设计)
-2. [消息推送格式](#2-消息推送格式)
-3. [进度返回格式](#3-进度返回格式)
-4. [完整消息示例](#4-完整消息示例)
-5. [数据结构实现](#5-数据结构实现)
-6. [测试说明](#6-测试说明)
+| 配置项 | 方向 | 用途 |
+|---|---|---|
+| `listen_queue_name` | Backend -> SimNIBS | 发送任务请求 |
+| `send_queue_name` | SimNIBS -> Backend | 返回进度与结果 |
 
----
+默认运行方式下：
 
-## 1. 队列设计
+- `main.py` 监听 `listen_queue_name`
+- `main.py` 通过 `SenderThread` 发送到 `send_queue_name`
+- `demo/main_sender_demo.py` 的发送/接收方向与 `main.py` 相反
 
-### 1.1 队列命名
+### 1.2 RabbitMQ 连接参数
 
-| 队列名称 | 方向 | 说明 |
-|----------|------|------|
-| `backend_to_simnibs` | Backend → SimNIBS | 任务推送（头模生成、正向仿真、逆向仿真） |
-| `simnibs_to_backend` | SimNIBS → Backend | 进度回报与结果返回 |
+配置由 [`neuracle/utils/env.py`](../../neuracle/utils/env.py) 的 `get_rabbitmq_config()` 提供：
 
-### 1.2 连接配置
+| 字段 | 默认值 |
+|---|---|
+| `host` | `localhost` |
+| `port` | `5672` |
+| `username` | `guest` |
+| `password` | `guest` |
+| `virtual_host` | `/` |
+| `heartbeat` | `60` |
+| `blocked_connection_timeout` | `300` |
+| `socket_timeout` | `10` |
+| `connection_attempts` | `5` |
+| `retry_delay` | `5` |
+| `listen_queue_name` | `""` |
+| `send_queue_name` | `""` |
 
-- **交换机**: 使用默认交换机 `''`（空字符串）
-- **队列绑定**: 直接绑定到队列，无需交换机中转
+### 1.3 队列声明方式
 
----
+`RabbitMQListener` 和 `RabbitMQSender` 都会声明队列，声明参数固定为：
 
-## 2. 消息推送格式
+- `durable=True`
+- `arguments={"x-queue-type": "quorum"}`
+- 使用默认交换机 `""`
+- `routing_key` 直接等于队列名
 
-所有消息均为 JSON 格式，包含以下通用字段：
+## 2. 顶层消息格式
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 任务唯一标识符 |
-| `type` | string | 是 | 任务类型：`model` / `forward` / `inverse` |
-| `params` | object | 是 | 任务参数配置 |
-
----
-
-### 2.1 头模生成消息 (Model Generation)
-
-```json
-{
-  "id": "model_id",
-  "type": "model",
-  "params": {
-    "T1_file_path": "m2m_modelId_T1_nii",
-    "T2_file_path": "m2m_modelId_T2_nii",
-    "DTI_file_path": "m2m_modelId_DTI_nii",
-    "dir_path": "m2m_modelId"
-  }
-}
-```
-
-#### 字段说明
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 模型唯一标识符 |
-| `params.T1_file_path` | string | 是 | T1 加权 MRI 图像路径 |
-| `params.T2_file_path` | string | 否 | T2 加权 MRI 图像路径，可为空 |
-| `params.DTI_file_path` | string | 否 | DTI 扩散张量图像路径，可为空 |
-| `params.dir_path` | string | 是 | 头模生成输出目录路径 |
-
----
-
-### 2.2 正向仿真消息 (Forward Simulation)
+所有任务请求消息都使用 JSON，对应验证入口为 [`neuracle/rabbitmq/validator.py`](../../neuracle/rabbitmq/validator.py)。
 
 ```json
 {
   "id": "task_id",
-  "type": "forward",
-  "params": {
-    "dir_path": "头模所在文件夹",
-    "msh_file_path": "头模文件",
-    "montage": "使用的电极导联文件",
-    "electrode_A": ["F5", "P5"],
-    "electrode_B": ["F5", "P5"],
-    "current_A": [0.002, -0.002],
-    "current_B": [0.001, -0.001],
-    "cond": {},
-    "anisotropy": false,
-    "DTI_file_path": "张量文件路径"
-  }
-}
-```
-
-#### 字段说明
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 任务唯一标识符 |
-| `params.dir_path` | string | 是 | 头模所在文件夹路径 |
-| `params.msh_file_path` | string | 是 | 头模网格文件路径 (.msh) |
-| `params.montage` | string | 是 | 电极导联配置文件路径 |
-| `params.electrode_A` | string[] | 是 | 电极组 A 名称列表 |
-| `params.electrode_B` | string[] | 是 | 电极组 B 名称列表 |
-| `params.current_A` | float[] | 是 | 电极组 A 电流值列表 (安培)，总和必须为 0 |
-| `params.current_B` | float[] | 是 | 电极组 B 电流值列表 (安培)，总和必须为 0 |
-| `params.cond` | object | 是 | 组织电导率配置 JSON |
-| `params.anisotropy` | boolean | 是 | 是否启用各向异性电导率 |
-| `params.DTI_file_path` | string | 否 | DTI 张量文件路径，可为空 |
-
----
-
-### 2.3 逆向仿真消息 (Inverse Simulation)
-
-```json
-{
-  "id": "task_id",
-  "type": "inverse",
-  "params": {
-    "dir_path": "头模所在文件夹",
-    "msh_file_path": "头模文件",
-    "montage": "使用的电极导联文件",
-    "current_A": [0.002, -0.002],
-    "current_B": [0.001, -0.001],
-    "roi_type": "atlas",
-    "roi_param": {
-      "atlas_param": {
-        "name": "脑图谱名称",
-        "area": "选择的脑区"
-      },
-      "mni_param": null
-    },
-    "target_threshold": 0.5,
-    "cond": {},
-    "anisotropy": false,
-    "DTI_file_path": "张量文件路径"
-  }
-}
-```
-
-#### 字段说明
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 任务唯一标识符 |
-| `params.dir_path` | string | 是 | 头模所在文件夹路径 |
-| `params.msh_file_path` | string | 是 | 头模网格文件路径 (.msh) |
-| `params.montage` | string | 是 | 电极导联配置文件路径 |
-| `params.current_A` | float[] | 是 | 电极组 A 电流值列表 (安培)，总和必须为 0 |
-| `params.current_B` | float[] | 是 | 电极组 B 电流值列表 (安培)，总和必须为 0 |
-| `params.roi_type` | string | 是 | ROI 类型：`atlas` 或 `mni_pos` |
-| `params.roi_param` | object | 是 | ROI 参数配置 |
-| `params.roi_param.atlas_param` | object | 否 | 图谱模式参数，当 `roi_type` 为 `atlas` 时必填 |
-| `params.roi_param.atlas_param.name` | string | 否 | 脑图谱名称 |
-| `params.roi_param.atlas_param.area` | string | 否 | 选择的脑区名称 |
-| `params.roi_param.mni_param` | object | 否 | MNI 坐标模式参数，当 `roi_type` 为 `mni_pos` 时必填 |
-| `params.roi_param.mni_param.center` | float[3] | 否 | MNI 坐标中心点 [x, y, z] |
-| `params.roi_param.mni_param.radius` | float | 否 | 靶区半径范围 |
-| `params.target_threshold` | float | 是 | 目标电场强度阈值，必须 >= 0 |
-| `params.cond` | object | 是 | 组织电导率配置 JSON |
-| `params.anisotropy` | boolean | 是 | 是否启用各向异性电导率 |
-| `params.DTI_file_path` | string | 否 | DTI 张量文件路径，可为空 |
-
----
-
-## 3. 进度返回格式
-
-消息通过 `simnibs_to_backend` 队列发送。
-
-```json
-{
-  "id": "model_id 或 task_id",
   "type": "model | forward | inverse",
-  "progress_rate": 75,
-  "message": null,
-  "result": null
+  "params": {}
 }
 ```
-
-### 3.1 进度消息字段
 
 | 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 对应任务的 ID |
-| `type` | string | 是 | 任务类型：`model` / `forward` / `inverse` |
-| `progress_rate` | integer | 是 | 进度百分比 (0-100) |
-| `message` | string | 否 | 错误消息或状态描述，正常为 null |
-| `result` | object | 否 | 完成时返回的结果，过程中为 null |
+|---|---|---|---|
+| `id` | string | 是 | 任务 ID，不能为空 |
+| `type` | string | 是 | 仅支持 `model`、`forward`、`inverse` |
+| `params` | object | 是 | 按任务类型区分 |
 
-### 3.2 完成消息 (Result)
+## 3. `model` 请求
 
-#### 头模生成完成
+对应数据类：`ModelParams`
 
 ```json
 {
-  "id": "model_id",
-  "type": "model",
-  "progress_rate": 100,
-  "message": null,
-  "result": {
-    "msh_file_path": "头模最终生成的结果文件路径"
-  }
-}
-```
-
-#### 正向仿真完成
-
-```json
-{
-  "id": "task_id",
-  "type": "forward",
-  "progress_rate": 100,
-  "message": null,
-  "result": {
-    "T1_mni": "配准到 MNI 空间的头模 .nii.gz",
-    "TI_file": "正向仿真最终结果 .mz3"
-  }
-}
-```
-
-#### 逆向仿真完成
-
-```json
-{
-  "id": "task_id",
-  "type": "inverse",
-  "progress_rate": 100,
-  "message": null,
-  "result": {
-    "T1_mni": "配准到 MNI 空间的头模 .nii.gz",
-    "TI_file": "逆向仿真最终结果 .mz3",
-    "electrode_A": ["F5", "P5"],
-    "electrode_B": ["F5", "P5"]
-  }
-}
-```
-
----
-
-## 4. 完整消息示例
-
-### 4.1 头模生成
-
-**请求消息** (通过 `backend_to_simnibs` 发送):
-```json
-{
-  "id": "subj_001",
+  "id": "model_001",
   "type": "model",
   "params": {
-    "T1_file_path": "/data/m2m_subj_001/T1fs.nii",
-    "T2_file_path": "/data/m2m_subj_001/T2fs.nii",
-    "DTI_file_path": "/data/m2m_subj_001/DTI.nii",
-    "dir_path": "/data/m2m_subj_001"
+    "T1_file_path": "C:/data/subj/T1.nii.gz",
+    "T2_file_path": "C:/data/subj/T2.nii.gz",
+    "DTI_file_path": "C:/data/subj/DTI_coregT1_tensor.nii.gz",
+    "dir_path": "C:/data/subj"
   }
 }
 ```
 
-**进度回报** (通过 `simnibs_to_backend` 发送):
-```json
-{
-  "id": "subj_001",
-  "type": "model",
-  "progress_rate": 50,
-  "message": null,
-  "result": null
-}
-```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `params.T1_file_path` | string | 是 | T1 文件路径 |
+| `params.dir_path` | string | 是 | 输出目录，也是 CHARM 工作目录 |
+| `params.T2_file_path` | string | 否 | T2 文件路径 |
+| `params.DTI_file_path` | string | 否 | 当前消息结构保留该字段，但 `handle_model_task()` 未使用 |
 
-**完成消息** (通过 `simnibs_to_backend` 发送):
+### 3.1 `model` 完成结果
+
 ```json
 {
-  "id": "subj_001",
+  "id": "model_001",
   "type": "model",
   "progress_rate": 100,
-  "message": null,
+  "message": "已完成: 四面体网格生成",
   "result": {
-    "msh_file_path": "/data/m2m_subj_001/subj_001.msh"
+    "msh_file_path": "C:/data/subj/model.msh"
   }
 }
 ```
 
-### 4.2 正向仿真
+注意：
 
-**请求消息** (通过 `backend_to_simnibs` 发送):
+- 结果文件名被代码固定为 `model.msh`
+- 路径由 `os.path.join(dir_path, "model.msh")` 生成
+
+## 4. `forward` 请求
+
+对应数据类：`ForwardParams`
+
 ```json
 {
-  "id": "fwd_001",
+  "id": "forward_001",
   "type": "forward",
   "params": {
-    "dir_path": "/data/m2m_subj_001",
-    "msh_file_path": "/data/m2m_subj_001/subj_001.msh",
-    "montage": "/data/montages/standard_64chan.csv",
+    "dir_path": "C:/data/m2m_ernie",
+    "msh_file_path": "C:/data/m2m_ernie/model.msh",
+    "montage": "EEG10-10_UI_Jurak_2007",
     "electrode_A": ["F5", "P5"],
-    "electrode_B": ["F5", "P5"],
+    "electrode_B": ["F6", "P6"],
     "current_A": [0.002, -0.002],
     "current_B": [0.001, -0.001],
     "cond": {
@@ -305,77 +134,65 @@
       "Blood": 0.6,
       "Muscle": 0.16
     },
-    "anisotropy": true,
-    "DTI_file_path": "/data/m2m_subj_001/DTI.nii"
+    "anisotropy": false
   }
 }
 ```
 
-**完成消息** (通过 `simnibs_to_backend` 发送):
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `params.dir_path` | string | 是 | 头模目录 |
+| `params.msh_file_path` | string | 是 | 网格路径 |
+| `params.montage` | string | 是 | Montage 名称或绝对路径 |
+| `params.electrode_A` | string[] | 是 | 第一组电极标签 |
+| `params.electrode_B` | string[] | 是 | 第二组电极标签 |
+| `params.current_A` | number[] | 是 | 与 `electrode_A` 长度一致，且总和为 0 |
+| `params.current_B` | number[] | 是 | 与 `electrode_B` 长度一致，且总和为 0 |
+| `params.cond` | object | 是 | 电导率字典，值必须为数字 |
+| `params.anisotropy` | boolean | 是 | 是否启用各向异性 |
+| `params.DTI_file_path` | string | 否 | 各向异性场景可传 |
+
+### 4.1 `montage` 的实际解析规则
+
+`montage` 通过 `find_montage_file(dir_path, montage)` 解析：
+
+- 如果是绝对路径，直接使用该路径
+- 否则依次查找：
+  - `dir_path/eeg_positions/{montage}`
+  - `dir_path/eeg_positions/{montage}.csv`
+
+### 4.2 `forward` 完成结果
+
 ```json
 {
-  "id": "fwd_001",
+  "id": "forward_001",
   "type": "forward",
   "progress_rate": 100,
-  "message": null,
+  "message": "已完成: 仿真完成",
   "result": {
-    "T1_mni": "/data/results/subj_001_T1_mni.nii.gz",
-    "TI_file": "/data/results/subj_001_forward_result.mz3"
+    "TI_file": "C:/data/m2m_ernie/TI_simulation/forward_001/TI.mz3"
   }
 }
 ```
 
-### 4.3 逆向仿真 (Atlas ROI)
+注意：
 
-**请求消息** (通过 `backend_to_simnibs` 发送):
+- 输出目录固定为 `dir_path/TI_simulation/{task_id}`
+- 开始执行前会删除同名旧目录
+- 中间产物包括 `TI.msh`
+
+## 5. `inverse` 请求
+
+对应数据类：`InverseParams`
+
 ```json
 {
-  "id": "inv_001",
+  "id": "inverse_001",
   "type": "inverse",
   "params": {
-    "dir_path": "/data/m2m_subj_001",
-    "msh_file_path": "/data/m2m_subj_001/subj_001.msh",
-    "montage": "/data/montages/standard_64chan.csv",
-    "current_A": [0.002, -0.002],
-    "current_B": [0.001, -0.001],
-    "roi_type": "atlas",
-    "roi_param": {
-      "atlas_param": {
-        "name": "AAL3",
-        "area": "Precentral_L"
-      },
-      "mni_param": null
-    },
-    "target_threshold": 0.5,
-    "cond": {
-      "White Matter": 0.126,
-      "Gray Matter": 0.275,
-      "CSF": 1.654,
-      "Bone": 0.01,
-      "Scalp": 0.465,
-      "Eye balls": 0.5,
-      "Compact Bone": 0.008,
-      "Spongy Bone": 0.025,
-      "Blood": 0.6,
-      "Muscle": 0.16
-    },
-    "anisotropy": true,
-    "DTI_file_path": "/data/m2m_subj_001/DTI.nii"
-  }
-}
-```
-
-### 4.4 逆向仿真 (MNI Position ROI)
-
-**请求消息** (通过 `backend_to_simnibs` 发送):
-```json
-{
-  "id": "inv_002",
-  "type": "inverse",
-  "params": {
-    "dir_path": "/data/m2m_subj_001",
-    "msh_file_path": "/data/m2m_subj_001/subj_001.msh",
-    "montage": "/data/montages/standard_64chan.csv",
+    "dir_path": "C:/data/m2m_ernie",
+    "msh_file_path": "C:/data/m2m_ernie/model.msh",
+    "montage": "EEG10-10_Cutini_2011",
     "current_A": [0.002, -0.002],
     "current_B": [0.001, -0.001],
     "roi_type": "mni_pos",
@@ -400,144 +217,190 @@
       "Muscle": 0.16
     },
     "anisotropy": false,
-    "DTI_file_path": null
+    "electrode_pair1_center": [[0, 0]],
+    "electrode_pair2_center": [[0, 0]],
+    "electrode_radius": [10],
+    "electrode_current1": [0.002, -0.002],
+    "electrode_current2": [0.002, -0.002]
   }
 }
 ```
 
-**完成消息** (通过 `simnibs_to_backend` 发送):
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `params.dir_path` | string | 是 | 头模目录 |
+| `params.msh_file_path` | string | 是 | 网格路径 |
+| `params.montage` | string | 是 | EEG 网格文件名称或绝对路径 |
+| `params.current_A` | number[] | 是 | 仅做校验，要求总和为 0 |
+| `params.current_B` | number[] | 是 | 仅做校验，要求总和为 0 |
+| `params.roi_type` | string | 是 | `atlas` 或 `mni_pos` |
+| `params.roi_param` | object | 是 | ROI 参数 |
+| `params.target_threshold` | number | 是 | 必须 `>= 0` |
+| `params.cond` | object | 是 | 电导率字典 |
+| `params.anisotropy` | boolean | 是 | 是否启用各向异性 |
+| `params.electrode_pair1_center` | number[][] | 否 | 优化电极阵列 1 的中心点 |
+| `params.electrode_pair2_center` | number[][] | 否 | 优化电极阵列 2 的中心点 |
+| `params.electrode_radius` | number[] | 否 | 电极半径列表 |
+| `params.electrode_current1` | number[] | 否 | 阵列 1 电流 |
+| `params.electrode_current2` | number[] | 否 | 阵列 2 电流 |
+| `params.DTI_file_path` | string | 否 | 各向异性场景可传 |
+
+### 5.1 `roi_param` 结构
+
+`roi_type=atlas` 时：
+
 ```json
 {
-  "id": "inv_001",
+  "roi_type": "atlas",
+  "roi_param": {
+    "atlas_param": {
+      "name": "AAL3",
+      "area": "Precentral_L"
+    },
+    "mni_param": null
+  }
+}
+```
+
+`roi_type=mni_pos` 时：
+
+```json
+{
+  "roi_type": "mni_pos",
+  "roi_param": {
+    "atlas_param": null,
+    "mni_param": {
+      "center": [-38.5, -22.5, 58.3],
+      "radius": 15.0
+    }
+  }
+}
+```
+
+### 5.2 当前实现限制
+
+`handle_inverse_task()` 当前真实行为如下：
+
+- 目标函数固定为 `focality`
+- `current_A` 和 `current_B` 只参与消息校验，没有直接传入优化器
+- 真正用于优化器的是 `electrode_current1` 和 `electrode_current2`
+- 如果未传 `electrode_pair1_center`、`electrode_pair2_center`、`electrode_radius`、`electrode_current1`、`electrode_current2`，会由 `setup_electrodes_and_roi()` 使用默认值
+- `roi_type=atlas` 时，代码尚未按 `atlas_param` 解析真实脑区；当前写死为：
+  - `roi_center = [0.0, 0.0, 0.0]`
+  - `roi_radius = 20`
+
+### 5.3 `inverse` 完成结果
+
+```json
+{
+  "id": "inverse_001",
   "type": "inverse",
   "progress_rate": 100,
-  "message": null,
+  "message": "已完成: 优化完成",
   "result": {
-    "T1_mni": "/data/results/subj_001_T1_mni.nii.gz",
-    "TI_file": "/data/results/subj_001_inverse_result.mz3",
+    "TI_file": "C:/data/m2m_ernie/TI_optimization/inverse_001/result.mz3",
     "electrode_A": ["F3", "FC5"],
     "electrode_B": ["P3", "PO7"]
   }
 }
 ```
 
-### 4.5 错误消息示例
+注意：
+
+- 输出目录固定为 `dir_path/TI_optimization/{task_id}`
+- 开始执行前会删除同名旧目录
+- `electrode_A` 和 `electrode_B` 取自 `electrode_mapping.json` 的 `mapped_labels`
+
+## 6. 返回消息格式
+
+返回消息由 `build_progress_message()` 构造：
 
 ```json
 {
-  "id": "subj_001",
-  "type": "model",
-  "progress_rate": 25,
-  "message": "T1 file not found or invalid format",
+  "id": "task_id",
+  "type": "model | forward | inverse",
+  "progress_rate": 0,
+  "message": "任务开始",
   "result": null
 }
 ```
 
----
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `id` | string | 是 | 任务 ID |
+| `type` | string | 是 | 任务类型 |
+| `progress_rate` | integer | 是 | 进度百分比 |
+| `message` | string or null | 否 | 状态或错误信息 |
+| `result` | object or null | 否 | 完成时才返回 |
 
-## 5. 数据结构实现
+### 6.1 失败消息
 
-### 5.1 模块位置
+当前实现没有单独的 `status` 字段。失败通过以下模式表达：
 
-数据结构和验证器位于 `neuracle/rabbitmq/` 目录下，测试示例位于 `neuracle/demo/` 目录下：
+- `progress_rate = 0`
+- `message = 异常信息`
+- `result = null`
 
-| 文件 | 说明 |
-|------|------|
-| `schemas.py` | 消息数据类定义（使用 dataclass） |
-| `validator.py` | 参数合法性验证函数 |
-| `message_builder.py` | 消息构建辅助函数 |
-| `simnibs_side_demo.py` | SimNIBS 端测试示例（接收消息并返回结果） |
-| `backend_side_demo.py` | Backend 端测试示例（发送消息并接收结果） |
+示例：
 
-详细实现请参考源代码文件。
-
----
-
-## 6. 测试说明
-
-### 6.1 架构说明
-
-测试演示 Backend 和 SimNIBS 两个独立进程的通信：
-
-```
-┌─────────────┐     backend_to_simnibs      ┌─────────────┐
-│   Backend   │ ──────────────────────────► │   SimNIBS   │
-│   (发送)    │                             │   (接收)    │
-└─────────────┘                             └─────────────┘
-       ▲                                           │
-       │     simnibs_to_backend                    │
-       └──────────────────────────────────────────┘
-                     (返回结果)
+```json
+{
+  "id": "forward_001",
+  "type": "forward",
+  "progress_rate": 0,
+  "message": "montage 文件不存在: EEG10-10_UI_Jurak_2007",
+  "result": null
+}
 ```
 
-### 6.2 运行步骤
+## 7. 进度节点
 
-1. **先启动 SimNIBS 端**（持续监听，不自动停止）
-2. **再启动 Backend 端**（发送消息并持续监听结果）
+### 7.1 `model`
 
-### 6.3 运行说明
+| 进度 | 说明 |
+|---|---|
+| 0 | 任务开始 |
+| 10 | 已完成: T1 图像准备与格式转换 |
+| 20 | 已完成: T2 图像配准与准备，仅在传入 `T2_file_path` 时发送 |
+| 35 | 已完成: 输入图像降噪 |
+| 50 | 已完成: Atlas 初始仿射配准与颈部校正 |
+| 70 | 已完成: 体积与表面分割 |
+| 85 | 已完成: 皮层表面重建 |
+| 100 | 已完成: 四面体网格生成 |
 
-**SimNIBS 端命令：**
-```bash
-python -m neuracle.demo.simnibs_side_demo
-```
+### 7.2 `forward`
 
-**Backend 端命令：**
-```bash
-python -m neuracle.demo.backend_side_demo normal # 发送正常测试消息
-python -m neuracle.demo.backend_side_demo error # 发送错误测试消息
-```
+| 进度 | 说明 |
+|---|---|
+| 0 | 任务开始 |
+| 10 | 已完成: 配置会话参数 |
+| 20 | 已完成: 配置第一个电极对 |
+| 35 | 已完成: 配置第二个电极对 |
+| 70 | 已完成: TDCS 仿真计算 |
+| 85 | 已完成: TI 场计算 |
+| 95 | 已完成: 导出 MZ3 格式 |
+| 100 | 已完成: 仿真完成 |
 
-### 6.2 测试场景覆盖矩阵
+### 7.3 `inverse`
 
-| 消息类型 | 场景 | 覆盖情况 |
-|----------|------|----------|
-| model | 必填参数 | T1_file_path, dir_path |
-| model | 可选参数 | + T2_file_path, DTI_file_path |
-| forward | anisotropy=False | 无 DTI |
-| forward | anisotropy=True | + DTI_file_path |
-| forward | anisotropy=False with DTI | + DTI_file_path |
-| forward | 多电极配置 | 4+ 电极 |
-| inverse | Atlas ROI | roi_type=atlas |
-| inverse | MNI Position ROI | roi_type=mni_pos |
-| inverse | 边界值 | target_threshold=0 |
-| 错误消息 | 参数缺失 | 缺少必填字段 |
-| 错误消息 | 空值 | id="" |
-| 错误消息 | 长度不匹配 | electrode_A 和 current_A |
-| 错误消息 | 电流总和不等于0 | current_A=[0.001] |
-| 错误消息 | 非法枚举值 | roi_type="invalid" |
-| 错误消息 | 负数 | target_threshold=-0.5 |
-| 错误消息 | 未知类型 | type="unknown" |
-| 进度消息 | 进行中 | progress_rate=0-99 |
-| 进度消息 | 完成 | progress_rate=100 |
-| 进度消息 | 错误 | message!=null |
+| 进度 | 说明 |
+|---|---|
+| 0 | 任务开始 |
+| 10 | 已完成: 初始化优化结构 |
+| 20 | 已完成: 配置目标函数 |
+| 35 | 已完成: 配置电极对和 ROI |
+| 85 | 已完成: 优化算法执行 |
+| 90 | 已完成: 获取电极映射结果 |
+| 95 | 已完成: 导出 MZ3 格式 |
+| 100 | 已完成: 优化完成 |
 
----
+## 8. 相关代码位置
 
-## 附录
-
-### A. 文件格式说明
-
-| 扩展名 | 格式 | 说明 |
-|--------|------|------|
-| `.msh` | MSH | SimNIBS 网格文件格式 |
-| `.nii.gz` | NIfTI | 3D 医学影像格式 (压缩) |
-| `.mz3` | MZ3 | 电场仿真结果格式 |
-| `.csv` | CSV | 电极导联配置文件 |
-
-### B. 组织名称与 Tissue Tag 映射
-
-用于将组织名称映射为 SimNIBS 内部使用的 tissue tag：
-
-| 组织名称 | Tissue Tag |
-|----------|------------|
-| White Matter | 1 |
-| Gray Matter | 2 |
-| CSF | 3 |
-| Bone | 4 |
-| Scalp | 5 |
-| Eye balls | 6 |
-| Compact Bone | 7 |
-| Spongy Bone | 8 |
-| Blood | 9 |
-| Muscle | 10 |
+| 文件 | 作用 |
+|---|---|
+| [`neuracle/main.py`](../../neuracle/main.py) | 服务入口与任务执行 |
+| [`neuracle/rabbitmq/schemas.py`](../../neuracle/rabbitmq/schemas.py) | dataclass 定义 |
+| [`neuracle/rabbitmq/validator.py`](../../neuracle/rabbitmq/validator.py) | 请求校验 |
+| [`neuracle/rabbitmq/message_builder.py`](../../neuracle/rabbitmq/message_builder.py) | 消息构造 |
+| [`neuracle/utils/params_utils.py`](../../neuracle/utils/params_utils.py) | dict -> dataclass 转换 |
+| [`neuracle/demo/main_sender_demo.py`](../../neuracle/demo/main_sender_demo.py) | 发送与接收示例 |
