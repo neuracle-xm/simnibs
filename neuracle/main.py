@@ -12,6 +12,7 @@ import logging
 import os
 import shutil
 import threading
+import time
 from functools import partial
 from queue import Queue
 from typing import Any
@@ -36,6 +37,7 @@ from neuracle.rabbitmq.schemas import (
 from neuracle.rabbitmq.sender_thread import SenderThread
 from neuracle.rabbitmq.validator import (
     ValidationError,
+    validate_ack_test_params,
     validate_forward_params,
     validate_inverse_params,
     validate_model_params,
@@ -64,6 +66,7 @@ from neuracle.utils import (
     N_WORKERS,
     NON_ROI_THRESHOLD,
     cond_dict_to_list,
+    dict_to_ack_test_params,
     dict_to_forward_params,
     dict_to_inverse_params,
     dict_to_model_params,
@@ -74,6 +77,79 @@ from neuracle.utils import (
 from neuracle.utils.env import get_rabbitmq_config
 
 logger = logging.getLogger(__name__)
+
+
+def _ack_in_consumer_thread(
+    channel: Any,
+    delivery_tag: int,
+    task_id: str,
+    msg_type: str,
+    reason: str,
+) -> None:
+    """在 RabbitMQ 消费线程中实际执行 ack。"""
+    try:
+        if channel is None or not getattr(channel, "is_open", False):
+            logger.warning(
+                "ack_sent 跳过，channel 不可用: task_id=%s type=%s delivery_tag=%s reason=%s",
+                task_id,
+                msg_type,
+                delivery_tag,
+                reason,
+            )
+            return
+        channel.basic_ack(delivery_tag=delivery_tag)
+        logger.info(
+            "ack_sent: task_id=%s type=%s delivery_tag=%s reason=%s",
+            task_id,
+            msg_type,
+            delivery_tag,
+            reason,
+        )
+    except Exception:
+        logger.exception(
+            "发送 ack 失败: task_id=%s type=%s delivery_tag=%s reason=%s",
+            task_id,
+            msg_type,
+            delivery_tag,
+            reason,
+        )
+
+
+def schedule_ack(
+    channel: Any,
+    delivery_tag: int,
+    task_id: str,
+    msg_type: str,
+    reason: str,
+) -> None:
+    """从工作线程把 ack 请求投递回消费线程执行。"""
+    connection = getattr(channel, "connection", None)
+    if connection is None or not getattr(connection, "is_open", False):
+        logger.warning(
+            "ack_scheduled 跳过，connection 不可用: task_id=%s type=%s delivery_tag=%s reason=%s",
+            task_id,
+            msg_type,
+            delivery_tag,
+            reason,
+        )
+        return
+    logger.info(
+        "ack_scheduled: task_id=%s type=%s delivery_tag=%s reason=%s",
+        task_id,
+        msg_type,
+        delivery_tag,
+        reason,
+    )
+    connection.add_callback_threadsafe(
+        partial(
+            _ack_in_consumer_thread,
+            channel,
+            delivery_tag,
+            task_id,
+            msg_type,
+            reason,
+        )
+    )
 
 
 def reset_task_output_dir(output_dir: str) -> None:
@@ -386,23 +462,46 @@ def handle_inverse_task(
     send_progress(message_queue, task_id, "inverse", 100, "已完成: 优化完成", result)
 
 
+def handle_ack_test_task(message_queue: Queue, task_id: str, params: Any) -> None:
+    """处理 ack 时机验证任务。"""
+    send_progress(message_queue, task_id, "ack_test", 0, "任务开始")
+    logger.info(
+        "worker_started: task_id=%s type=ack_test sleep_seconds=%.2f",
+        task_id,
+        params.sleep_seconds,
+    )
+    time.sleep(params.sleep_seconds)
+    logger.info("worker_finished: task_id=%s type=ack_test", task_id)
+    result = {"sleep_seconds": params.sleep_seconds}
+    send_progress(
+        message_queue, task_id, "ack_test", 100, "已完成: ack_test 完成", result
+    )
+
+
 def execute_task(
     message_queue: Queue,
     task_id: str,
     msg_type: str,
     task_handler: Any,
     params: Any,
+    channel: Any,
+    delivery_tag: int,
 ) -> None:
     """在线程中执行耗时任务，避免阻塞 RabbitMQ 回调线程。"""
+    ack_reason = "task_finished"
     try:
         task_handler(message_queue, task_id, params)
         logger.info("任务完成: %s", task_id)
     except ValidationError as e:
+        ack_reason = "task_validation_error"
         logger.error("参数验证失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
     except Exception as e:
+        ack_reason = "task_exception"
         logger.exception("任务执行失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
+    finally:
+        schedule_ack(channel, delivery_tag, task_id, msg_type, ack_reason)
 
 
 def handle_message(
@@ -428,6 +527,7 @@ def handle_message(
     """
     task_id = ""
     msg_type = ""
+    delivery_tag = method.delivery_tag
 
     try:
         data = json.loads(body)
@@ -452,12 +552,25 @@ def handle_message(
             params = dict_to_inverse_params(params_data, task_id)
             task_handler = handle_inverse_task
 
+        elif msg_type == "ack_test":
+            validate_ack_test_params(params_data)
+            params = dict_to_ack_test_params(params_data, task_id)
+            task_handler = handle_ack_test_task
+
         else:
             raise ValueError(f"未知任务类型: {msg_type}")
 
         worker = threading.Thread(
             target=execute_task,
-            args=(message_queue, task_id, msg_type, task_handler, params),
+            args=(
+                message_queue,
+                task_id,
+                msg_type,
+                task_handler,
+                params,
+                channel,
+                delivery_tag,
+            ),
             daemon=True,
             name=f"task-{msg_type}-{task_id}",
         )
@@ -472,13 +585,20 @@ def handle_message(
     except ValidationError as e:
         logger.error("参数验证失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
+        _ack_in_consumer_thread(
+            channel,
+            delivery_tag,
+            task_id,
+            msg_type or "unknown",
+            "sync_validation_error",
+        )
 
     except Exception as e:
         logger.exception("任务执行失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
-
-    finally:
-        channel.basic_ack(delivery_tag=method.delivery_tag)
+        _ack_in_consumer_thread(
+            channel, delivery_tag, task_id, msg_type or "unknown", "sync_exception"
+        )
 
 
 def run_service(config: dict) -> None:

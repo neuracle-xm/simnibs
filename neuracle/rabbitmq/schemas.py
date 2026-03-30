@@ -84,6 +84,14 @@ class InverseParams:
 
 
 @dataclass
+class AckTestParams:
+    """ack 时机验证参数"""
+
+    id: str
+    sleep_seconds: float = 30.0
+
+
+@dataclass
 class ModelResult:
     """头模生成结果"""
 
@@ -111,7 +119,7 @@ class ReturnMessage:
     """返回消息"""
 
     id: str
-    type: Literal["model", "forward", "inverse"]
+    type: Literal["model", "forward", "inverse", "ack_test"]
     progress_rate: int
     message: str | None = None
     result: ModelResult | ForwardResult | InverseResult | None = None

@@ -30,6 +30,7 @@ class RabbitMQListener:
         socket_timeout: int = 10,
         connection_attempts: int = 5,
         retry_delay: int = 5,
+        prefetch_count: int = 1,
     ):
         """
         初始化 RabbitMQ 监听器
@@ -50,6 +51,7 @@ class RabbitMQListener:
         self.socket_timeout = socket_timeout
         self.connection_attempts = connection_attempts
         self.retry_delay = retry_delay
+        self.prefetch_count = prefetch_count
         self.connection: BlockingConnection | None = None
         self.channel = None
         self._stopped = False
@@ -135,6 +137,7 @@ class RabbitMQListener:
                 - properties: pika.spec.BasicProperties 消息属性
                 - body: bytes 消息内容
         """
+        self.channel.basic_qos(prefetch_count=self.prefetch_count)  # type: ignore
         self.channel.basic_consume(
             queue=self.queue_name, on_message_callback=callback, auto_ack=False
         )  # type: ignore

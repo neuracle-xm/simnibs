@@ -8,8 +8,11 @@ RabbitMQ 监听器使用示例
 
 import json
 import logging
+import threading
+import time
 from functools import partial
 from queue import Queue
+from typing import Any
 
 from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQListener, SenderThread
@@ -28,6 +31,56 @@ def mask_rabbitmq_config(config: dict) -> dict:
     if masked.get("password"):
         masked["password"] = "***"
     return masked
+
+
+def ack_in_consumer_thread(
+    channel: Any, delivery_tag: int, message_type: str
+) -> None:
+    """在消费线程中实际发送 ack，避免工作线程直接操作 channel。"""
+    channel.basic_ack(delivery_tag=delivery_tag)
+    logger.info("ack_sent: type=%s delivery_tag=%s", message_type, delivery_tag)
+
+
+def schedule_ack(
+    channel: Any, delivery_tag: int, message_type: str, reason: str
+) -> None:
+    """把 ack 请求投递回 RabbitMQ 消费线程执行。"""
+    logger.info(
+        "ack_scheduled: type=%s delivery_tag=%s reason=%s",
+        message_type,
+        delivery_tag,
+        reason,
+    )
+    channel.connection.add_callback_threadsafe(
+        partial(ack_in_consumer_thread, channel, delivery_tag, message_type)
+    )
+
+
+def process_message_async(
+    message: dict[str, Any],
+    message_queue: Queue,
+    channel: Any,
+    delivery_tag: int,
+) -> None:
+    """模拟一个异步长任务，完成后再回到消费线程 ack。"""
+    message_type = str(message.get("type", "unknown"))
+    try:
+        logger.info("worker_started: type=%s", message_type)
+        # 这里用 sleep 模拟一个真正会持续运行的任务。
+        time.sleep(1.0)
+        response = {
+            "type": "response",
+            "original_type": message_type,
+            "status": "processed",
+            "message": "已处理消息",
+        }
+        message_queue.put(response)
+        logger.info("响应已加入发送队列")
+        logger.info("worker_finished: type=%s", message_type)
+        schedule_ack(channel, delivery_tag, message_type, "task_finished")
+    except Exception:
+        logger.exception("处理消息时发生错误")
+        schedule_ack(channel, delivery_tag, message_type, "task_exception")
 
 
 def message_callback(channel, method, properties, body, message_queue: Queue):
@@ -49,23 +102,20 @@ def message_callback(channel, method, properties, body, message_queue: Queue):
         # 解析消息
         message = json.loads(body.decode("utf-8"))
         logger.info("收到消息: %s", message)
-        # 构造响应消息
-        response = {
-            "type": "response",
-            "original_type": message.get("type", "unknown"),
-            "status": "processed",
-            "message": "已处理消息",
-        }
-        message_queue.put(response)
-        logger.info("响应已加入发送队列")
-        # 立即确认消息
-        channel.basic_ack(delivery_tag=method.delivery_tag)
+        worker = threading.Thread(
+            target=process_message_async,
+            args=(message, message_queue, channel, method.delivery_tag),
+            daemon=True,
+            name=f"rabbitmq-example-{message.get('type', 'unknown')}",
+        )
+        worker.start()
+        logger.info("消息已交给工作线程: %s", worker.name)
     except json.JSONDecodeError as e:
         logger.error("无法解析 JSON 消息: %s", e)
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        channel.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
         logger.error("处理消息时发生错误: %s", e)
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
 def main():

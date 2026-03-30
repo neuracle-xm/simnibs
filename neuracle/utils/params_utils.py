@@ -5,6 +5,7 @@
 """
 
 from neuracle.rabbitmq.schemas import (
+    AckTestParams,
     AtlasParam,
     ForwardParams,
     InverseParams,
@@ -75,4 +76,12 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
         electrode_current1=data.get("electrode_current1"),
         electrode_current2=data.get("electrode_current2"),
         DTI_file_path=data.get("DTI_file_path"),
+    )
+
+
+def dict_to_ack_test_params(data: dict, task_id: str) -> AckTestParams:
+    """将字典转换为 AckTestParams（不包含 id，id 在消息顶层）"""
+    return AckTestParams(
+        id=task_id,
+        sleep_seconds=float(data.get("sleep_seconds", 30.0)),
     )

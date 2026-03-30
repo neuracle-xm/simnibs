@@ -271,7 +271,7 @@ def get_test_messages():
         current_B=[0.001, -0.001],
         roi_type="atlas",
         roi_param={
-            "atlas_param": {"name": "AAL3", "area": "Precentral_L"},
+            "atlas_param": {"name": "BN", "area": "A8m_L"},
             "mni_param": None,
         },
         target_threshold=0.5,
@@ -310,7 +310,7 @@ def get_test_messages():
         current_B=[0.001, -0.001],
         roi_type="atlas",
         roi_param={
-            "atlas_param": {"name": "AAL3", "area": "Postcentral_R"},
+            "atlas_param": {"name": "BN", "area": "A8m_L"},
             "mni_param": None,
         },
         target_threshold=0.0,
@@ -386,7 +386,7 @@ def get_error_messages():
         current_B=[0.001, -0.001],
         roi_type="atlas",
         roi_param={
-            "atlas_param": {"name": "AAL3", "area": "Precentral_L"},
+            "atlas_param": {"name": "BN", "area": "A8m_L"},
             "mni_param": None,
         },
         target_threshold=-0.5,

@@ -329,6 +329,22 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
         raise ValidationError("DTI_file_path 必须是字符串")
 
 
+def validate_ack_test_params(params: dict[str, Any]) -> None:
+    """
+    验证 ack 时机测试参数
+
+    验证规则：
+    - sleep_seconds: 数字且 > 0
+    """
+    sleep_seconds = params.get("sleep_seconds", 30.0)
+    if not isinstance(sleep_seconds, (int, float)):
+        logger.error("[sleep_seconds] sleep_seconds 必须是数字")
+        raise ValidationError("sleep_seconds 必须是数字")
+    if sleep_seconds <= 0:
+        logger.error("[sleep_seconds] sleep_seconds 必须大于 0")
+        raise ValidationError("sleep_seconds 必须大于 0")
+
+
 def validate_message(message: dict[str, Any]) -> None:
     """
     验证消息完整性
@@ -336,7 +352,7 @@ def validate_message(message: dict[str, Any]) -> None:
     验证规则：
     - message 必须是字典
     - id: 非空字符串
-    - type: 非空字符串，必须为 "model", "forward", 或 "inverse"
+    - type: 非空字符串，必须为 "model", "forward", "inverse" 或 "ack_test"
     - params: 字典，根据 type 验证对应参数
 
     Args:
@@ -357,9 +373,13 @@ def validate_message(message: dict[str, Any]) -> None:
 
     # 验证 type
     msg_type = message.get("type")
-    if not msg_type or msg_type not in ("model", "forward", "inverse"):
-        logger.error('[type] type 必须是 "model", "forward", 或 "inverse"')
-        raise ValidationError('type 必须是 "model", "forward", 或 "inverse"')
+    if not msg_type or msg_type not in ("model", "forward", "inverse", "ack_test"):
+        logger.error(
+            '[type] type 必须是 "model", "forward", "inverse" 或 "ack_test"'
+        )
+        raise ValidationError(
+            'type 必须是 "model", "forward", "inverse" 或 "ack_test"'
+        )
 
     # 验证 params
     params = message.get("params")
@@ -374,3 +394,5 @@ def validate_message(message: dict[str, Any]) -> None:
         validate_forward_params(params)
     elif msg_type == "inverse":
         validate_inverse_params(params)
+    elif msg_type == "ack_test":
+        validate_ack_test_params(params)

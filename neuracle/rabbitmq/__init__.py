@@ -6,12 +6,14 @@ RabbitMQ 模块
 
 from .listener import RabbitMQListener
 from .message_builder import (
+    build_ack_test_message,
     build_forward_message,
     build_inverse_message,
     build_model_message,
     build_progress_message,
 )
 from .schemas import (
+    AckTestParams,
     AtlasParam,
     ForwardParams,
     ForwardResult,
@@ -27,6 +29,7 @@ from .sender import RabbitMQSender
 from .sender_thread import SenderThread
 from .validator import (
     ValidationError,
+    validate_ack_test_params,
     validate_forward_params,
     validate_inverse_params,
     validate_message,
@@ -39,6 +42,7 @@ __all__ = [
     "SenderThread",
     # schemas
     "AtlasParam",
+    "AckTestParams",
     "MNIParam",
     "ROIParam",
     "ModelParams",
@@ -53,10 +57,12 @@ __all__ = [
     "validate_model_params",
     "validate_forward_params",
     "validate_inverse_params",
+    "validate_ack_test_params",
     "validate_message",
     # message_builder
     "build_model_message",
     "build_forward_message",
     "build_inverse_message",
+    "build_ack_test_message",
     "build_progress_message",
 ]

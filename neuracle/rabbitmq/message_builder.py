@@ -151,7 +151,7 @@ def build_inverse_message(
 
 def build_progress_message(
     id: str,
-    msg_type: Literal["model", "forward", "inverse"],
+    msg_type: Literal["model", "forward", "inverse", "ack_test"],
     progress_rate: int,
     message: str | None = None,
     result: dict | None = None,
@@ -177,3 +177,23 @@ def build_progress_message(
         "result": result,
     }
     return progress_msg
+
+
+def build_ack_test_message(id: str, sleep_seconds: float = 30.0) -> dict:
+    """
+    构建 ack 时机验证消息
+
+    Args:
+        id: 任务唯一标识符
+        sleep_seconds: 模拟长任务持续时间
+
+    Returns:
+        dict: 符合规范的 JSON 消息字典
+    """
+    return {
+        "id": id,
+        "type": "ack_test",
+        "params": {
+            "sleep_seconds": sleep_seconds,
+        },
+    }

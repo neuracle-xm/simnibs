@@ -7,21 +7,126 @@ SimNIBS 端 RabbitMQ 测试示例
 
 import json
 import logging
+import threading
+import time
 from functools import partial
 from queue import Queue
+from typing import Any
 
-from neuracle.utils.env import get_rabbitmq_config, load_env
 from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQListener, SenderThread
 from neuracle.rabbitmq.message_builder import build_progress_message
 from neuracle.rabbitmq.validator import ValidationError, validate_message
+from neuracle.utils.env import get_rabbitmq_config, load_env
 
 logger = logging.getLogger(__name__)
 
 
+def ack_in_consumer_thread(
+    channel: Any, delivery_tag: int, msg_id: str, msg_type: str, reason: str
+) -> None:
+    """在消费线程中发送 ack，和 main.py 的线程模型保持一致。"""
+    channel.basic_ack(delivery_tag=delivery_tag)
+    logger.info(
+        "ack_sent: id=%s type=%s delivery_tag=%s reason=%s",
+        msg_id,
+        msg_type,
+        delivery_tag,
+        reason,
+    )
+
+
+def schedule_ack(
+    channel: Any, delivery_tag: int, msg_id: str, msg_type: str, reason: str
+) -> None:
+    """把 ack 请求从工作线程投递回消费线程。"""
+    logger.info(
+        "ack_scheduled: id=%s type=%s delivery_tag=%s reason=%s",
+        msg_id,
+        msg_type,
+        delivery_tag,
+        reason,
+    )
+    channel.connection.add_callback_threadsafe(
+        partial(
+            ack_in_consumer_thread,
+            channel,
+            delivery_tag,
+            msg_id,
+            msg_type,
+            reason,
+        )
+    )
+
+
+def process_message_async(
+    message_queue: Queue,
+    channel: Any,
+    delivery_tag: int,
+    msg_id: str,
+    msg_type: str,
+    params: dict[str, Any],
+) -> None:
+    """在线程中模拟任务处理，结束后再由消费线程 ack。"""
+    reason = "task_finished"
+    try:
+        logger.info("worker_started: id=%s type=%s", msg_id, msg_type)
+        # 这个 demo 只验证消息生命周期，因此用短暂 sleep 模拟长任务。
+        time.sleep(1.0)
+
+        progress_msg = build_progress_message(
+            id=msg_id,
+            msg_type=msg_type,
+            progress_rate=50,
+            message="Processing...",
+            result=None,
+        )
+        message_queue.put(progress_msg)
+        logger.info("已发送进度消息: progress_rate=50")
+
+        if msg_type == "model":
+            result = {"msh_file_path": f"/data/{msg_id}/{msg_id}.msh"}
+        elif msg_type == "forward":
+            result = {
+                "T1": f"/data/{msg_id}/T1.nii.gz",
+                "TI_file": f"/data/{msg_id}/forward_result.mz3",
+            }
+        else:
+            result = {
+                "T1": f"/data/{msg_id}/T1.nii.gz",
+                "TI_file": f"/data/{msg_id}/inverse_result.mz3",
+                "electrode_A": ["F3", "FC5"],
+                "electrode_B": ["P3", "PO7"],
+            }
+
+        complete_msg = build_progress_message(
+            id=msg_id,
+            msg_type=msg_type,
+            progress_rate=100,
+            message=None,
+            result=result,
+        )
+        message_queue.put(complete_msg)
+        logger.info("已发送完成消息: progress_rate=100")
+        logger.info("worker_finished: id=%s type=%s", msg_id, msg_type)
+    except Exception as e:
+        reason = "task_exception"
+        logger.exception("异步处理消息时发生错误: %s", e)
+        error_msg = build_progress_message(
+            id=msg_id,
+            msg_type=msg_type,
+            progress_rate=0,
+            message=str(e),
+            result=None,
+        )
+        message_queue.put(error_msg)
+    finally:
+        schedule_ack(channel, delivery_tag, msg_id, msg_type, reason)
+
+
 def handle_message(message_queue: Queue, channel, method, properties, body):
     """
-    处理接收到的消息，验证并发送响应
+    处理接收到的消息，验证并异步发送响应。
 
     Args:
         message_queue: 消息队列，用于发送响应消息
@@ -51,42 +156,21 @@ def handle_message(message_queue: Queue, channel, method, properties, body):
             validate_message(message)
             logger.info("消息验证通过")
 
-            # 发送进行中进度
-            progress_msg = build_progress_message(
-                id=msg_id,
-                msg_type=msg_type,
-                progress_rate=50,
-                message="Processing...",
-                result=None,
+            worker = threading.Thread(
+                target=process_message_async,
+                args=(
+                    message_queue,
+                    channel,
+                    method.delivery_tag,
+                    msg_id,
+                    msg_type,
+                    params,
+                ),
+                daemon=True,
+                name=f"simnibs-side-{msg_type}-{msg_id}",
             )
-            message_queue.put(progress_msg)
-            logger.info("已发送进度消息: progress_rate=50")
-
-            # 模拟处理完成，发送完成消息
-            if msg_type == "model":
-                result = {"msh_file_path": f"/data/{msg_id}/{msg_id}.msh"}
-            elif msg_type == "forward":
-                result = {
-                    "T1": f"/data/{msg_id}/T1.nii.gz",
-                    "TI_file": f"/data/{msg_id}/forward_result.mz3",
-                }
-            else:  # inverse
-                result = {
-                    "T1": f"/data/{msg_id}/T1.nii.gz",
-                    "TI_file": f"/data/{msg_id}/inverse_result.mz3",
-                    "electrode_A": ["F3", "FC5"],
-                    "electrode_B": ["P3", "PO7"],
-                }
-
-            complete_msg = build_progress_message(
-                id=msg_id,
-                msg_type=msg_type,
-                progress_rate=100,
-                message=None,
-                result=result,
-            )
-            message_queue.put(complete_msg)
-            logger.info("已发送完成消息: progress_rate=100")
+            worker.start()
+            logger.info("任务已提交到工作线程: %s", worker.name)
 
         except ValidationError as e:
             logger.warning("消息验证失败: %s", e)
@@ -101,16 +185,20 @@ def handle_message(message_queue: Queue, channel, method, properties, body):
             )
             message_queue.put(error_msg)
             logger.info("已发送错误消息")
-
-        # 确认消息
-        channel.basic_ack(delivery_tag=method.delivery_tag)
+            ack_in_consumer_thread(
+                channel,
+                method.delivery_tag,
+                msg_id,
+                msg_type,
+                "sync_validation_error",
+            )
 
     except json.JSONDecodeError as e:
         logger.error("JSON 解析失败: %s", e)
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        channel.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
         logger.error("处理消息时发生错误: %s", e)
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
 def run_simnibs_side(config):

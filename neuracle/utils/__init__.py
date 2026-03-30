@@ -25,6 +25,7 @@ from neuracle.utils.atlas_utils import (
 from neuracle.utils.cond_utils import TISSUE_ORDER, cond_dict_to_list
 from neuracle.utils.env import get_aliyun_config, get_rabbitmq_config, load_env
 from neuracle.utils.params_utils import (
+    dict_to_ack_test_params,
     dict_to_forward_params,
     dict_to_inverse_params,
     dict_to_model_params,
@@ -104,6 +105,7 @@ __all__ = [
     "ATLAS_REGISTRY_PATH",
     "SIMNIBS_MNI_TEMPLATE",
     "cond_dict_to_list",
+    "dict_to_ack_test_params",
     "dict_to_forward_params",
     "dict_to_inverse_params",
     "dict_to_model_params",

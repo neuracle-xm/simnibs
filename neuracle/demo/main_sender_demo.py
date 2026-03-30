@@ -16,7 +16,7 @@ import time
 from queue import Empty, Queue
 
 from neuracle.logger import setup_logging
-from neuracle.rabbitmq import RabbitMQListener, RabbitMQSender
+from neuracle.rabbitmq import RabbitMQListener, RabbitMQSender, build_ack_test_message
 from neuracle.utils import STANDARD_COND
 from neuracle.utils.env import get_rabbitmq_config, load_env
 
@@ -106,6 +106,49 @@ def create_inverse_message(
     return {"id": task_id, "type": "inverse", "params": params}
 
 
+def create_inverse_atlas_message(
+    task_id: str,
+    montage: str,
+    atlas_name: str = "BN",
+    area_name: str = "A8m_L",
+    anisotropy: bool = False,
+) -> dict:
+    """创建 inverse atlas 任务消息。
+
+    注意：
+        atlas ROI 依赖离线标准化产物，首次使用前需要先运行
+        neuracle/docs/atlas_roi_offline_preprocessing_plan.md 中记录的预处理脚本。
+    """
+    params = {
+        "dir_path": DEMO_DATA_DIR,
+        "msh_file_path": os.path.join(DEMO_DATA_DIR, "model.msh"),
+        "montage": montage,
+        "current_A": [0.002, -0.002],
+        "current_B": [0.001, -0.001],
+        "roi_type": "atlas",
+        "roi_param": {
+            "mni_param": None,
+            "atlas_param": {
+                "name": atlas_name,
+                "area": area_name,
+            },
+        },
+        "target_threshold": 0.5,
+        "cond": STANDARD_COND,
+        "anisotropy": anisotropy,
+    }
+    if anisotropy:
+        params["DTI_file_path"] = os.path.join(
+            DEMO_DATA_DIR, "DTI_coregT1_tensor.nii.gz"
+        )
+    return {"id": task_id, "type": "inverse", "params": params}
+
+
+def create_ack_test_message(task_id: str, sleep_seconds: float = 10.0) -> dict:
+    """创建 ack 时机验证消息。"""
+    return build_ack_test_message(task_id, sleep_seconds=sleep_seconds)
+
+
 def progress_callback(channel, method, properties, body, message_queue: Queue):
     """
     进度消息回调函数
@@ -159,7 +202,7 @@ def run_listener_thread(
         retry_delay=retry_delay,
     )
 
-    callback = lambda ch, meth, props, body: progress_callback(
+    callback = lambda ch, meth, props, body: progress_callback(  # noqa: E731
         ch, meth, props, body, message_queue
     )
     thread = threading.Thread(
@@ -354,6 +397,14 @@ def main():
     inverse_aniso_msg = create_inverse_message(
         "test_inverse_002", "EEG10-20_extended_SPM12", anisotropy=True
     )
+    inverse_atlas_msg = create_inverse_atlas_message(
+        "test_inverse_003",
+        "EEG10-10_Cutini_2011",
+        atlas_name="BN",
+        area_name="A8m_L",
+        anisotropy=False,
+    )
+    ack_test_msg = create_ack_test_message("test_ack_001", sleep_seconds=10.0)
 
     menu = {
         "1": ("model 任务（头模生成）", model_msg),
@@ -361,6 +412,8 @@ def main():
         "3": ("forward 任务（各向异性电导率）", forward_aniso_msg),
         "4": ("inverse 任务（标量电导率）", inverse_msg),
         "5": ("inverse 任务（各向异性电导率）", inverse_aniso_msg),
+        "6": ("inverse 任务（Atlas ROI，需先离线预处理）", inverse_atlas_msg),
+        "7": ("ack_test 任务（验证完成后 ack）", ack_test_msg),
     }
 
     while True:
