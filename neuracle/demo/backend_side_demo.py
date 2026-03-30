@@ -10,7 +10,6 @@ import logging
 import threading
 import time
 
-from neuracle.env import get_rabbitmq_config, load_env
 from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQListener, RabbitMQSender
 from neuracle.rabbitmq.message_builder import (
@@ -18,6 +17,7 @@ from neuracle.rabbitmq.message_builder import (
     build_inverse_message,
     build_model_message,
 )
+from neuracle.utils.env import get_rabbitmq_config, load_env
 
 load_env()
 logger = logging.getLogger(__name__)
@@ -58,17 +58,23 @@ def result_callback(channel, method, properties, body):
 def listener_thread(queue_name):
     """Listener 线程函数，持续监听结果队列"""
     listener = RabbitMQListener(
-        host=config["host"], port=config["port"], queue_name=queue_name
+        host=config["host"],
+        port=config["port"],
+        queue_name=queue_name,
+        username=config["username"],
+        password=config["password"],
+        virtual_host=config["virtual_host"],
+        heartbeat=config["heartbeat"],
+        blocked_connection_timeout=config["blocked_connection_timeout"],
+        socket_timeout=config["socket_timeout"],
+        connection_attempts=config["connection_attempts"],
+        retry_delay=config["retry_delay"],
     )
-
-    if not listener.connect():
-        logger.error("Result Listener 连接失败")
-        return
 
     logger.info("Result Listener 已启动...")
 
     try:
-        listener.start_consume(result_callback)
+        listener.consume_forever(result_callback)
     except KeyboardInterrupt:
         logger.info("Result Listener 收到中断信号")
     finally:
@@ -105,16 +111,6 @@ def run_backend_side():
 
 def run_interactive_mode():
     """交互模式：显示菜单供用户选择发送的消息"""
-    sender = RabbitMQSender(
-        host=config["host"],
-        port=config["port"],
-        queue_name=config["send_queue_name"],
-    )
-
-    if not sender.connect():
-        logger.error("Sender 连接失败")
-        return
-
     test_messages = get_test_messages()
     error_messages = get_error_messages()
 
@@ -132,14 +128,14 @@ def run_interactive_mode():
         if choice == "1":
             for name, msg in test_messages:
                 logger.info("发送消息: %s", name)
-                sender.send_message(msg)
+                send_one_message(msg)
                 time.sleep(0.3)
             logger.info("所有正常消息发送完成")
 
         elif choice == "2":
             for name, msg in error_messages:
                 logger.info("发送错误消息: %s", name)
-                sender.send_message(msg)
+                send_one_message(msg)
                 time.sleep(0.3)
             logger.info("所有错误消息发送完成")
 
@@ -150,7 +146,29 @@ def run_interactive_mode():
         else:
             print("无效的选项")
 
-    sender.close()
+
+def send_one_message(message: dict) -> bool:
+    """按当前发送策略，单条消息单次建连发送。"""
+    sender = RabbitMQSender(
+        host=config["host"],
+        port=config["port"],
+        queue_name=config["send_queue_name"],
+        username=config["username"],
+        password=config["password"],
+        virtual_host=config["virtual_host"],
+        heartbeat=config["heartbeat"],
+        blocked_connection_timeout=config["blocked_connection_timeout"],
+        socket_timeout=config["socket_timeout"],
+        connection_attempts=config["connection_attempts"],
+        retry_delay=config["retry_delay"],
+    )
+    try:
+        if not sender.connect():
+            logger.error("Sender 连接失败")
+            return False
+        return sender.send_message(message)
+    finally:
+        sender.close()
 
 
 def get_test_messages():

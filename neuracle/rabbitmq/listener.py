@@ -5,10 +5,11 @@ RabbitMQ 消息监听器模块
 """
 
 import logging
+import time
 from typing import Any, Callable
 
-from pika import BlockingConnection, ConnectionParameters
-from pika.exceptions import AMQPConnectionError
+from pika import BlockingConnection, ConnectionParameters, PlainCredentials
+from pika.exceptions import AMQPConnectionError, ConnectionWrongStateError
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,20 @@ logger = logging.getLogger(__name__)
 class RabbitMQListener:
     """RabbitMQ 监听器类"""
 
-    def __init__(self, host: str = "localhost", port: int = 5672, queue_name: str = ""):
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 5672,
+        queue_name: str = "",
+        username: str = "guest",
+        password: str = "guest",
+        virtual_host: str = "/",
+        heartbeat: int = 60,
+        blocked_connection_timeout: int = 300,
+        socket_timeout: int = 10,
+        connection_attempts: int = 5,
+        retry_delay: int = 5,
+    ):
         """
         初始化 RabbitMQ 监听器
 
@@ -28,8 +42,32 @@ class RabbitMQListener:
         self.host = host
         self.port = port
         self.queue_name = queue_name
+        self.username = username
+        self.password = password
+        self.virtual_host = virtual_host
+        self.heartbeat = heartbeat
+        self.blocked_connection_timeout = blocked_connection_timeout
+        self.socket_timeout = socket_timeout
+        self.connection_attempts = connection_attempts
+        self.retry_delay = retry_delay
         self.connection: BlockingConnection | None = None
         self.channel = None
+        self._stopped = False
+
+    def _build_connection_parameters(self) -> ConnectionParameters:
+        """构造 RabbitMQ 连接参数。"""
+        credentials = PlainCredentials(self.username, self.password)
+        return ConnectionParameters(
+            host=self.host,
+            port=self.port,
+            virtual_host=self.virtual_host,
+            credentials=credentials,
+            heartbeat=self.heartbeat,
+            blocked_connection_timeout=self.blocked_connection_timeout,
+            socket_timeout=self.socket_timeout,
+            connection_attempts=self.connection_attempts,
+            retry_delay=self.retry_delay,
+        )
 
     def connect(self) -> bool:
         """
@@ -39,8 +77,7 @@ class RabbitMQListener:
             bool: 连接是否成功
         """
         try:
-            # 连接参数
-            parameters = ConnectionParameters(host=self.host, port=self.port)
+            parameters = self._build_connection_parameters()
             # 创建连接
             self.connection = BlockingConnection(parameters)
             self.channel = self.connection.channel()
@@ -50,13 +87,37 @@ class RabbitMQListener:
                 durable=True,
                 arguments={"x-queue-type": "quorum"},
             )
-            logger.info("成功连接到 RabbitMQ 服务器: %s:%s", self.host, self.port)
+            logger.info(
+                "成功连接到 RabbitMQ 服务器: host=%s port=%s vhost=%s user=%s queue=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+            )
             return True
         except AMQPConnectionError as e:
-            logger.error("连接 RabbitMQ 失败: %s", e)
+            logger.error(
+                "连接 RabbitMQ 失败: host=%s port=%s vhost=%s user=%s queue=%s error_type=%s error=%r",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+                type(e).__name__,
+                e,
+            )
             return False
         except Exception as e:
-            logger.error("连接时发生未知错误: %s", e)
+            logger.exception(
+                "连接时发生未知错误: host=%s port=%s vhost=%s user=%s queue=%s error_type=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+                type(e).__name__,
+            )
             return False
 
     def start_consume(self, callback: Callable[[Any, Any, Any, bytes], None]) -> None:
@@ -79,12 +140,54 @@ class RabbitMQListener:
         )  # type: ignore
         self.channel.start_consuming()  # type: ignore
 
+    def consume_forever(self, callback: Callable[[Any, Any, Any, bytes], None]) -> None:
+        """持续消费消息，断线后自动重连。"""
+        self._stopped = False
+        while not self._stopped:
+            if not self.connect():
+                if self._stopped:
+                    break
+                logger.warning(
+                    "监听器连接失败，%s 秒后重试: queue=%s",
+                    self.retry_delay,
+                    self.queue_name,
+                )
+                time.sleep(self.retry_delay)
+                continue
+            try:
+                self.start_consume(callback)
+            except KeyboardInterrupt:
+                self._stopped = True
+                raise
+            except Exception as e:
+                if not self._stopped:
+                    logger.exception(
+                        "监听器消费中断，准备重连: host=%s port=%s vhost=%s user=%s queue=%s error_type=%s",
+                        self.host,
+                        self.port,
+                        self.virtual_host,
+                        self.username,
+                        self.queue_name,
+                        type(e).__name__,
+                    )
+            finally:
+                self.close()
+            if not self._stopped:
+                time.sleep(self.retry_delay)
+
     def stop_consume(self) -> None:
         """停止消费消息"""
+        self._stopped = True
         if self.channel:
             self.channel.stop_consuming()
 
     def close(self) -> None:
         """关闭连接"""
         if self.connection and not self.connection.is_closed:
-            self.connection.close()
+            try:
+                self.connection.close()
+            except ConnectionWrongStateError:
+                logger.warning("RabbitMQ 连接已处于关闭流程，忽略重复关闭")
+            except Exception as e:
+                logger.warning("关闭 RabbitMQ 监听连接时发生错误: %s", e)
+        self.channel = None

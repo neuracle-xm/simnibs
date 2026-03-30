@@ -6,7 +6,7 @@ OSS 上传下载示例
 
 import logging
 
-from neuracle.env import load_env
+from neuracle.utils.env import load_env
 from neuracle.logger import setup_logging
 from neuracle.oss_tool import get_bucket, upload_bytes_to_oss, download_bytes_from_oss
 

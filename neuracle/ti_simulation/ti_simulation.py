@@ -9,11 +9,30 @@ TI Simulation - Temporal Interference 正向仿真
     5. 生成可视化输出
 
 用法：
-    python -m neuracle.ti_simulation <subid> [--electrode-pair1 <pair1>]
-            [--electrode-pair2 <pair2>] [--current1 <current1>]
-            [--current2 <current2>] [--electrode-shape <shape>]
-            [--electrode-dim <width height>] [--electrode-thickness <thickness>]
-            [--n-workers <n_workers>]
+    from neuracle.ti_simulation import (
+        setup_session,
+        setup_electrode_pair1,
+        setup_electrode_pair2,
+        run_tdcs_simulation,
+        calculate_ti,
+        export_mz3,
+    )
+
+    # 1. 配置会话
+    S = setup_session(subject_dir, output_dir)
+
+    # 2. 配置电极对
+    setup_electrode_pair1(S, ["F5", "P5"], current1=0.001)
+    setup_electrode_pair2(S, ["F6", "P6"], current2=0.001)
+
+    # 3. 运行仿真
+    mesh1, mesh2 = run_tdcs_simulation(S, subject_dir, output_dir, n_workers=24)
+
+    # 4. 计算 TI
+    ti_mesh, ti_max = calculate_ti(mesh1, mesh2, output_dir)
+
+    # 5. 导出结果
+    mz3_path = export_mz3(ti_mesh, output_dir)
 """
 
 import logging
@@ -28,141 +47,205 @@ from simnibs.utils import TI_utils as TI
 logger = logging.getLogger(__name__)
 
 
-def run_ti_forward_simulation(
+def setup_session(
     subject_dir: str,
     output_dir: str,
-    electrode_pair1: list[str],
-    electrode_pair2: list[str],
-    current1: float = 0.001,
-    current2: float = 0.001,
-    electrode_shape: str = "ellipse",
-    electrode_dimensions: list[float] | None = None,
-    electrode_thickness: float = 2.0,
+    msh_file_path: str | None = None,
     anisotropy_type: str = "scalar",
     cond: list | None = None,
     fname_tensor: str | None = None,
-    n_workers: int = 1,
-) -> tuple[str, str]:
+    eeg_cap: str | None = None,
+) -> sim_struct.SESSION:
     """
-    执行 TI 正向仿真 - 运行两组电极的 TDCS 仿真
+    配置会话参数
 
     Parameters
     ----------
     subject_dir : str
         Subject 目录（m2m_{subid}）
+    msh_file_path : str, optional
+        头模网格文件路径；如果提供，则优先使用该 mesh 文件
     output_dir : str
         仿真输出目录
-    electrode_pair1 : list
-        第一个电极对 [elec1_name, elec2_name]，如 ['F5', 'P5']
-    electrode_pair2 : list
-        第二个电极对 [elec1_name, elec2_name]，如 ['F6', 'P6']
-    current1 : float, optional
-        第一组电极对电流强度，单位 A (default: 0.001，即 1mA)
-    current2 : float, optional
-        第二组电极对电流强度，单位 A (default: 0.001，即 1mA)
-    electrode_shape : str, optional
-        电极形状，可选 'ellipse', 'rect', 'custom' (default: 'ellipse')
-    electrode_dimensions : list, optional
-        电极尺寸 [width, height]，单位 mm (default: [40, 40])
-    electrode_thickness : float, optional
-        电极厚度，单位 mm (default: 2.0)
     anisotropy_type : str, optional
         电导率各向异性类型 (default: "scalar")
-        可选值：
-        - "scalar": 标量电导率（各向同性）
-        - "vector": 向量电导率（仅白质各向异性）
-        - "tensor": 张量电导率（基于 DWI 张量）
     cond : list, optional
-        电导率列表，默认为标准电导率 (standard_cond)
-        每个元素为 (tissue_index, conductivity) 元组
-        如: [(1, 0.465), (2, 0.01), ...] 表示 (组织标签, 电导率 S/m)
+        电导率列表
     fname_tensor : str, optional
-        DTI 张量文件路径 (.nii.gz)，仅当 anisotropy_type="tensor" 时需要
-    n_workers : int, optional
-        并行工作进程数 (default: 1)
-        Note: 即使设置了多个worker，实际也还是没用
+        DTI 张量文件路径
+    eeg_cap : str, optional
+        EEG 电极帽 CSV 文件路径（不含 .csv 扩展名）
+
+    Returns
+    -------
+    sim_struct.SESSION
+        配置好的会话对象
+    """
+    S = sim_struct.SESSION()
+    S.subpath = subject_dir
+    S.fnamehead = msh_file_path
+    S.pathfem = output_dir
+    S.open_in_gmsh = False
+    S.anisotropy_type = anisotropy_type
+    logger.info("电导率各向异性类型: %s", anisotropy_type)
+
+    if cond is not None:
+        S.cond = cond
+        logger.info("使用自定义电导率值: %s", cond)
+    else:
+        logger.info("使用标准电导率值 (standard_cond)")
+
+    if fname_tensor is not None:
+        S.fname_tensor = fname_tensor
+        logger.info("DTI 张量文件: %s", fname_tensor)
+
+    S.eeg_cap = eeg_cap
+    logger.info("EEG 电极帽: %s", eeg_cap)
+    if msh_file_path is not None:
+        logger.info("头模网格文件: %s", msh_file_path)
+
+    os.makedirs(output_dir, exist_ok=True)
+    logger.info("会话配置完成")
+
+    return S
+
+
+def setup_electrode_pair1(
+    session: sim_struct.SESSION,
+    electrode_pair1: list[str],
+    current1: list[float],
+    electrode_shape: str = "ellipse",
+    electrode_dimensions: list[float] | None = None,
+    electrode_thickness: float = 2.0,
+) -> sim_struct.TDCSLIST:
+    """
+    配置第一个电极对
+
+    Parameters
+    ----------
+    session : sim_struct.SESSION
+        SimNIBS 会话对象
+    electrode_pair1 : list
+        第一个电极对 [elec1_name, elec2_name]
+    current1 : list[float]
+        第一组电极对电流列表 [anode_current, cathode_current]，单位 A
+    electrode_shape : str
+        电极形状
+    electrode_dimensions : list
+        电极尺寸 [width, height]
+    electrode_thickness : float
+        电极厚度
+
+    Returns
+    -------
+    sim_struct.TDCSLIST
+        配置好的 TDCS 列表对象
+    """
+    if electrode_dimensions is None:
+        electrode_dimensions = [40, 40]
+
+    logger.info("配置第一个电极对: %s", electrode_pair1)
+    tdcs1 = _setup_electrode_pair(
+        session=session,
+        electrode_pair=electrode_pair1,
+        currents=current1,
+        electrode_shape=electrode_shape,
+        electrode_dimensions=electrode_dimensions,
+        electrode_thickness=electrode_thickness,
+    )
+    return tdcs1
+
+
+def setup_electrode_pair2(
+    session: sim_struct.SESSION,
+    electrode_pair2: list[str],
+    current2: list[float],
+    electrode_shape: str = "ellipse",
+    electrode_dimensions: list[float] | None = None,
+    electrode_thickness: float = 2.0,
+) -> sim_struct.TDCSLIST:
+    """
+    配置第二个电极对
+
+    Parameters
+    ----------
+    session : sim_struct.SESSION
+        SimNIBS 会话对象
+    electrode_pair2 : list
+        第二个电极对 [elec1_name, elec2_name]
+    current2 : list[float]
+        第二组电极对电流列表 [anode_current, cathode_current]，单位 A
+    electrode_shape : str
+        电极形状
+    electrode_dimensions : list
+        电极尺寸 [width, height]
+    electrode_thickness : float
+        电极厚度
+
+    Returns
+    -------
+    sim_struct.TDCSLIST
+        配置好的 TDCS 列表对象
+    """
+    if electrode_dimensions is None:
+        electrode_dimensions = [40, 40]
+
+    logger.info("配置第二个电极对: %s", electrode_pair2)
+    tdcs2 = _setup_electrode_pair(
+        session=session,
+        electrode_pair=electrode_pair2,
+        currents=current2,
+        electrode_shape=electrode_shape,
+        electrode_dimensions=electrode_dimensions,
+        electrode_thickness=electrode_thickness,
+    )
+    return tdcs2
+
+
+def run_tdcs_simulation(
+    session: sim_struct.SESSION,
+    subject_dir: str,
+    output_dir: str,
+    n_workers: int = 1,
+) -> tuple[str, str]:
+    """
+    运行 TDCS 仿真
+
+    Parameters
+    ----------
+    session : sim_struct.SESSION
+        SimNIBS 会话对象
+    subject_dir : str
+        Subject 目录（用于提取 subid）
+    output_dir : str
+        仿真输出目录
+    n_workers : int
+        并行工作进程数
 
     Returns
     -------
     tuple
         (mesh1_path, mesh2_path) - 两组电极仿真结果网格路径
     """
-    if electrode_dimensions is None:
-        electrode_dimensions = [40, 40]
-
-    logger.info("开始 TI 正向仿真")
-    logger.info("Subject 目录: %s", subject_dir)
-    logger.info("输出目录: %s", output_dir)
-    logger.info("电极对1: %s, 电流: %s A", electrode_pair1, current1)
-    logger.info("电极对2: %s, 电流: %s A", electrode_pair2, current2)
-
-    # 设置会话
-    S = sim_struct.SESSION()
-    S.subpath = subject_dir
-    S.pathfem = output_dir
-    S.open_in_gmsh = False  # 禁止自动打开 Gmsh
-    S.anisotropy_type = anisotropy_type
-    logger.info("电导率各向异性类型: %s", anisotropy_type)
-
-    # 设置电导率值
-    if cond is not None:
-        S.cond = cond
-        logger.info("使用自定义电导率值")
-    else:
-        logger.info("使用标准电导率值 (standard_cond)")
-
-    # 设置 DTI 张量文件（用于 tensor 各向异性）
-    if fname_tensor is not None:
-        S.fname_tensor = fname_tensor
-        logger.info("DTI 张量文件: %s", fname_tensor)
-
-    # 创建输出目录
-    os.makedirs(output_dir, exist_ok=True)
-
-    # 配置第一个电极对
-    logger.info("配置第一个电极对: %s", electrode_pair1)
-    tdcs1 = _setup_electrode_pair(
-        session=S,
-        electrode_pair=electrode_pair1,
-        currents=[current1, -current1],
-        electrode_shape=electrode_shape,
-        electrode_dimensions=electrode_dimensions,
-        electrode_thickness=electrode_thickness,
-    )
-
-    # 配置第二个电极对
-    logger.info("配置第二个电极对: %s", electrode_pair2)
-    tdcs2 = _setup_electrode_pair(
-        session=S,
-        electrode_pair=electrode_pair2,
-        currents=[current2, -current2],
-        electrode_shape=electrode_shape,
-        electrode_dimensions=electrode_dimensions,
-        electrode_thickness=electrode_thickness,
-    )
-
-    # 运行仿真
     logger.info("开始运行 TDCS 仿真，n_workers=%s", n_workers)
-    run_simnibs(S, cpus=n_workers)
+    run_simnibs(session, cpus=n_workers)
     logger.info("TDCS 仿真完成")
 
-    # 返回两组仿真结果路径
-    # 从 subject_dir 提取 subject ID（支持 m2m_ernie 或 ernie 格式）
-    subid = os.path.basename(subject_dir).replace("m2m_", "", 1)
-    mesh1_path = os.path.join(output_dir, f"{subid}_TDCS_1_scalar.msh")
-    mesh2_path = os.path.join(output_dir, f"{subid}_TDCS_2_scalar.msh")
+    base_name = os.path.splitext(os.path.basename(session.fnamehead))[0]
+    mesh1_path = os.path.join(output_dir, f"{base_name}_TDCS_1_scalar.msh")
+    mesh2_path = os.path.join(output_dir, f"{base_name}_TDCS_2_scalar.msh")
 
     logger.info("TDCS 仿真结果路径: %s, %s", mesh1_path, mesh2_path)
     return mesh1_path, mesh2_path
 
 
-def calculate_ti_envelope(
+def calculate_ti(
     mesh1_path: str,
     mesh2_path: str,
     output_dir: str,
-) -> tuple[str, np.ndarray]:
+) -> str:
     """
-    计算 TI 包络
+    计算 TI 场
 
     Parameters
     ----------
@@ -175,8 +258,8 @@ def calculate_ti_envelope(
 
     Returns
     -------
-    tuple
-        (ti_mesh_path, ti_max) - TI 结果网格路径和最大调制振幅数组
+    str
+        TI 结果网格路径
     """
     logger.info("开始计算 TI 场...")
     logger.info("读取网格文件: %s, %s", mesh1_path, mesh2_path)
@@ -184,7 +267,6 @@ def calculate_ti_envelope(
     m1 = mesh_io.read_msh(mesh1_path)
     m2 = mesh_io.read_msh(mesh2_path)
 
-    # 裁剪网格，去除电极元素
     tags_keep = np.hstack(
         (
             np.arange(ElementTags.TH_START, ElementTags.SALINE_START - 1),
@@ -196,12 +278,10 @@ def calculate_ti_envelope(
     m1 = m1.crop_mesh(tags=tags_keep)
     m2 = m2.crop_mesh(tags=tags_keep)
 
-    # 计算 TI 最大调制振幅
     ef1 = m1.field["E"]
     ef2 = m2.field["E"]
     ti_max = TI.get_maxTI(ef1.value, ef2.value)
 
-    # 生成可视化输出
     logger.info("生成 TI 可视化输出...")
     mout = deepcopy(m1)
     mout.elmdata = []
@@ -212,7 +292,6 @@ def calculate_ti_envelope(
     ti_mesh_path = os.path.join(output_dir, "TI.msh")
     mesh_io.write_msh(mout, ti_mesh_path)
 
-    # 生成视图
     v = mout.view(
         visible_tags=[1002, 1006],
         visible_fields="TImax",
@@ -220,93 +299,42 @@ def calculate_ti_envelope(
     v.write_opt(ti_mesh_path)
 
     logger.info("TI 计算完成，输出文件: %s", ti_mesh_path)
-    return ti_mesh_path, ti_max
+    return ti_mesh_path
 
 
-def run_ti_simulation(
-    subject_dir: str,
+def export_mz3(
+    ti_mesh_path: str,
     output_dir: str,
-    electrode_pair1: list[str],
-    electrode_pair2: list[str],
-    current1: float = 0.001,
-    current2: float = 0.001,
-    electrode_shape: str = "ellipse",
-    electrode_dimensions: list[float] | None = None,
-    electrode_thickness: float = 2.0,
-    anisotropy_type: str = "scalar",
-    cond: list | None = None,
-    fname_tensor: str | None = None,
-    n_workers: int = 1,
-) -> tuple[str, np.ndarray]:
+    surface_type: str = "central",
+) -> str:
     """
-    执行 TI 正向仿真
+    导出 TI 结果到 MZ3 格式
 
     Parameters
     ----------
-    subject_dir : str
-        Subject 目录（m2m_{subid}）
+    ti_mesh_path : str
+        TI 结果网格路径
     output_dir : str
-        仿真输出目录
-    electrode_pair1 : list
-        第一个电极对 [elec1_name, elec2_name]，如 ['F5', 'P5']
-    electrode_pair2 : list
-        第二个电极对 [elec1_name, elec2_name]，如 ['F6', 'P6']
-    current1 : float, optional
-        第一组电极对电流强度，单位 A (default: 0.001，即 1mA)
-    current2 : float, optional
-        第二组电极对电流强度，单位 A (default: 0.001，即 1mA)
-    electrode_shape : str, optional
-        电极形状，可选 'ellipse', 'rect', 'custom' (default: 'ellipse')
-    electrode_dimensions : list, optional
-        电极尺寸 [width, height]，单位 mm (default: [40, 40])
-    electrode_thickness : float, optional
-        电极厚度，单位 mm (default: 2.0)
-    anisotropy_type : str, optional
-        电导率各向异性类型 (default: "scalar")
-        可选值：
-        - "scalar": 标量电导率（各向同性）
-        - "vector": 向量电导率（仅白质各向异性）
-        - "tensor": 张量电导率（基于 DWI 张量）
-    cond : list, optional
-        电导率列表，默认为标准电导率 (standard_cond)
-        每个元素为 (tissue_index, conductivity) 元组
-        如: [(1, 0.465), (2, 0.01), ...] 表示 (组织标签, 电导率 S/m)
-    fname_tensor : str, optional
-        DTI 张量文件路径 (.nii.gz)，仅当 anisotropy_type="tensor" 时需要
-    n_workers : int, optional
-        并行工作进程数 (default: 1)
-        Note: 即使设置了多个worker，实际也还是没用
+        输出目录
+    surface_type : str
+        表面类型 (default: "central")
 
     Returns
     -------
-    tuple
-        (ti_mesh_path, ti_max) - TI 结果网格路径和最大调制振幅数组
+    str
+        MZ3 文件路径
     """
-    # 运行正向仿真
-    mesh1_path, mesh2_path = run_ti_forward_simulation(
-        subject_dir=subject_dir,
-        output_dir=output_dir,
-        electrode_pair1=electrode_pair1,
-        electrode_pair2=electrode_pair2,
-        current1=current1,
-        current2=current2,
-        electrode_shape=electrode_shape,
-        electrode_dimensions=electrode_dimensions,
-        electrode_thickness=electrode_thickness,
-        anisotropy_type=anisotropy_type,
-        cond=cond,
-        fname_tensor=fname_tensor,
-        n_workers=n_workers,
-    )
+    from neuracle.mesh_tools import msh_to_mz3
 
-    # 计算 TI 包络
-    ti_mesh_path, ti_max = calculate_ti_envelope(
-        mesh1_path=mesh1_path,
-        mesh2_path=mesh2_path,
+    logger.info("导出 TI 结果到 MZ3 格式...")
+    mz3_path = msh_to_mz3(
+        msh_path=ti_mesh_path,
         output_dir=output_dir,
+        surface_type=surface_type,
+        field_name="TImax",
     )
-
-    return ti_mesh_path, ti_max
+    logger.info("MZ3 导出完成: %s", mz3_path)
+    return mz3_path
 
 
 def _setup_electrode_pair(
@@ -318,7 +346,7 @@ def _setup_electrode_pair(
     electrode_thickness: float,
 ) -> sim_struct.TDCSLIST:
     """
-    配置单个电极对
+    配置单个电极对（内部函数）
 
     Parameters
     ----------

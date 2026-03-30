@@ -10,7 +10,7 @@ import logging
 from functools import partial
 from queue import Queue
 
-from neuracle.env import get_rabbitmq_config, load_env
+from neuracle.utils.env import get_rabbitmq_config, load_env
 from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQListener, SenderThread
 from neuracle.rabbitmq.message_builder import build_progress_message
@@ -67,12 +67,12 @@ def handle_message(message_queue: Queue, channel, method, properties, body):
                 result = {"msh_file_path": f"/data/{msg_id}/{msg_id}.msh"}
             elif msg_type == "forward":
                 result = {
-                    "T1_mni": f"/data/{msg_id}/T1_mni.nii.gz",
+                    "T1": f"/data/{msg_id}/T1.nii.gz",
                     "TI_file": f"/data/{msg_id}/forward_result.mz3",
                 }
             else:  # inverse
                 result = {
-                    "T1_mni": f"/data/{msg_id}/T1_mni.nii.gz",
+                    "T1": f"/data/{msg_id}/T1.nii.gz",
                     "TI_file": f"/data/{msg_id}/inverse_result.mz3",
                     "electrode_A": ["F3", "FC5"],
                     "electrode_B": ["P3", "PO7"],
@@ -132,6 +132,14 @@ def run_simnibs_side(config):
         port=config["port"],
         queue_name=config["listen_queue_name"],
         message_queue=message_queue,
+        username=config["username"],
+        password=config["password"],
+        virtual_host=config["virtual_host"],
+        heartbeat=config["heartbeat"],
+        blocked_connection_timeout=config["blocked_connection_timeout"],
+        socket_timeout=config["socket_timeout"],
+        connection_attempts=config["connection_attempts"],
+        retry_delay=config["retry_delay"],
     )
     sender_thread.start()
 
@@ -140,17 +148,20 @@ def run_simnibs_side(config):
         host=config["host"],
         port=config["port"],
         queue_name=config["send_queue_name"],
+        username=config["username"],
+        password=config["password"],
+        virtual_host=config["virtual_host"],
+        heartbeat=config["heartbeat"],
+        blocked_connection_timeout=config["blocked_connection_timeout"],
+        socket_timeout=config["socket_timeout"],
+        connection_attempts=config["connection_attempts"],
+        retry_delay=config["retry_delay"],
     )
-
-    if not listener.connect():
-        logger.error("Listener 连接失败")
-        sender_thread.stop()
-        return
 
     logger.info("SimNIBS 端已启动，持续监听消息（Ctrl+C 退出）...")
 
     try:
-        listener.start_consume(partial(handle_message, message_queue))
+        listener.consume_forever(partial(handle_message, message_queue))
     except KeyboardInterrupt:
         logger.info("收到中断信号，正在停止...")
     finally:

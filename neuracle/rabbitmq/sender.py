@@ -8,7 +8,13 @@ import json
 import logging
 from typing import Any
 
-from pika import BasicProperties, BlockingConnection, ConnectionParameters, DeliveryMode
+from pika import (
+    BasicProperties,
+    BlockingConnection,
+    ConnectionParameters,
+    DeliveryMode,
+    PlainCredentials,
+)
 from pika.exceptions import AMQPConnectionError
 
 logger = logging.getLogger(__name__)
@@ -17,7 +23,20 @@ logger = logging.getLogger(__name__)
 class RabbitMQSender:
     """RabbitMQ 发送器类"""
 
-    def __init__(self, host: str = "localhost", port: int = 5672, queue_name: str = ""):
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 5672,
+        queue_name: str = "",
+        username: str = "guest",
+        password: str = "guest",
+        virtual_host: str = "/",
+        heartbeat: int = 60,
+        blocked_connection_timeout: int = 300,
+        socket_timeout: int = 10,
+        connection_attempts: int = 5,
+        retry_delay: int = 5,
+    ):
         """
         初始化 RabbitMQ 发送器
 
@@ -29,8 +48,31 @@ class RabbitMQSender:
         self.host = host
         self.port = port
         self.queue_name = queue_name
+        self.username = username
+        self.password = password
+        self.virtual_host = virtual_host
+        self.heartbeat = heartbeat
+        self.blocked_connection_timeout = blocked_connection_timeout
+        self.socket_timeout = socket_timeout
+        self.connection_attempts = connection_attempts
+        self.retry_delay = retry_delay
         self.connection: BlockingConnection | None = None
         self.channel = None
+
+    def _build_connection_parameters(self) -> ConnectionParameters:
+        """构造 RabbitMQ 连接参数。"""
+        credentials = PlainCredentials(self.username, self.password)
+        return ConnectionParameters(
+            host=self.host,
+            port=self.port,
+            virtual_host=self.virtual_host,
+            credentials=credentials,
+            heartbeat=self.heartbeat,
+            blocked_connection_timeout=self.blocked_connection_timeout,
+            socket_timeout=self.socket_timeout,
+            connection_attempts=self.connection_attempts,
+            retry_delay=self.retry_delay,
+        )
 
     def connect(self) -> bool:
         """
@@ -40,8 +82,7 @@ class RabbitMQSender:
             bool: 连接是否成功
         """
         try:
-            # 连接参数
-            parameters = ConnectionParameters(host=self.host, port=self.port)
+            parameters = self._build_connection_parameters()
             # 创建连接
             self.connection = BlockingConnection(parameters)
             self.channel = self.connection.channel()
@@ -52,13 +93,37 @@ class RabbitMQSender:
                     durable=True,
                     arguments={"x-queue-type": "quorum"},
                 )
-            logger.info("发送器成功连接到 RabbitMQ 服务器: %s:%s", self.host, self.port)
+            logger.info(
+                "发送器成功连接到 RabbitMQ 服务器: host=%s port=%s vhost=%s user=%s queue=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+            )
             return True
         except AMQPConnectionError as e:
-            logger.error("发送器连接 RabbitMQ 失败: %s", e)
+            logger.error(
+                "发送器连接 RabbitMQ 失败: host=%s port=%s vhost=%s user=%s queue=%s error_type=%s error=%r",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+                type(e).__name__,
+                e,
+            )
             return False
         except Exception as e:
-            logger.error("发送器连接时发生未知错误: %s", e)
+            logger.exception(
+                "发送器连接时发生未知错误: host=%s port=%s vhost=%s user=%s queue=%s error_type=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+                type(e).__name__,
+            )
             return False
 
     def send_message(self, message: Any) -> bool:
@@ -115,7 +180,14 @@ class RabbitMQSender:
     def _reconnect(self) -> bool:
         """重新建立连接"""
         try:
-            logger.info("尝试重新连接 RabbitMQ...")
+            logger.info(
+                "尝试重新连接 RabbitMQ: host=%s port=%s vhost=%s user=%s queue=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+            )
             # 关闭旧连接
             if self.connection and self.connection.is_open:
                 try:
@@ -123,7 +195,7 @@ class RabbitMQSender:
                 except Exception:
                     pass
             # 重新连接
-            parameters = ConnectionParameters(host=self.host, port=self.port)
+            parameters = self._build_connection_parameters()
             self.connection = BlockingConnection(parameters)
             self.channel = self.connection.channel()
             # 重新声明队列
@@ -133,10 +205,25 @@ class RabbitMQSender:
                     durable=True,
                     arguments={"x-queue-type": "quorum"},
                 )
-            logger.info("重连成功")
+            logger.info(
+                "重连成功: host=%s port=%s vhost=%s user=%s queue=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+            )
             return True
         except Exception as e:
-            logger.error("重连失败: %s", e)
+            logger.exception(
+                "重连失败: host=%s port=%s vhost=%s user=%s queue=%s error_type=%s",
+                self.host,
+                self.port,
+                self.virtual_host,
+                self.username,
+                self.queue_name,
+                type(e).__name__,
+            )
             return False
 
     def close(self) -> None:

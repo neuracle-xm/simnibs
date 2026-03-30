@@ -13,7 +13,7 @@ from alibabacloud_sts20150401 import models as sts_models
 from alibabacloud_sts20150401.client import Client as StsClient
 from alibabacloud_tea_openapi import models as open_api_models
 
-from neuracle.env import get_aliyun_config
+from neuracle.utils.env import get_aliyun_config
 
 logger = logging.getLogger(__name__)
 

@@ -75,6 +75,11 @@ class InverseParams:
     target_threshold: float
     cond: dict[str, float]
     anisotropy: bool
+    electrode_pair1_center: list[list[float]] | None = None
+    electrode_pair2_center: list[list[float]] | None = None
+    electrode_radius: list[float] | None = None
+    electrode_current1: list[float] | None = None
+    electrode_current2: list[float] | None = None
     DTI_file_path: str | None = None
 
 
@@ -89,7 +94,6 @@ class ModelResult:
 class ForwardResult:
     """正向仿真结果"""
 
-    T1_mni: str | None = None
     TI_file: str | None = None
 
 
@@ -97,7 +101,6 @@ class ForwardResult:
 class InverseResult:
     """逆向仿真结果"""
 
-    T1_mni: str | None = None
     TI_file: str | None = None
     electrode_A: list[str] | None = None
     electrode_B: list[str] | None = None

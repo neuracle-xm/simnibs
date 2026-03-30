@@ -143,7 +143,20 @@ def read_msh_surface(
     surface_tag = SURFACE_TAGS[surface_type]
     # SimNIBS 的 crop_mesh 在同时提供多个筛选条件时使用 OR，而不是 AND。
     # 这里 surface_tag 本身就是表面三角面标签，因此只按 tag 裁剪。
-    surface_mesh = mesh.crop_mesh(tags=surface_tag)
+    try:
+        surface_mesh = mesh.crop_mesh(tags=surface_tag)
+    except ValueError as exc:
+        # 某些优化结果文件本身已经是纯三角表面网格，不再包含
+        # central/white/pial 的体表面 tag。此时直接使用整张表面。
+        if mesh.elm.nr > 0 and np.all(mesh.elm.elm_type == 2):
+            logger.info(
+                "未找到表面 tag=%d，输入已是纯三角表面网格，直接使用整张网格: %s",
+                surface_tag,
+                msh_path,
+            )
+            surface_mesh = mesh
+        else:
+            raise exc
 
     if surface_mesh.elm.nr == 0:
         raise ValueError(
@@ -199,6 +212,13 @@ def _extract_surface_scalar_data(
             "请改用标量字段，例如 magnE、magnJ、TImax 或 v。"
         )
 
+    if len(mesh.elm.tetrahedra) == 0:
+        logger.info(
+            "输入网格不包含体元素，字段 '%s' 将按表面网格直接转换为顶点标量",
+            resolved_name,
+        )
+        return _extract_scalar_data_from_surface_field(surface_mesh, resolved_name)
+
     interp = field.interpolate_to_surface(surface_mesh)
     cdata = _normalize_scalar_data(interp.value, surface_mesh.nodes.nr)
     logger.info(
@@ -207,6 +227,43 @@ def _extract_surface_scalar_data(
         cdata.shape,
     )
     return cdata
+
+
+def _extract_scalar_data_from_surface_field(
+    surface_mesh: mesh_io.Msh,
+    field_name: str,
+) -> np.ndarray:
+    if field_name not in surface_mesh.field:
+        available_fields = ", ".join(sorted(surface_mesh.field.keys()))
+        raise ValueError(
+            f"表面网格中缺少字段 '{field_name}'。可用字段: {available_fields or '无'}"
+        )
+
+    field = surface_mesh.field[field_name]
+
+    if isinstance(field, mesh_io.NodeData):
+        cdata = _normalize_scalar_data(field.value, surface_mesh.nodes.nr)
+        logger.info(
+            "字段 '%s' 已直接作为表面顶点标量导出: %s",
+            field_name,
+            cdata.shape,
+        )
+        return cdata
+
+    if isinstance(field, mesh_io.ElementData):
+        values = np.asarray(field.value)
+        if values.ndim > 1:
+            values = np.squeeze(values, axis=-1)
+        node_values = surface_mesh.elm2node_matrix().dot(values)
+        cdata = _normalize_scalar_data(node_values, surface_mesh.nodes.nr)
+        logger.info(
+            "字段 '%s' 已由表面三角标量平均到顶点: %s",
+            field_name,
+            cdata.shape,
+        )
+        return cdata
+
+    raise TypeError(f"不支持的字段类型: {type(field)!r}")
 
 
 def msh_to_mz3(

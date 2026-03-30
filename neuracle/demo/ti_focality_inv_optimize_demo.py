@@ -1,7 +1,7 @@
 """
 TI Focality Inverse Optimization Demo - 反向 focality 优化
 
-演示如何使用 run_ti_optimization 函数执行 TI Focality Inverse 优化。
+演示如何使用步骤函数执行 TI Focality Inverse 优化。
 
 数据来源: data/m2m_ernie/
 
@@ -17,7 +17,13 @@ TI Focality Inverse Optimization Demo - 反向 focality 优化
 import os
 
 from neuracle.logger import setup_logging
-from neuracle.ti_optimize import run_ti_optimization
+from neuracle.ti_optimize import (
+    export_mz3,
+    init_optimization,
+    run_optimization,
+    setup_electrodes_and_roi,
+    setup_goal,
+)
 
 # 获取当前脚本所在目录的绝对路径
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -52,28 +58,56 @@ def main():
     print(f"Subject directory: {subject_dir}")
     print(f"Output directory: {output_dir}")
 
-    # 执行 TI Focality Inverse 优化
-    output_folder = run_ti_optimization(
+    # 1. 初始化优化结构
+    print("\n[1/5] 初始化优化结构...")
+    opt = init_optimization(
         subject_dir=subject_dir,
         output_dir=output_dir,
+    )
+
+    # 2. 配置目标函数
+    print("[2/5] 配置目标函数 (focality_inv)...")
+    setup_goal(
+        opt=opt,
         goal="focality_inv",
+        focality_threshold=[0.1, 0.2],
+    )
+
+    # 3. 配置电极对和 ROI
+    print("[3/5] 配置电极对和 ROI...")
+    setup_electrodes_and_roi(
+        opt=opt,
+        subject_dir=subject_dir,
+        goal="focality_inv",
+        electrode_pair1_center=[[0, 0]],
+        electrode_pair2_center=[[0, 0]],
+        electrode_radius=[10],
+        electrode_current1=[0.002, -0.002],
+        electrode_current2=[0.002, -0.002],
         roi_center=[-41.0, -13.0, 66.0],
         roi_radius=20.0,
         non_roi_center=[-41.0, -13.0, 66.0],
         non_roi_radius=25.0,
-        focality_threshold=[0.1, 0.2],
-        electrode_radius=[10],
-        electrode_current1=[0.002, -0.002],
-        electrode_current2=[0.002, -0.002],
-        map_to_net_electrodes=True,
-        run_mapped_electrodes_simulation=True,
-        net_electrode_file=EEG_ELECTRODE_FILE,
+    )
+
+    # 4. 运行优化
+    print("[4/5] 运行优化算法...")
+    output_folder = run_optimization(
+        opt=opt,
         n_workers=24,
+    )
+
+    # 5. 导出 MZ3 格式
+    print("[5/5] 导出 MZ3 格式...")
+    mz3_path = export_mz3(
+        output_dir=output_dir,
+        surface_type="central",
     )
 
     print("=" * 60)
     print("TI Focality Inverse 优化完成!")
     print(f"输出目录: {output_folder}")
+    print(f"MZ3 文件: {mz3_path}")
     print("=" * 60)
 
 

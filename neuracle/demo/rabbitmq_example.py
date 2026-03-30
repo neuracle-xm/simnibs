@@ -11,15 +11,23 @@ import logging
 from functools import partial
 from queue import Queue
 
-from neuracle.env import get_rabbitmq_config, load_env
 from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQListener, SenderThread
+from neuracle.utils.env import get_rabbitmq_config, load_env
 
 # 加载环境变量
 load_env()
 
 # 获取 logger
 logger = logging.getLogger(__name__)
+
+
+def mask_rabbitmq_config(config: dict) -> dict:
+    """隐藏敏感配置，避免密码写入日志。"""
+    masked = dict(config)
+    if masked.get("password"):
+        masked["password"] = "***"
+    return masked
 
 
 def message_callback(channel, method, properties, body, message_queue: Queue):
@@ -65,7 +73,7 @@ def main():
     setup_logging()
     # 从 .env 读取配置
     config = get_rabbitmq_config()
-    logger.info("RabbitMQ 配置: %s", config)
+    logger.info("RabbitMQ 配置: %s", mask_rabbitmq_config(config))
     message_queue = Queue()
     # 创建 sender 线程
     sender_thread = SenderThread(
@@ -73,6 +81,14 @@ def main():
         port=config["port"],
         queue_name=config["send_queue_name"],
         message_queue=message_queue,
+        username=config["username"],
+        password=config["password"],
+        virtual_host=config["virtual_host"],
+        heartbeat=config["heartbeat"],
+        blocked_connection_timeout=config["blocked_connection_timeout"],
+        socket_timeout=config["socket_timeout"],
+        connection_attempts=config["connection_attempts"],
+        retry_delay=config["retry_delay"],
     )
     sender_thread.start()
     # 创建 listener
@@ -80,18 +96,23 @@ def main():
         host=config["host"],
         port=config["port"],
         queue_name=config["listen_queue_name"],
+        username=config["username"],
+        password=config["password"],
+        virtual_host=config["virtual_host"],
+        heartbeat=config["heartbeat"],
+        blocked_connection_timeout=config["blocked_connection_timeout"],
+        socket_timeout=config["socket_timeout"],
+        connection_attempts=config["connection_attempts"],
+        retry_delay=config["retry_delay"],
     )
     # 使用 partial 绑定自定义参数
     callback_with_args = partial(message_callback, message_queue=message_queue)
     # 连接并开始消费
-    if listener.connect():
-        logger.info("开始监听消息...")
-        try:
-            listener.start_consume(callback_with_args)
-        except KeyboardInterrupt:
-            logger.info("收到中断信号，正在停止...")
-    else:
-        logger.error("连接失败，请检查 RabbitMQ 服务器是否运行")
+    logger.info("开始监听消息...")
+    try:
+        listener.consume_forever(callback_with_args)
+    except KeyboardInterrupt:
+        logger.info("收到中断信号，正在停止...")
     # 停止发送线程
     sender_thread.stop()
     sender_thread.join(timeout=5)

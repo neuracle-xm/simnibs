@@ -19,6 +19,7 @@ CHARM 步骤4: Atlas 初始仿射配准与颈部校正
 用法：
     python -m neuracle.charm.init_atlas <subid> [--use-transform <transform_file>]
 """
+
 import logging
 import os
 
@@ -26,9 +27,11 @@ import numpy as np
 
 from neuracle.charm.nifti_utils import MAX_THREADS, _read_settings, _setup_atlas
 from simnibs.segmentation import charm_utils, simnibs_samseg
-from simnibs.utils import file_finder, settings_reader
+from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
+
+
 def init_atlas(
     subject_dir: str,
     use_transform: str | None = None,
@@ -54,7 +57,7 @@ def init_atlas(
     None
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
-    settings = _read_settings(sub_files.settings)
+    settings = _read_settings()
     samseg_settings = settings["samseg"]
     num_threads = settings["general"]["threads"]
     if isinstance(num_threads, int) and num_threads > 0:
@@ -96,7 +99,9 @@ def init_atlas(
                 input_t1, mni_template, mni_settings
             )
         else:
-            logger.info("仿射初始化类型未知 (%s)，默认为 'atlas'", samseg_settings["init_type"])
+            logger.info(
+                "仿射初始化类型未知 (%s)，默认为 'atlas'", samseg_settings["init_type"]
+            )
             trans_mat = None
     if init_transform is not None:
         logger.info("使用初始变换矩阵: %s", init_transform)
@@ -120,6 +125,8 @@ def init_atlas(
         init_transform=init_transform,
     )
     logger.info("Atlas 配准完成")
+
+
 def _read_transform(transform_file: str) -> np.ndarray:
     """
     读取变换矩阵
@@ -140,4 +147,3 @@ def _read_transform(transform_file: str) -> np.ndarray:
     )
     RAS2LPS = np.diag([-1, -1, 1, 1])
     return RAS2LPS @ transform @ RAS2LPS
-

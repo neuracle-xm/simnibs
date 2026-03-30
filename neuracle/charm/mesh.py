@@ -21,6 +21,7 @@ CHARM 步骤7: 四面体网格生成
 用法：
     python -m neuracle.charm.mesh <subid> [--debug]
 """
+
 import glob
 import logging
 import os
@@ -36,6 +37,8 @@ from simnibs.utils import cond_utils, file_finder, transformations
 from simnibs.utils.transformations import crop_vol
 
 logger = logging.getLogger(__name__)
+
+
 def create_mesh_step(
     subject_dir: str,
     debug: bool = False,
@@ -55,7 +58,8 @@ def create_mesh_step(
     None
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
-    settings = _read_settings(sub_files.settings)
+    output_msh_path = os.path.join(subject_dir, "model.msh")
+    settings = _read_settings()
     mesh_settings = settings["mesh"]
     logger.info("开始生成网格")
     label_image = nib.load(sub_files.tissue_labeling_upsampled)
@@ -116,9 +120,9 @@ def create_mesh_step(
         debug=debug,
     )
     logger.info("正在写入网格文件")
-    write_msh(final_mesh, sub_files.fnamehead)
+    write_msh(final_mesh, output_msh_path)
     v = final_mesh.view(cond_list=cond_utils.standard_cond(), add_logo=True)
-    v.write_opt(sub_files.fnamehead)
+    v.write_opt(output_msh_path)
     logger.info("正在变换 EEG 电极位置")
     idx = (final_mesh.elm.elm_type == 2) & (final_mesh.elm.tag1 == skin_tag)
     mesh = final_mesh.crop_mesh(elements=final_mesh.elm.elm_number[idx])
@@ -156,4 +160,3 @@ def create_mesh_step(
     fn_lut = sub_files.final_labels.rsplit(".", 2)[0] + "_LUT.txt"
     shutil.copyfile(file_finder.templates.final_tissues_LUT, fn_lut)
     logger.info("网格生成完成")
-

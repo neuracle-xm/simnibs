@@ -12,8 +12,8 @@ CHARM 步骤1: T1 图像准备
 用法：
     python -m neuracle.charm.prepare_t1 <subid> <T1_file> [--forcesform]
 """
+
 import logging
-import os
 
 import nibabel as nib
 import numpy as np
@@ -22,6 +22,8 @@ from neuracle.charm.nifti_utils import _check_q_and_s_form
 from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
+
+
 def prepare_t1(
     subject_dir: str,
     t1: str,
@@ -60,4 +62,3 @@ def prepare_t1(
     t1_tmp.set_data_dtype(np.float32)
     nib.save(t1_tmp, sub_files.reference_volume)
     logger.info("T1 图像已保存至: %s", sub_files.reference_volume)
-

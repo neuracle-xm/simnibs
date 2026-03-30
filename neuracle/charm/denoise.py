@@ -18,6 +18,7 @@ CHARM 步骤3: 输入图像降噪
 用法：
     python -m neuracle.charm.denoise <subid>
 """
+
 import logging
 import os
 
@@ -26,6 +27,8 @@ from simnibs.segmentation import charm_utils
 from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
+
+
 def denoise_inputs(subject_dir: str) -> None:
     """
     对输入图像进行降噪
@@ -40,7 +43,7 @@ def denoise_inputs(subject_dir: str) -> None:
     None
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
-    settings = _read_settings(sub_files.settings)
+    settings = _read_settings()
     denoise_settings = settings["preprocess"]
     do_denoise = denoise_settings["denoise"]
     if not do_denoise:
@@ -58,6 +61,8 @@ def denoise_inputs(subject_dir: str) -> None:
         "registered T2",
     )
     logger.info("降噪完成")
+
+
 def _denoise_if_needed(
     input_path: str,
     output_path: str,
@@ -82,4 +87,3 @@ def _denoise_if_needed(
     else:
         logger.info("正在对 %s 进行降噪并保存。", name)
         charm_utils._denoise_input_and_save(input_path, output_path)
-

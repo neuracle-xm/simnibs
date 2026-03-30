@@ -281,7 +281,7 @@ class TesFlexOptimization:
         logger.info( "Setting up headmodel ...")
 
         # get subject specific filenames
-        self._ff_subject = SubjectFiles(subpath=self.subpath)
+        self._ff_subject = SubjectFiles(fnamehead=self.fn_mesh, subpath=self.subpath)
 
         # read mesh or store in self
         self.fn_mesh = self._ff_subject.fnamehead

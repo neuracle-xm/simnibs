@@ -20,6 +20,7 @@ CHARM 步骤5: 体积与表面分割
 用法：
     python -m neuracle.charm.segment <subid> [--debug]
 """
+
 import logging
 import os
 import shutil
@@ -28,9 +29,11 @@ import nibabel as nib
 
 from neuracle.charm.nifti_utils import MAX_THREADS, _read_settings, _setup_atlas
 from simnibs.segmentation import charm_utils, simnibs_samseg
-from simnibs.utils import file_finder, settings_reader
+from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
+
+
 def run_segmentation(
     subject_dir: str,
     debug: bool = False,
@@ -50,7 +53,7 @@ def run_segmentation(
     None
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
-    settings = _read_settings(sub_files.settings)
+    settings = _read_settings()
     samseg_settings = settings["samseg"]
     segment_settings = settings["segment"]
     num_threads = settings["general"]["threads"]
@@ -173,4 +176,3 @@ def run_segmentation(
     fn_lut = sub_files.tissue_labeling_upsampled.rsplit(".", 2)[0] + "_LUT.txt"
     shutil.copyfile(file_finder.templates.final_tissues_LUT, fn_lut)
     logger.info("分割完成")
-

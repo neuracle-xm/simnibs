@@ -11,19 +11,20 @@ CHARM 步骤2: T2 图像配准与准备
 用法：
     python -m neuracle.charm.prepare_t2 <subid> <T2_file> [--register-t2]
 """
+
+import logging
 import os
 
 import nibabel as nib
 import numpy as np
 
-from simnibs.utils import file_finder
-from simnibs.segmentation import charm_utils
-
 from neuracle.charm.nifti_utils import _check_q_and_s_form
-
-import logging
+from simnibs.segmentation import charm_utils
+from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
+
+
 def prepare_t2(
     subject_dir: str,
     t2: str,
@@ -75,4 +76,3 @@ def prepare_t2(
         t2_tmp.set_data_dtype(np.float32)
         nib.save(t2_tmp, sub_files.T2_reg)
         logger.info("T2 图像已保存至: %s", sub_files.T2_reg)
-

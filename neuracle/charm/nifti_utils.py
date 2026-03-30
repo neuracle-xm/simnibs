@@ -8,6 +8,7 @@ import os
 import nibabel as nib
 import numpy as np
 
+from simnibs import SIMNIBSDIR
 from simnibs.utils import file_finder, settings_reader
 
 logger = logging.getLogger(__name__)
@@ -65,21 +66,17 @@ def _check_q_and_s_form(
     return scan
 
 
-def _read_settings(fn_settings: str) -> dict:
+def _read_settings() -> dict:
     """
     读取 CHARM 设置文件
-
-    Parameters
-    ----------
-    fn_settings : str
-        设置文件路径
 
     Returns
     -------
     dict
         设置字典
     """
-    return settings_reader.read_ini(fn_settings)
+    src_settings = os.path.join(SIMNIBSDIR, "charm.ini")
+    return settings_reader.read_ini(src_settings)
 
 
 def _setup_atlas(
