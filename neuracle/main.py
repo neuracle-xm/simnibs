@@ -51,9 +51,6 @@ from neuracle.rabbitmq.validator import (
     validate_model_params,
 )
 from neuracle.ti_optimize import (
-    export_mz3 as optimize_export_mz3,
-)
-from neuracle.ti_optimize import (
     get_electrode_mapping,
     init_optimization,
     run_optimization,
@@ -66,9 +63,6 @@ from neuracle.ti_simulation import (
     setup_electrode_pair1,
     setup_electrode_pair2,
     setup_session,
-)
-from neuracle.ti_simulation import (
-    export_mz3 as sim_export_mz3,
 )
 from neuracle.utils import (
     N_WORKERS,
@@ -83,6 +77,7 @@ from neuracle.utils import (
     load_env,
 )
 from neuracle.utils.env import get_aliyun_config, get_rabbitmq_config
+from neuracle.utils.ti_export_utils import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
 
@@ -482,18 +477,19 @@ def handle_forward_task(
     )
     send_progress(message_queue, task_id, "forward", 85)
 
-    # 95% - export_mz3
-    mz3_path = sim_export_mz3(
-        ti_mesh_path=ti_mesh_path,
+    # 95% - export_ti_to_nifti
+    ti_nifti_path = export_ti_to_nifti(
+        msh_path=ti_mesh_path,
         output_dir=str(output_dir),
-        surface_type="central",
+        reference=str(subject_dir / params.T1_file_path),
+        field_name="max_TI",
     )
     send_progress(message_queue, task_id, "forward", 95)
 
     ti_file_key = upload_task_result(
         bucket,
-        Path(mz3_path),
-        f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}/TI.mz3",
+        Path(ti_nifti_path),
+        f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}/TI_max_TI.nii.gz",
     )
     if DEBUG:
         logger.info("DEBUG 模式，跳过删除 output_dir: %s", output_dir)
@@ -611,21 +607,23 @@ def handle_inverse_task(
     electrode_A, electrode_B = get_electrode_mapping(output_dir=str(output_dir))
     send_progress(message_queue, task_id, "inverse", 90)
 
-    # 95% - export_mz3
-    # 从 mesh_path 中提取 modelid，格式如 data/xxx/model.msh -> model
-    modelid = Path(mesh_path).stem
+    # 95% - export_ti_to_nifti
+    # 从 dir_path 中提取 modelid，格式如 m2m_ernie -> ernie
+    modelid = params.dir_path.split("m2m_")[-1]
     msh_name = f"{modelid}_tes_mapped_opt_surface_mesh.msh"
-    mz3_path = optimize_export_mz3(
-        output_dir=str(output_dir / "mapped_electrodes_simulation"),
-        msh_name=msh_name,
-        surface_type="central",
+    msh_path = str(output_dir / "mapped_electrodes_simulation" / msh_name)
+    ti_nifti_path = export_ti_to_nifti(
+        msh_path=msh_path,
+        output_dir=str(output_dir),
+        reference=str(subject_dir / params.T1_file_path),
+        field_name="max_TI",
     )
     send_progress(message_queue, task_id, "inverse", 95)
 
     ti_file_key = upload_task_result(
         bucket,
-        Path(mz3_path),
-        f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}/TI.mz3",
+        Path(ti_nifti_path),
+        f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}/TI_max_TI.nii.gz",
     )
     if DEBUG:
         logger.info("DEBUG 模式，跳过删除 output_dir: %s", output_dir)

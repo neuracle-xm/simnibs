@@ -1,0 +1,91 @@
+"""
+TI 导出工具函数
+"""
+
+import logging
+import os
+
+from simnibs import ElementTags, mesh_io
+from simnibs.utils.transformations import interpolate_to_volume
+
+logger = logging.getLogger(__name__)
+
+
+def export_ti_to_nifti(
+    msh_path: str,
+    output_dir: str,
+    reference: str,
+    field_name: str,
+) -> str:
+    """
+    将 TI 场从 mesh 导出到 NIfTI 格式
+
+    Parameters
+    ----------
+    msh_path : str
+        源 mesh 文件路径
+    output_dir : str
+        输出目录
+    reference : str
+        参考 NIfTI 文件路径（用于确定输出空间）
+    field_name : str
+        mesh 中使用的字段名，固定为 "max_TI"
+
+    Returns
+    -------
+    str
+        NIfTI 文件路径
+    """
+    logger.info("将 TI 结果导出到 NIfTI 格式...")
+    mesh = mesh_io.read_msh(msh_path)
+
+    # interpolate_to_volume 会在输出文件名后加 _field_name
+    # 所以传 "TI.nii.gz" 会生成 "TI_max_TI.nii.gz"
+    nifti_path = os.path.join(output_dir, "TI.nii.gz")
+    interpolate_to_volume(
+        mesh,
+        reference,
+        nifti_path,
+        method="linear",
+        keep_tissues=[ElementTags.WM, ElementTags.GM],
+    )
+
+    # 返回实际生成的文件路径
+    actual_path = os.path.join(output_dir, f"TI_{field_name}.nii.gz")
+    logger.info("NIfTI 导出完成: %s", actual_path)
+    return actual_path
+
+
+def export_ti_to_mz3(
+    ti_mesh_path: str,
+    output_dir: str,
+    surface_type: str = "central",
+) -> str:
+    """
+    导出 TI 结果到 MZ3 格式
+
+    Parameters
+    ----------
+    ti_mesh_path : str
+        TI 结果网格路径
+    output_dir : str
+        输出目录
+    surface_type : str
+        表面类型 (default: "central")
+
+    Returns
+    -------
+    str
+        MZ3 文件路径
+    """
+    from neuracle.mesh_tools import msh_to_mz3
+
+    logger.info("导出 TI 结果到 MZ3 格式...")
+    mz3_path = msh_to_mz3(
+        msh_path=ti_mesh_path,
+        output_dir=output_dir,
+        surface_type=surface_type,
+        field_name="max_TI",
+    )
+    logger.info("MZ3 导出完成: %s", mz3_path)
+    return mz3_path

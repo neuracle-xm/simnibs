@@ -18,12 +18,12 @@ import os
 
 from neuracle.logger import setup_logging
 from neuracle.ti_optimize import (
-    export_mz3,
     init_optimization,
     run_optimization,
     setup_electrodes_and_roi,
     setup_goal,
 )
+from neuracle.utils.ti_export_utils import export_ti_to_nifti
 
 # 获取当前脚本所在目录的绝对路径
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -96,17 +96,24 @@ def main():
         n_workers=24,
     )
 
-    # 5. 导出 MZ3 格式
-    print("[5/5] 导出 MZ3 格式...")
-    mz3_path = export_mz3(
+    # 5. 导出 NIfTI 格式
+    print("[5/5] 导出 NIfTI 格式...")
+    msh_path = os.path.join(
+        output_folder,
+        "mapped_electrodes_simulation",
+        "model_tes_mapped_opt_surface_mesh.msh",
+    )
+    ti_nifti_path = export_ti_to_nifti(
+        msh_path=msh_path,
         output_dir=output_dir,
-        surface_type="central",
+        reference=os.path.join(subject_dir, "T1.nii.gz"),
+        field_name="max_TI",
     )
 
     print("=" * 60)
     print("TI Focality 优化完成!")
     print(f"输出目录: {output_folder}")
-    print(f"MZ3 文件: {mz3_path}")
+    print(f"TI NIfTI 文件: {ti_nifti_path}")
     print("=" * 60)
 
 

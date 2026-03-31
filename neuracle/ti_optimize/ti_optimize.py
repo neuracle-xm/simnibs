@@ -13,7 +13,6 @@ TI Optimization - Temporal Interference 逆向仿真优化
         setup_goal,
         setup_electrodes_and_roi,
         run_optimization,
-        export_mz3,
     )
 
     # 1. 初始化
@@ -27,16 +26,12 @@ TI Optimization - Temporal Interference 逆向仿真优化
 
     # 4. 运行优化
     run_optimization(opt, n_workers=24)
-
-    # 5. 导出结果
-    mz3_path = export_mz3(output_dir)
 """
 
 import json
 import logging
 import os
 
-from neuracle.mesh_tools import msh_to_mz3
 from simnibs import opt_struct
 
 logger = logging.getLogger(__name__)
@@ -342,44 +337,6 @@ def run_optimization(
     opt.run(cpus=n_workers)
     logger.info("优化完成，结果保存在: %s", opt.output_folder)
     return opt.output_folder
-
-
-def export_mz3(
-    output_dir: str,
-    msh_name: str,
-    surface_type: str = "central",
-) -> str:
-    """
-    导出优化结果到 MZ3 格式
-
-    Parameters
-    ----------
-    output_dir : str
-        MZ3 输出目录
-    msh_name : str
-        源 .msh 文件名称（不含路径）
-    surface_type : str
-        表面类型 (default: "central")
-
-    Returns
-    -------
-    str
-        MZ3 文件路径
-    """
-    msh_path = os.path.join(output_dir, msh_name)
-
-    if not os.path.exists(msh_path):
-        raise FileNotFoundError(f"msh 文件不存在: {msh_path}")
-
-    logger.info("导出优化结果到 MZ3 格式...")
-    mz3_path = msh_to_mz3(
-        msh_path=msh_path,
-        output_dir=output_dir,
-        surface_type=surface_type,
-        field_name="max_TI",
-    )
-    logger.info("MZ3 导出完成: %s", mz3_path)
-    return mz3_path
 
 
 def get_electrode_mapping(output_dir: str) -> tuple[list[str], list[str]]:

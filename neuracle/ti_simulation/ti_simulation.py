@@ -15,7 +15,6 @@ TI Simulation - Temporal Interference 正向仿真
         setup_electrode_pair2,
         run_tdcs_simulation,
         calculate_ti,
-        export_mz3,
     )
 
     # 1. 配置会话
@@ -30,9 +29,6 @@ TI Simulation - Temporal Interference 正向仿真
 
     # 4. 计算 TI
     ti_mesh, ti_max = calculate_ti(mesh1, mesh2, output_dir)
-
-    # 5. 导出结果
-    mz3_path = export_mz3(ti_mesh, output_dir)
 """
 
 import logging
@@ -285,56 +281,19 @@ def calculate_ti(
     logger.info("生成 TI 可视化输出...")
     mout = deepcopy(m1)
     mout.elmdata = []
-    mout.add_element_field(ef1.norm(), "magnE - pair 1")
-    mout.add_element_field(ef2.norm(), "magnE - pair 2")
-    mout.add_element_field(ti_max, "TImax")
+    mout.add_element_field(ti_max, "max_TI")
 
     ti_mesh_path = os.path.join(output_dir, "TI.msh")
     mesh_io.write_msh(mout, ti_mesh_path)
 
     v = mout.view(
         visible_tags=[1002, 1006],
-        visible_fields="TImax",
+        visible_fields="max_TI",
     )
     v.write_opt(ti_mesh_path)
 
     logger.info("TI 计算完成，输出文件: %s", ti_mesh_path)
     return ti_mesh_path
-
-
-def export_mz3(
-    ti_mesh_path: str,
-    output_dir: str,
-    surface_type: str = "central",
-) -> str:
-    """
-    导出 TI 结果到 MZ3 格式
-
-    Parameters
-    ----------
-    ti_mesh_path : str
-        TI 结果网格路径
-    output_dir : str
-        输出目录
-    surface_type : str
-        表面类型 (default: "central")
-
-    Returns
-    -------
-    str
-        MZ3 文件路径
-    """
-    from neuracle.mesh_tools import msh_to_mz3
-
-    logger.info("导出 TI 结果到 MZ3 格式...")
-    mz3_path = msh_to_mz3(
-        msh_path=ti_mesh_path,
-        output_dir=output_dir,
-        surface_type=surface_type,
-        field_name="TImax",
-    )
-    logger.info("MZ3 导出完成: %s", mz3_path)
-    return mz3_path
 
 
 def _setup_electrode_pair(

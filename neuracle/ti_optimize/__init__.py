@@ -5,7 +5,6 @@ TI Optimization 模块
 """
 
 from neuracle.ti_optimize.ti_optimize import (
-    export_mz3,
     get_electrode_mapping,
     init_optimization,
     run_optimization,
@@ -19,5 +18,4 @@ __all__ = [
     "setup_electrodes_and_roi",
     "run_optimization",
     "get_electrode_mapping",
-    "export_mz3",
 ]
