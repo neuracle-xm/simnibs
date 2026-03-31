@@ -298,7 +298,7 @@ def send_progress(
     task_id: str,
     msg_type: str,
     progress_rate: int,
-    message: str | None = None,
+    error_message: str | None = None,
     result: dict | None = None,
 ) -> None:
     """
@@ -314,8 +314,8 @@ def send_progress(
         任务类型：model, forward, inverse
     progress_rate : int
         进度百分比 (0-100)
-    message : str, optional
-        状态描述
+    error_message : str, optional
+        错误消息，无错时为 None
     result : dict, optional
         结果数据
     """
@@ -323,7 +323,7 @@ def send_progress(
         id=task_id,
         msg_type=msg_type,
         progress_rate=progress_rate,
-        message=message,
+        message=error_message,
         result=result,
     )
 
@@ -369,11 +369,11 @@ def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -
         )
 
     # 0% - 任务开始
-    send_progress(message_queue, task_id, "model", 0, "任务开始")
+    send_progress(message_queue, task_id, "model", 0)
 
     # 10% - prepare_t1
     prepare_t1(str(subject_dir), str(t1_local_path))
-    send_progress(message_queue, task_id, "model", 10, "已完成: T1 图像准备与格式转换")
+    send_progress(message_queue, task_id, "model", 10)
 
     # 20% - prepare_t2
     if t2_local_path:
@@ -381,25 +381,23 @@ def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -
             prepare_t2(str(subject_dir), str(t2_local_path))
         except Exception:
             prepare_t2(str(subject_dir), str(t2_local_path), force_sform=True)
-        send_progress(message_queue, task_id, "model", 20, "已完成: T2 图像配准与准备")
+        send_progress(message_queue, task_id, "model", 20)
 
     # 35% - denoise
     denoise_inputs(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 35, "已完成: 输入图像降噪")
+    send_progress(message_queue, task_id, "model", 35)
 
     # 50% - init_atlas
     init_atlas(str(subject_dir))
-    send_progress(
-        message_queue, task_id, "model", 50, "已完成: Atlas 初始仿射配准与颈部校正"
-    )
+    send_progress(message_queue, task_id, "model", 50)
 
     # 70% - segment
     run_segmentation(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 70, "已完成: 体积与表面分割")
+    send_progress(message_queue, task_id, "model", 70)
 
     # 85% - create_surfaces
     create_surfaces(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 85, "已完成: 皮层表面重建")
+    send_progress(message_queue, task_id, "model", 85)
 
     # 100% - mesh
     create_mesh(str(subject_dir))
@@ -407,9 +405,7 @@ def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -
     msh_path = f"{normalize_dir_path(params.dir_path)}/model.msh"
     result = {"msh_file_path": msh_path}
     logger.debug("msh_file_path: %s", msh_path)
-    send_progress(
-        message_queue, task_id, "model", 100, "已完成: 四面体网格生成", result
-    )
+    send_progress(message_queue, task_id, "model", 100, result=result)
 
 
 def handle_forward_task(
@@ -439,7 +435,7 @@ def handle_forward_task(
     dti_path = resolve_local_dti_path(params.dir_path, params.DTI_file_path)
 
     # 0% - 任务开始
-    send_progress(message_queue, task_id, "forward", 0, "任务开始")
+    send_progress(message_queue, task_id, "forward", 0)
 
     # 10% - setup_session
     S = setup_session(
@@ -451,7 +447,7 @@ def handle_forward_task(
         fname_tensor=dti_path,
         eeg_cap=eeg_cap,
     )
-    send_progress(message_queue, task_id, "forward", 10, "已完成: 配置会话参数")
+    send_progress(message_queue, task_id, "forward", 10)
 
     # 20% - setup_electrode_pair1
     setup_electrode_pair1(
@@ -459,7 +455,7 @@ def handle_forward_task(
         electrode_pair1=params.electrode_A,
         current1=params.current_A,
     )
-    send_progress(message_queue, task_id, "forward", 20, "已完成: 配置第一个电极对")
+    send_progress(message_queue, task_id, "forward", 20)
 
     # 35% - setup_electrode_pair2
     setup_electrode_pair2(
@@ -467,7 +463,7 @@ def handle_forward_task(
         electrode_pair2=params.electrode_B,
         current2=params.current_B,
     )
-    send_progress(message_queue, task_id, "forward", 35, "已完成: 配置第二个电极对")
+    send_progress(message_queue, task_id, "forward", 35)
 
     # 70% - run_tdcs
     mesh1_path, mesh2_path = run_tdcs_simulation(
@@ -476,7 +472,7 @@ def handle_forward_task(
         output_dir=str(output_dir),
         n_workers=N_WORKERS,
     )
-    send_progress(message_queue, task_id, "forward", 70, "已完成: TDCS 仿真计算")
+    send_progress(message_queue, task_id, "forward", 70)
 
     # 85% - calculate_ti
     ti_mesh_path = calculate_ti(
@@ -484,7 +480,7 @@ def handle_forward_task(
         mesh2_path=mesh2_path,
         output_dir=str(output_dir),
     )
-    send_progress(message_queue, task_id, "forward", 85, "已完成: TI 场计算")
+    send_progress(message_queue, task_id, "forward", 85)
 
     # 95% - export_mz3
     mz3_path = sim_export_mz3(
@@ -492,7 +488,7 @@ def handle_forward_task(
         output_dir=str(output_dir),
         surface_type="central",
     )
-    send_progress(message_queue, task_id, "forward", 95, "已完成: 导出 MZ3 格式")
+    send_progress(message_queue, task_id, "forward", 95)
 
     ti_file_key = upload_task_result(
         bucket,
@@ -506,7 +502,7 @@ def handle_forward_task(
 
     result = {"TI_file": ti_file_key}
     logger.debug("TI_file: %s", ti_file_key)
-    send_progress(message_queue, task_id, "forward", 100, "已完成: 仿真完成", result)
+    send_progress(message_queue, task_id, "forward", 100, result=result)
 
 
 def handle_inverse_task(
@@ -561,7 +557,7 @@ def handle_inverse_task(
         roi_center_space = "mni"
 
     # 0% - 任务开始
-    send_progress(message_queue, task_id, "inverse", 0, "任务开始")
+    send_progress(message_queue, task_id, "inverse", 0)
 
     # 10% - init_optimization
     opt = init_optimization(
@@ -572,7 +568,12 @@ def handle_inverse_task(
         cond=cond_dict_to_list(params.cond),
         fname_tensor=dti_path,
     )
-    send_progress(message_queue, task_id, "inverse", 10, "已完成: 初始化优化结构")
+    send_progress(
+        message_queue,
+        task_id,
+        "inverse",
+        10,
+    )
 
     # 20% - setup_goal
     setup_goal(
@@ -581,7 +582,7 @@ def handle_inverse_task(
         focality_threshold=[focality_threshold, NON_ROI_THRESHOLD],
         net_electrode_file=net_electrode_file,
     )
-    send_progress(message_queue, task_id, "inverse", 20, "已完成: 配置目标函数")
+    send_progress(message_queue, task_id, "inverse", 20)
 
     # 35% - setup_electrodes_and_roi
     setup_electrodes_and_roi(
@@ -600,15 +601,15 @@ def handle_inverse_task(
         non_roi_center=None,
         non_roi_radius=None,
     )
-    send_progress(message_queue, task_id, "inverse", 35, "已完成: 配置电极对和 ROI")
+    send_progress(message_queue, task_id, "inverse", 35)
 
     # 85% - run_optimization
     run_optimization(opt=opt, n_workers=N_WORKERS)
-    send_progress(message_queue, task_id, "inverse", 85, "已完成: 优化算法执行")
+    send_progress(message_queue, task_id, "inverse", 85)
 
     # 90% - get_electrode_mapping
     electrode_A, electrode_B = get_electrode_mapping(output_dir=str(output_dir))
-    send_progress(message_queue, task_id, "inverse", 90, "已完成: 获取电极映射结果")
+    send_progress(message_queue, task_id, "inverse", 90)
 
     # 95% - export_mz3
     # 从 mesh_path 中提取 modelid，格式如 data/xxx/model.msh -> model
@@ -619,7 +620,7 @@ def handle_inverse_task(
         msh_name=msh_name,
         surface_type="central",
     )
-    send_progress(message_queue, task_id, "inverse", 95, "已完成: 导出 MZ3 格式")
+    send_progress(message_queue, task_id, "inverse", 95)
 
     ti_file_key = upload_task_result(
         bucket,
@@ -642,12 +643,12 @@ def handle_inverse_task(
         electrode_A,
         electrode_B,
     )
-    send_progress(message_queue, task_id, "inverse", 100, "已完成: 优化完成", result)
+    send_progress(message_queue, task_id, "inverse", 100, result=result)
 
 
 def handle_ack_test_task(message_queue: Queue, task_id: str, params: Any) -> None:
     """处理 ack 时机验证任务。"""
-    send_progress(message_queue, task_id, "ack_test", 0, "任务开始")
+    send_progress(message_queue, task_id, "ack_test", 0)
     logger.info(
         "worker_started: task_id=%s type=ack_test sleep_seconds=%.2f",
         task_id,
@@ -656,9 +657,7 @@ def handle_ack_test_task(message_queue: Queue, task_id: str, params: Any) -> Non
     time.sleep(params.sleep_seconds)
     logger.info("worker_finished: task_id=%s type=ack_test", task_id)
     result = {"sleep_seconds": params.sleep_seconds}
-    send_progress(
-        message_queue, task_id, "ack_test", 100, "已完成: ack_test 完成", result
-    )
+    send_progress(message_queue, task_id, "ack_test", 100, result=result)
 
 
 def execute_task(
