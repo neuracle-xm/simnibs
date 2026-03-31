@@ -429,6 +429,12 @@ def handle_forward_task(
     mesh_path = get_model_mesh_path(params.dir_path)
     dti_path = resolve_local_dti_path(params.dir_path, params.DTI_file_path)
 
+    # 从 ElectrodeWithCurrent 对象中提取电极名称和电流
+    electrode_A_names = [e.name for e in params.electrode_A]
+    electrode_A_currents = [e.current_mA for e in params.electrode_A]
+    electrode_B_names = [e.name for e in params.electrode_B]
+    electrode_B_currents = [e.current_mA for e in params.electrode_B]
+
     # 0% - 任务开始
     send_progress(message_queue, task_id, "forward", 0)
 
@@ -438,7 +444,7 @@ def handle_forward_task(
         msh_file_path=str(mesh_path),
         output_dir=str(output_dir),
         anisotropy_type=anisotropy_type,
-        cond=cond_dict_to_list(params.cond),
+        cond=cond_dict_to_list(params.conductivity_config),
         fname_tensor=dti_path,
         eeg_cap=eeg_cap,
     )
@@ -447,16 +453,16 @@ def handle_forward_task(
     # 20% - setup_electrode_pair1
     setup_electrode_pair1(
         session=S,
-        electrode_pair1=params.electrode_A,
-        current1=params.current_A,
+        electrode_pair1=electrode_A_names,
+        current1=electrode_A_currents,
     )
     send_progress(message_queue, task_id, "forward", 20)
 
     # 35% - setup_electrode_pair2
     setup_electrode_pair2(
         session=S,
-        electrode_pair2=params.electrode_B,
-        current2=params.current_B,
+        electrode_pair2=electrode_B_names,
+        current2=electrode_B_currents,
     )
     send_progress(message_queue, task_id, "forward", 35)
 
@@ -561,7 +567,7 @@ def handle_inverse_task(
         msh_file_path=str(mesh_path),
         output_dir=str(output_dir),
         anisotropy_type=anisotropy_type,
-        cond=cond_dict_to_list(params.cond),
+        cond=cond_dict_to_list(params.conductivity_config),
         fname_tensor=dti_path,
     )
     send_progress(
@@ -584,11 +590,6 @@ def handle_inverse_task(
     setup_electrodes_and_roi(
         opt=opt,
         goal="focality",
-        electrode_pair1_center=params.electrode_pair1_center,
-        electrode_pair2_center=params.electrode_pair2_center,
-        electrode_radius=params.electrode_radius,
-        electrode_current1=params.electrode_current1,
-        electrode_current2=params.electrode_current2,
         roi_center=roi_center,
         roi_radius=roi_radius,
         roi_center_space=roi_center_space,

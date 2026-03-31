@@ -116,13 +116,17 @@
   "type": "forward",
   "params": {
     "dir_path": "C:/data/m2m_ernie",
-    "msh_file_path": "C:/data/m2m_ernie/model.msh",
+    "T1_file_path": "C:/data/m2m_ernie/T1.nii.gz",
     "montage": "EEG10-10_UI_Jurak_2007",
-    "electrode_A": ["F5", "P5"],
-    "electrode_B": ["F6", "P6"],
-    "current_A": [0.002, -0.002],
-    "current_B": [0.001, -0.001],
-    "cond": {
+    "electrode_A": [
+      { "name": "F5", "current_mA": 2.0 },
+      { "name": "P5", "current_mA": -2.0 }
+    ],
+    "electrode_B": [
+      { "name": "F6", "current_mA": 1.0 },
+      { "name": "P6", "current_mA": -1.0 }
+    ],
+    "conductivity_config": {
       "White Matter": 0.126,
       "Gray Matter": 0.275,
       "CSF": 1.654,
@@ -142,14 +146,12 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `params.dir_path` | string | 是 | 头模目录 |
-| `params.msh_file_path` | string | 是 | 网格路径 |
+| `params.T1_file_path` | string | 是 | T1 文件路径 |
 | `params.montage` | string | 是 | Montage 名称或绝对路径 |
-| `params.electrode_A` | string[] | 是 | 第一组电极标签 |
-| `params.electrode_B` | string[] | 是 | 第二组电极标签 |
-| `params.current_A` | number[] | 是 | 与 `electrode_A` 长度一致，且总和为 0 |
-| `params.current_B` | number[] | 是 | 与 `electrode_B` 长度一致，且总和为 0 |
-| `params.cond` | object | 是 | 电导率字典，值必须为数字 |
-| `params.anisotropy` | boolean | 是 | 是否启用各向异性 |
+| `params.electrode_A` | list[dict] | 是 | 第一组电极，元素为 `{"name": str, "current_mA": number}`，current_mA 总和必须为 0 |
+| `params.electrode_B` | list[dict] | 是 | 第二组电极，元素为 `{"name": str, "current_mA": number}`，current_mA 总和必须为 0 |
+| `params.conductivity_config` | dict | 是 | 电导率字典，值必须为数字 |
+| `params.anisotropy` | bool | 是 | 是否启用各向异性 |
 | `params.DTI_file_path` | string | 否 | 各向异性场景可传 |
 
 ### 4.1 `montage` 的实际解析规则
@@ -170,7 +172,7 @@
   "progress_rate": 100,
   "message": "已完成: 仿真完成",
   "result": {
-    "TI_file": "C:/data/m2m_ernie/TI_simulation/forward_001/TI.mz3"
+    "TI_file": "C:/data/m2m_ernie/TI_simulation/forward_001/TI.nii.gz"
   }
 }
 ```
@@ -191,7 +193,7 @@
   "type": "inverse",
   "params": {
     "dir_path": "C:/data/m2m_ernie",
-    "msh_file_path": "C:/data/m2m_ernie/model.msh",
+    "T1_file_path": "C:/data/m2m_ernie/T1.nii.gz",
     "montage": "EEG10-10_Cutini_2011",
     "current_A": [0.002, -0.002],
     "current_B": [0.001, -0.001],
@@ -204,7 +206,7 @@
       }
     },
     "target_threshold": 0.5,
-    "cond": {
+    "conductivity_config": {
       "White Matter": 0.126,
       "Gray Matter": 0.275,
       "CSF": 1.654,
@@ -216,12 +218,7 @@
       "Blood": 0.6,
       "Muscle": 0.16
     },
-    "anisotropy": false,
-    "electrode_pair1_center": [[0, 0]],
-    "electrode_pair2_center": [[0, 0]],
-    "electrode_radius": [10],
-    "electrode_current1": [0.002, -0.002],
-    "electrode_current2": [0.002, -0.002]
+    "anisotropy": false
   }
 }
 ```
@@ -229,20 +226,15 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `params.dir_path` | string | 是 | 头模目录 |
-| `params.msh_file_path` | string | 是 | 网格路径 |
+| `params.T1_file_path` | string | 是 | T1 文件路径 |
 | `params.montage` | string | 是 | EEG 网格文件名称或绝对路径 |
-| `params.current_A` | number[] | 是 | 仅做校验，要求总和为 0 |
-| `params.current_B` | number[] | 是 | 仅做校验，要求总和为 0 |
+| `params.current_A` | list[float] | 是 | 仅做校验，要求总和为 0 |
+| `params.current_B` | list[float] | 是 | 仅做校验，要求总和为 0 |
 | `params.roi_type` | string | 是 | `atlas` 或 `mni_pos` |
-| `params.roi_param` | object | 是 | ROI 参数 |
+| `params.roi_param` | dict | 是 | ROI 参数 |
 | `params.target_threshold` | number | 是 | 必须 `>= 0` |
-| `params.cond` | object | 是 | 电导率字典 |
-| `params.anisotropy` | boolean | 是 | 是否启用各向异性 |
-| `params.electrode_pair1_center` | number[][] | 否 | 优化电极阵列 1 的中心点 |
-| `params.electrode_pair2_center` | number[][] | 否 | 优化电极阵列 2 的中心点 |
-| `params.electrode_radius` | number[] | 否 | 电极半径列表 |
-| `params.electrode_current1` | number[] | 否 | 阵列 1 电流 |
-| `params.electrode_current2` | number[] | 否 | 阵列 2 电流 |
+| `params.conductivity_config` | dict | 是 | 电导率字典 |
+| `params.anisotropy` | bool | 是 | 是否启用各向异性 |
 | `params.DTI_file_path` | string | 否 | 各向异性场景可传 |
 
 ### 5.1 `roi_param` 结构
@@ -283,8 +275,6 @@
 
 - 目标函数固定为 `focality`
 - `current_A` 和 `current_B` 只参与消息校验，没有直接传入优化器
-- 真正用于优化器的是 `electrode_current1` 和 `electrode_current2`
-- 如果未传 `electrode_pair1_center`、`electrode_pair2_center`、`electrode_radius`、`electrode_current1`、`electrode_current2`，会由 `setup_electrodes_and_roi()` 使用默认值
 - `roi_type=atlas` 时，代码尚未按 `atlas_param` 解析真实脑区；当前写死为：
   - `roi_center = [0.0, 0.0, 0.0]`
   - `roi_radius = 20`
@@ -298,7 +288,7 @@
   "progress_rate": 100,
   "message": "已完成: 优化完成",
   "result": {
-    "TI_file": "C:/data/m2m_ernie/TI_optimization/inverse_001/result.mz3",
+    "TI_file": "C:/data/m2m_ernie/TI_optimization/inverse_001/result.nii.gz",
     "electrode_A": ["F3", "FC5"],
     "electrode_B": ["P3", "PO7"]
   }
@@ -378,7 +368,7 @@
 | 35 | 已完成: 配置第二个电极对 |
 | 70 | 已完成: TDCS 仿真计算 |
 | 85 | 已完成: TI 场计算 |
-| 95 | 已完成: 导出 MZ3 格式 |
+| 95 | 已完成: 导出 NIfTI 格式 |
 | 100 | 已完成: 仿真完成 |
 
 ### 7.3 `inverse`
@@ -391,7 +381,7 @@
 | 35 | 已完成: 配置电极对和 ROI |
 | 85 | 已完成: 优化算法执行 |
 | 90 | 已完成: 获取电极映射结果 |
-| 95 | 已完成: 导出 MZ3 格式 |
+| 95 | 已完成: 导出 NIfTI 格式 |
 | 100 | 已完成: 优化完成 |
 
 ## 8. 相关代码位置

@@ -14,16 +14,20 @@
 **ForwardParams 修改**：
 ```python
 @dataclass
+class ElectrodeWithCurrent:
+    name: str
+    current_mA: float
+
+
+@dataclass
 class ForwardParams:
     id: str
     dir_path: str
-    T1_file_path: str  # 新增
+    T1_file_path: str
     montage: str
-    electrode_A: list[str]
-    electrode_B: list[str]
-    current_A: list[float]
-    current_B: list[float]
-    cond: dict[str, float]
+    electrode_A: list[ElectrodeWithCurrent]
+    electrode_B: list[ElectrodeWithCurrent]
+    conductivity_config: dict[str, float]
     anisotropy: bool
     DTI_file_path: str | None = None
 ```
@@ -34,20 +38,15 @@ class ForwardParams:
 class InverseParams:
     id: str
     dir_path: str
-    T1_file_path: str  # 新增
+    T1_file_path: str
     montage: str
     current_A: list[float]
     current_B: list[float]
     roi_type: Literal["atlas", "mni_pos"]
     roi_param: ROIParam
     target_threshold: float
-    cond: dict[str, float]
+    conductivity_config: dict[str, float]
     anisotropy: bool
-    electrode_pair1_center: list[list[float]] | None = None
-    electrode_pair2_center: list[list[float]] | None = None
-    electrode_radius: list[float] | None = None
-    electrode_current1: list[float] | None = None
-    electrode_current2: list[float] | None = None
     DTI_file_path: str | None = None
 ```
 

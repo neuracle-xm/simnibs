@@ -7,6 +7,7 @@
 from neuracle.rabbitmq.schemas import (
     AckTestParams,
     AtlasParam,
+    ElectrodeWithCurrent,
     ForwardParams,
     InverseParams,
     MNIParam,
@@ -28,15 +29,22 @@ def dict_to_model_params(data: dict, task_id: str) -> ModelParams:
 
 def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
     """将字典转换为 ForwardParams（不包含 id，id 在消息顶层）"""
+    electrode_A = [
+        ElectrodeWithCurrent(name=e["name"], current_mA=e["current_mA"])
+        for e in data["electrode_A"]
+    ]
+    electrode_B = [
+        ElectrodeWithCurrent(name=e["name"], current_mA=e["current_mA"])
+        for e in data["electrode_B"]
+    ]
     return ForwardParams(
         id=task_id,
         dir_path=data["dir_path"],
+        T1_file_path=data["T1_file_path"],
         montage=data["montage"],
-        electrode_A=data["electrode_A"],
-        electrode_B=data["electrode_B"],
-        current_A=data["current_A"],
-        current_B=data["current_B"],
-        cond=data["cond"],
+        electrode_A=electrode_A,
+        electrode_B=electrode_B,
+        conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
         DTI_file_path=data.get("DTI_file_path"),
     )
@@ -60,19 +68,15 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
     return InverseParams(
         id=task_id,
         dir_path=data["dir_path"],
+        T1_file_path=data["T1_file_path"],
         montage=data["montage"],
         current_A=data["current_A"],
         current_B=data["current_B"],
         roi_type=data["roi_type"],
         roi_param=roi_param,
         target_threshold=data["target_threshold"],
-        cond=data["cond"],
+        conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
-        electrode_pair1_center=data.get("electrode_pair1_center"),
-        electrode_pair2_center=data.get("electrode_pair2_center"),
-        electrode_radius=data.get("electrode_radius"),
-        electrode_current1=data.get("electrode_current1"),
-        electrode_current2=data.get("electrode_current2"),
         DTI_file_path=data.get("DTI_file_path"),
     )
 

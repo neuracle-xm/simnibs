@@ -33,9 +33,7 @@ def mask_rabbitmq_config(config: dict) -> dict:
     return masked
 
 
-def ack_in_consumer_thread(
-    channel: Any, delivery_tag: int, message_type: str
-) -> None:
+def ack_in_consumer_thread(channel: Any, delivery_tag: int, message_type: str) -> None:
     """在消费线程中实际发送 ack，避免工作线程直接操作 channel。"""
     channel.basic_ack(delivery_tag=delivery_tag)
     logger.info("ack_sent: type=%s delivery_tag=%s", message_type, delivery_tag)

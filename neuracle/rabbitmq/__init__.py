@@ -15,6 +15,7 @@ from .message_builder import (
 from .schemas import (
     AckTestParams,
     AtlasParam,
+    ElectrodeWithCurrent,
     ForwardParams,
     ForwardResult,
     InverseParams,
@@ -43,6 +44,7 @@ __all__ = [
     # schemas
     "AtlasParam",
     "AckTestParams",
+    "ElectrodeWithCurrent",
     "MNIParam",
     "ROIParam",
     "ModelParams",

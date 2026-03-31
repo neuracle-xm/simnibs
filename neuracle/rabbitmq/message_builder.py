@@ -45,12 +45,11 @@ def build_model_message(
 def build_forward_message(
     id: str,
     dir_path: str,
+    T1_file_path: str,
     montage: str,
-    electrode_A: list[str],
-    electrode_B: list[str],
-    current_A: list[float],
-    current_B: list[float],
-    cond: dict[str, float],
+    electrode_A: list[dict],
+    electrode_B: list[dict],
+    conductivity_config: dict[str, float],
     anisotropy: bool,
     DTI_file_path: str | None = None,
 ) -> dict:
@@ -60,12 +59,11 @@ def build_forward_message(
     Args:
         id: 任务唯一标识符
         dir_path: 头模所在文件夹路径
+        T1_file_path: T1 加权 MRI 图像路径
         montage: 电极导联名称
-        electrode_A: 电极组 A 名称列表
-        electrode_B: 电极组 B 名称列表
-        current_A: 电极组 A 电流值列表
-        current_B: 电极组 B 电流值列表
-        cond: 组织电导率配置
+        electrode_A: 电极组 A 列表，每个元素为 {name: str, current_mA: number}
+        electrode_B: 电极组 B 列表，每个元素为 {name: str, current_mA: number}
+        conductivity_config: 组织电导率配置
         anisotropy: 是否启用各向异性电导率
         DTI_file_path: DTI 张量文件路径（可选）
 
@@ -77,12 +75,11 @@ def build_forward_message(
         "type": "forward",
         "params": {
             "dir_path": dir_path,
+            "T1_file_path": T1_file_path,
             "montage": montage,
             "electrode_A": electrode_A,
             "electrode_B": electrode_B,
-            "current_A": current_A,
-            "current_B": current_B,
-            "cond": cond,
+            "conductivity_config": conductivity_config,
             "anisotropy": anisotropy,
         },
     }
@@ -94,13 +91,14 @@ def build_forward_message(
 def build_inverse_message(
     id: str,
     dir_path: str,
+    T1_file_path: str,
     montage: str,
     current_A: list[float],
     current_B: list[float],
     roi_type: Literal["atlas", "mni_pos"],
     roi_param: dict,
     target_threshold: float,
-    cond: dict[str, float],
+    conductivity_config: dict[str, float],
     anisotropy: bool,
     DTI_file_path: str | None = None,
 ) -> dict:
@@ -110,13 +108,14 @@ def build_inverse_message(
     Args:
         id: 任务唯一标识符
         dir_path: 头模所在文件夹路径
+        T1_file_path: T1 加权 MRI 图像路径
         montage: 电极导联名称
         current_A: 电极组 A 电流值列表
         current_B: 电极组 B 电流值列表
         roi_type: ROI 类型（"atlas" 或 "mni_pos"）
         roi_param: ROI 参数配置
         target_threshold: 目标电场强度阈值
-        cond: 组织电导率配置
+        conductivity_config: 组织电导率配置
         anisotropy: 是否启用各向异性电导率
         DTI_file_path: DTI 张量文件路径（可选）
 
@@ -128,13 +127,14 @@ def build_inverse_message(
         "type": "inverse",
         "params": {
             "dir_path": dir_path,
+            "T1_file_path": T1_file_path,
             "montage": montage,
             "current_A": current_A,
             "current_B": current_B,
             "roi_type": roi_type,
             "roi_param": roi_param,
             "target_threshold": target_threshold,
-            "cond": cond,
+            "conductivity_config": conductivity_config,
             "anisotropy": anisotropy,
         },
     }

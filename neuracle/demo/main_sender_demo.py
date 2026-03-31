@@ -45,22 +45,27 @@ def create_forward_message(
     task_id: str,
     montage: str,
     anisotropy: bool = False,
-    electrode_a: list[str] | None = None,
-    electrode_b: list[str] | None = None,
+    electrode_a: list[dict] | None = None,
+    electrode_b: list[dict] | None = None,
 ) -> dict:
     """创建 forward 任务消息"""
     if electrode_a is None:
-        electrode_a = ["F5", "P5"]
+        electrode_a = [
+            {"name": "F5", "current_mA": 2.0},
+            {"name": "P5", "current_mA": -2.0},
+        ]
     if electrode_b is None:
-        electrode_b = ["F6", "P6"]
+        electrode_b = [
+            {"name": "F6", "current_mA": 1.0},
+            {"name": "P6", "current_mA": -1.0},
+        ]
     params = {
         "dir_path": DEMO_DIR_PATH,
+        "T1_file_path": f"{DEMO_DIR_PATH}/T1.nii.gz",
         "montage": montage,
         "electrode_A": electrode_a,
         "electrode_B": electrode_b,
-        "current_A": [0.002, -0.002],
-        "current_B": [0.001, -0.001],
-        "cond": STANDARD_COND,
+        "conductivity_config": STANDARD_COND,
         "anisotropy": anisotropy,
     }
     if anisotropy:
@@ -74,6 +79,7 @@ def create_inverse_message(
     """创建 inverse 任务消息"""
     params = {
         "dir_path": DEMO_DIR_PATH,
+        "T1_file_path": f"{DEMO_DIR_PATH}/T1.nii.gz",
         "montage": montage,
         "current_A": [0.002, -0.002],
         "current_B": [0.001, -0.001],
@@ -86,7 +92,7 @@ def create_inverse_message(
             "atlas_param": None,
         },
         "target_threshold": 0.5,
-        "cond": STANDARD_COND,
+        "conductivity_config": STANDARD_COND,
         "anisotropy": anisotropy,
     }
     if anisotropy:
@@ -109,6 +115,7 @@ def create_inverse_atlas_message(
     """
     params = {
         "dir_path": DEMO_DIR_PATH,
+        "T1_file_path": f"{DEMO_DIR_PATH}/T1.nii.gz",
         "montage": montage,
         "current_A": [0.002, -0.002],
         "current_B": [0.001, -0.001],
@@ -121,7 +128,7 @@ def create_inverse_atlas_message(
             },
         },
         "target_threshold": 0.5,
-        "cond": STANDARD_COND,
+        "conductivity_config": STANDARD_COND,
         "anisotropy": anisotropy,
     }
     if anisotropy:
@@ -373,8 +380,14 @@ def main():
         "test_forward_002",
         "EEG10-20_Okamoto_2004",
         anisotropy=True,
-        electrode_a=["F3", "P3"],
-        electrode_b=["F4", "P4"],
+        electrode_a=[
+            {"name": "F3", "current_mA": 1.0},
+            {"name": "P3", "current_mA": -1.0},
+        ],
+        electrode_b=[
+            {"name": "F4", "current_mA": 1.0},
+            {"name": "P4", "current_mA": -1.0},
+        ],
     )
     inverse_msg = create_inverse_message(
         "test_inverse_001", "EEG10-10_Cutini_2011", anisotropy=False

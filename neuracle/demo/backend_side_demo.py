@@ -198,12 +198,17 @@ def get_test_messages():
     msg3 = build_forward_message(
         id="test_forward_001",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_UI_Jurak_2007",
-        electrode_A=["F5", "P5"],
-        electrode_B=["F5", "P5"],
-        current_A=[0.002, -0.002],
-        current_B=[0.001, -0.001],
-        cond={"White Matter": 0.126, "Gray Matter": 0.275},
+        electrode_A=[
+            {"name": "F5", "current_mA": 2.0},
+            {"name": "P5", "current_mA": -2.0},
+        ],
+        electrode_B=[
+            {"name": "F5", "current_mA": 1.0},
+            {"name": "P5", "current_mA": -1.0},
+        ],
+        conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
         anisotropy=False,
     )
     messages.append(("forward_anisotropy_false", msg3))
@@ -212,12 +217,17 @@ def get_test_messages():
     msg4 = build_forward_message(
         id="test_forward_002",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
-        electrode_A=["F5", "P5"],
-        electrode_B=["P5", "F5"],
-        current_A=[0.001, -0.001],
-        current_B=[0.001, -0.001],
-        cond={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
+        electrode_A=[
+            {"name": "F5", "current_mA": 1.0},
+            {"name": "P5", "current_mA": -1.0},
+        ],
+        electrode_B=[
+            {"name": "P5", "current_mA": 1.0},
+            {"name": "F5", "current_mA": -1.0},
+        ],
+        conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
         anisotropy=True,
         DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
@@ -227,12 +237,17 @@ def get_test_messages():
     msg5 = build_forward_message(
         id="test_forward_004",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_UI_Jurak_2007",
-        electrode_A=["F5", "P5"],
-        electrode_B=["F5", "P5"],
-        current_A=[0.002, -0.002],
-        current_B=[0.001, -0.001],
-        cond={"White Matter": 0.126, "Gray Matter": 0.275},
+        electrode_A=[
+            {"name": "F5", "current_mA": 2.0},
+            {"name": "P5", "current_mA": -2.0},
+        ],
+        electrode_B=[
+            {"name": "F5", "current_mA": 1.0},
+            {"name": "P5", "current_mA": -1.0},
+        ],
+        conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
         anisotropy=False,
         DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
@@ -242,12 +257,21 @@ def get_test_messages():
     msg6 = build_forward_message(
         id="test_forward_003",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-20_Okamoto_2004",
-        electrode_A=["F3", "FC5", "FC1", "Cz"],
-        electrode_B=["P3", "PO7", "PO3", "O1"],
-        current_A=[0.001, 0.001, -0.001, -0.001],
-        current_B=[-0.001, -0.001, 0.001, 0.001],
-        cond={
+        electrode_A=[
+            {"name": "F3", "current_mA": 1.0},
+            {"name": "FC5", "current_mA": 1.0},
+            {"name": "FC1", "current_mA": -1.0},
+            {"name": "Cz", "current_mA": -1.0},
+        ],
+        electrode_B=[
+            {"name": "P3", "current_mA": -1.0},
+            {"name": "PO7", "current_mA": -1.0},
+            {"name": "PO3", "current_mA": 1.0},
+            {"name": "O1", "current_mA": 1.0},
+        ],
+        conductivity_config={
             "White Matter": 0.126,
             "Gray Matter": 0.275,
             "CSF": 1.654,
@@ -262,6 +286,7 @@ def get_test_messages():
     msg7 = build_inverse_message(
         id="test_inverse_001",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.002, -0.002],
         current_B=[0.001, -0.001],
@@ -271,7 +296,7 @@ def get_test_messages():
             "mni_param": None,
         },
         target_threshold=0.5,
-        cond={"White Matter": 0.126, "Gray Matter": 0.275},
+        conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
         anisotropy=False,
     )
     messages.append(("inverse_atlas_roi", msg7))
@@ -280,6 +305,7 @@ def get_test_messages():
     msg8 = build_inverse_message(
         id="test_inverse_002",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -289,7 +315,7 @@ def get_test_messages():
             "mni_param": {"center": [-38.5, -22.5, 58.3], "radius": 15.0},
         },
         target_threshold=0.7,
-        cond={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
+        conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
         anisotropy=True,
         DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
@@ -299,6 +325,7 @@ def get_test_messages():
     msg9 = build_inverse_message(
         id="test_inverse_003",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -308,7 +335,7 @@ def get_test_messages():
             "mni_param": None,
         },
         target_threshold=0.0,
-        cond={"Gray Matter": 0.275},
+        conductivity_config={"Gray Matter": 0.275},
         anisotropy=False,
     )
     messages.append(("inverse_threshold_边界值", msg9))
@@ -336,24 +363,30 @@ def get_error_messages():
     }
     messages.append(("model_id为空", msg2))
 
-    # 3. forward - electrode_A 和 current_A 长度不一致
+    # 3. forward - electrode_A 电流总和不等于 0
     msg3 = build_forward_message(
         id="test_error_002",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_UI_Jurak_2007",
-        electrode_A=["F5", "P5", "P3"],
-        electrode_B=["F5", "P5"],
-        current_A=[0.001, -0.001],
-        current_B=[0.001, -0.001],
-        cond={"Gray Matter": 0.275},
+        electrode_A=[
+            {"name": "F5", "current_mA": 2.0},
+            {"name": "P5", "current_mA": 2.0},
+        ],
+        electrode_B=[
+            {"name": "F5", "current_mA": 1.0},
+            {"name": "P5", "current_mA": -1.0},
+        ],
+        conductivity_config={"Gray Matter": 0.275},
         anisotropy=False,
     )
-    messages.append(("forward_电极电流长度不一致", msg3))
+    messages.append(("forward_电极电流总和不等于0", msg3))
 
     # 4. inverse - roi_type 非法值
     msg4 = build_inverse_message(
         id="test_error_003",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -363,7 +396,7 @@ def get_error_messages():
             "mni_param": {"center": [-38.5, -22.5, 58.3], "radius": 15.0},
         },
         target_threshold=0.5,
-        cond={"Gray Matter": 0.275},
+        conductivity_config={"Gray Matter": 0.275},
         anisotropy=False,
     )
     messages.append(("inverse_roi_type非法", msg4))
@@ -372,6 +405,7 @@ def get_error_messages():
     msg5 = build_inverse_message(
         id="test_error_004",
         dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -381,7 +415,7 @@ def get_error_messages():
             "mni_param": None,
         },
         target_threshold=-0.5,
-        cond={"Gray Matter": 0.275},
+        conductivity_config={"Gray Matter": 0.275},
         anisotropy=False,
     )
     messages.append(("inverse_threshold负数", msg5))

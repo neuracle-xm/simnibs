@@ -6,9 +6,9 @@ OSS 上传下载示例
 
 import logging
 
-from neuracle.utils.env import load_env
 from neuracle.logger import setup_logging
-from neuracle.oss_tool import get_bucket, upload_bytes_to_oss, download_bytes_from_oss
+from neuracle.oss_tool import download_bytes_from_oss, get_bucket, upload_bytes_to_oss
+from neuracle.utils.env import load_env
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def demo_upload_download():
     assert downloaded_data == original_data, "Data mismatch!"
     logger.info("验证成功：上传和下载的数据一致")
     # 打印内容
-    logger.info("文件内容: %s", downloaded_data.decode('utf-8'))
+    logger.info("文件内容: %s", downloaded_data.decode("utf-8"))
 
 
 if __name__ == "__main__":

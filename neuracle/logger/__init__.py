@@ -26,11 +26,15 @@ _MAX_BYTES: Final[int] = 1 * 1024 * 1024  # 1MB
 _BACKUP_COUNT: Final[int] = 20
 
 # 日志格式
-_LOG_FORMAT: Final[str] = '%(asctime)s - %(processName)s - %(threadName)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
-_DATE_FORMAT: Final[str] = '%Y-%m-%d %H:%M:%S'
+_LOG_FORMAT: Final[str] = (
+    "%(asctime)s - %(processName)s - %(threadName)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
+)
+_DATE_FORMAT: Final[str] = "%Y-%m-%d %H:%M:%S"
 
 
-def _create_level_handler(level: int, filename: str, log_dir: str) -> RotatingFileHandler:
+def _create_level_handler(
+    level: int, filename: str, log_dir: str
+) -> RotatingFileHandler:
     """
     创建指定级别的文件处理器
 
@@ -50,10 +54,7 @@ def _create_level_handler(level: int, filename: str, log_dir: str) -> RotatingFi
     """
     log_path = os.path.join(log_dir, filename)
     handler = RotatingFileHandler(
-        log_path,
-        maxBytes=_MAX_BYTES,
-        backupCount=_BACKUP_COUNT,
-        encoding='utf-8'
+        log_path, maxBytes=_MAX_BYTES, backupCount=_BACKUP_COUNT, encoding="utf-8"
     )
     handler.setLevel(level)
     handler.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
@@ -105,17 +106,17 @@ def setup_logging(log_dir: Optional[str] = None) -> None:
     """
     # 默认日志目录
     if log_dir is None:
-        log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'log')
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "log")
     # 确保日志目录存在
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    logger = logging.getLogger('neuracle')
+    logger = logging.getLogger("neuracle")
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
     # 添加控制台处理器（INFO 级别）
     logger.addHandler(_create_console_handler())
     # 添加各级别文件处理器
-    logger.addHandler(_create_level_handler(logging.DEBUG, 'debug.log', log_dir))
-    logger.addHandler(_create_level_handler(logging.INFO, 'info.log', log_dir))
-    logger.addHandler(_create_level_handler(logging.WARNING, 'warning.log', log_dir))
-    logger.addHandler(_create_level_handler(logging.ERROR, 'error.log', log_dir))
+    logger.addHandler(_create_level_handler(logging.DEBUG, "debug.log", log_dir))
+    logger.addHandler(_create_level_handler(logging.INFO, "info.log", log_dir))
+    logger.addHandler(_create_level_handler(logging.WARNING, "warning.log", log_dir))
+    logger.addHandler(_create_level_handler(logging.ERROR, "error.log", log_dir))

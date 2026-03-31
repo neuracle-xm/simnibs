@@ -196,12 +196,13 @@ handle_message()
 3. `setup_electrode_pair2(...)`
 4. `run_tdcs_simulation(...)`
 5. `calculate_ti(...)`
-6. `sim_export_mz3(...)`
-7. 返回 `{"TI_file": mz3_path}`
+6. `export_ti_to_nifti(...)`
+7. 返回 `{"TI_file": ti_nifti_path}`
 
 说明：
 
-- `cond` 会被 `cond_dict_to_list()` 转成 SimNIBS 所需列表
+- `electrode_A/B` 现在是 `ElectrodeWithCurrent` 对象数组，从对象中提取 `name` 和 `current_mA`
+- `conductivity_config` 会被 `cond_dict_to_list()` 转成 SimNIBS 所需列表
 - `N_WORKERS` 当前固定为 `8`
 
 ### 6.3 `inverse`
@@ -265,7 +266,7 @@ handle_message()
 | 35 | 已完成: 配置第二个电极对 |
 | 70 | 已完成: TDCS 仿真计算 |
 | 85 | 已完成: TI 场计算 |
-| 95 | 已完成: 导出 MZ3 格式 |
+| 95 | 已完成: 导出 NIfTI 格式 |
 | 100 | 已完成: 仿真完成 |
 
 ### 7.3 `inverse` 进度
@@ -278,7 +279,7 @@ handle_message()
 | 35 | 已完成: 配置电极对和 ROI |
 | 85 | 已完成: 优化算法执行 |
 | 90 | 已完成: 获取电极映射结果 |
-| 95 | 已完成: 导出 MZ3 格式 |
+| 95 | 已完成: 导出 NIfTI 格式 |
 | 100 | 已完成: 优化完成 |
 
 ## 8. 配置约定
@@ -319,5 +320,7 @@ handle_message()
 - 服务已经落地为 `neuracle/main.py`，不是伪代码
 - 请求校验是按 `params` 分类型执行，不再使用单一 `validate_message()` 入口
 - `SenderThread` 当前并不复用长连接，而是每条消息建连后发送
-- `inverse` 的 atlas ROI 仍是占位实现，文档不能按“已支持 atlas 精确脑区”描述
-- `inverse` 额外支持 `electrode_pair1_center`、`electrode_pair2_center`、`electrode_radius`、`electrode_current1`、`electrode_current2`
+- `inverse` 的 atlas ROI 仍是占位实现，文档不能按”已支持 atlas 精确脑区”描述
+- `forward` 的 `electrode_A/B` 现在是 `ElectrodeWithCurrent` 对象数组，电流绑定到电极上
+- `inverse` 的 `cond` 已改名为 `conductivity_config`
+- `inverse` 已移除电极优化参数（`electrode_pair1_center` 等）

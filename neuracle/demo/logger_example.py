@@ -9,7 +9,7 @@ import logging
 from neuracle.logger import setup_logging
 
 # 获取 logger
-logger = logging.getLogger('neuracle.demo')
+logger = logging.getLogger("neuracle.demo")
 
 
 def demo_basic_logging():
@@ -23,7 +23,7 @@ def demo_basic_logging():
 def demo_custom_logger():
     """演示自定义 logger"""
     # 获取自定义名称的 logger
-    custom_logger = logging.getLogger('neuracle.custom')
+    custom_logger = logging.getLogger("neuracle.custom")
     custom_logger.info("使用自定义 logger 记录日志")
 
 

@@ -67,13 +67,11 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     验证规则：
     - dir_path: 非空字符串
     - montage: 非空字符串
-    - electrode_A: 非空列表，元素为字符串
-    - electrode_B: 非空列表，元素为字符串
-    - current_A: 非空列表，元素为浮点数，总和必须为 0
-    - current_B: 非空列表，元素为浮点数，总和必须为 0
-    - electrode_A 和 current_A 长度必须一致
-    - electrode_B 和 current_B 长度必须一致
-    - cond: 非空字典，值为浮点数
+    - electrode_A: 非空列表，元素为对象 {name: str, current_mA: number}
+    - electrode_B: 非空列表，元素为对象 {name: str, current_mA: number}
+    - electrode_A 中 current_mA 总和必须为 0
+    - electrode_B 中 current_mA 总和必须为 0
+    - conductivity_config: 非空字典，值为浮点数
     - anisotropy: 布尔值
     - DTI_file_path: 可选
 
@@ -100,69 +98,57 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     if not electrode_A or not isinstance(electrode_A, list):
         logger.error("[electrode_A] electrode_A 必须是列表")
         raise ValidationError("electrode_A 验证失败")
-    if not all(isinstance(e, str) for e in electrode_A):
-        logger.error("[electrode_A] electrode_A 元素必须是字符串")
-        raise ValidationError("electrode_A 元素必须是字符串")
+    if not all(
+        isinstance(e, dict)
+        and isinstance(e.get("name"), str)
+        and isinstance(e.get("current_mA"), (int, float))
+        for e in electrode_A
+    ):
+        logger.error(
+            "[electrode_A] electrode_A 元素必须是 {name: str, current_mA: number} 格式"
+        )
+        raise ValidationError(
+            "electrode_A 元素必须是 {name: str, current_mA: number} 格式"
+        )
 
     # 验证 electrode_B
     electrode_B = params.get("electrode_B")
     if not electrode_B or not isinstance(electrode_B, list):
         logger.error("[electrode_B] electrode_B 必须是列表")
         raise ValidationError("electrode_B 验证失败")
-    if not all(isinstance(e, str) for e in electrode_B):
-        logger.error("[electrode_B] electrode_B 元素必须是字符串")
-        raise ValidationError("electrode_B 元素必须是字符串")
-
-    # 验证 current_A
-    current_A = params.get("current_A")
-    if not current_A or not isinstance(current_A, list):
-        logger.error("[current_A] current_A 必须是列表")
-        raise ValidationError("current_A 验证失败")
-    if not all(isinstance(c, (int, float)) for c in current_A):
-        logger.error("[current_A] current_A 元素必须是数字")
-        raise ValidationError("current_A 元素必须是数字")
-
-    # 验证 current_B
-    current_B = params.get("current_B")
-    if not current_B or not isinstance(current_B, list):
-        logger.error("[current_B] current_B 必须是列表")
-        raise ValidationError("current_B 验证失败")
-    if not all(isinstance(c, (int, float)) for c in current_B):
-        logger.error("[current_B] current_B 元素必须是数字")
-        raise ValidationError("current_B 元素必须是数字")
-
-    # 验证 electrode_A 和 current_A 长度一致
-    if electrode_A and current_A and len(electrode_A) != len(current_A):
+    if not all(
+        isinstance(e, dict)
+        and isinstance(e.get("name"), str)
+        and isinstance(e.get("current_mA"), (int, float))
+        for e in electrode_B
+    ):
         logger.error(
-            f"[electrode_A/current_A] 长度不一致: {len(electrode_A)} vs {len(current_A)}"
+            "[electrode_B] electrode_B 元素必须是 {name: str, current_mA: number} 格式"
         )
-        raise ValidationError("electrode_A/current_A 长度不一致")
-
-    # 验证 electrode_B 和 current_B 长度一致
-    if electrode_B and current_B and len(electrode_B) != len(current_B):
-        logger.error(
-            f"[electrode_B/current_B] 长度不一致: {len(electrode_B)} vs {len(current_B)}"
+        raise ValidationError(
+            "electrode_B 元素必须是 {name: str, current_mA: number} 格式"
         )
-        raise ValidationError("electrode_B/current_B 长度不一致")
 
-    # 验证 current_A 总和为 0
-    if current_A and abs(sum(current_A)) > 1e-6:
-        logger.error(f"[current_A] 电流总和必须为 0，当前为: {sum(current_A)}")
-        raise ValidationError("current_A 电流总和必须为 0")
+    # 验证 electrode_A 中 current_mA 总和为 0
+    current_A_values = [e["current_mA"] for e in electrode_A]
+    if abs(sum(current_A_values)) > 1e-6:
+        logger.error(f"[electrode_A] 电流总和必须为 0，当前为: {sum(current_A_values)}")
+        raise ValidationError("electrode_A 电流总和必须为 0")
 
-    # 验证 current_B 总和为 0
-    if current_B and abs(sum(current_B)) > 1e-6:
-        logger.error(f"[current_B] 电流总和必须为 0，当前为: {sum(current_B)}")
-        raise ValidationError("current_B 电流总和必须为 0")
+    # 验证 electrode_B 中 current_mA 总和为 0
+    current_B_values = [e["current_mA"] for e in electrode_B]
+    if abs(sum(current_B_values)) > 1e-6:
+        logger.error(f"[electrode_B] 电流总和必须为 0，当前为: {sum(current_B_values)}")
+        raise ValidationError("electrode_B 电流总和必须为 0")
 
-    # 验证 cond
-    cond = params.get("cond")
-    if not cond or not isinstance(cond, dict):
-        logger.error("[cond] cond 必须是字典")
-        raise ValidationError("cond 验证失败")
-    if not all(isinstance(v, (int, float)) for v in cond.values()):
-        logger.error("[cond] cond 值必须是数字")
-        raise ValidationError("cond 值必须是数字")
+    # 验证 conductivity_config
+    conductivity_config = params.get("conductivity_config")
+    if not conductivity_config or not isinstance(conductivity_config, dict):
+        logger.error("[conductivity_config] conductivity_config 必须是字典")
+        raise ValidationError("conductivity_config 验证失败")
+    if not all(isinstance(v, (int, float)) for v in conductivity_config.values()):
+        logger.error("[conductivity_config] conductivity_config 值必须是数字")
+        raise ValidationError("conductivity_config 值必须是数字")
 
     # 验证 anisotropy
     anisotropy = params.get("anisotropy")
@@ -241,14 +227,14 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
         logger.error(f"[current_B] 电流总和必须为 0，当前为: {sum(current_B)}")
         raise ValidationError("current_B 电流总和必须为 0")
 
-    # 验证 cond
-    cond = params.get("cond")
-    if not cond or not isinstance(cond, dict):
-        logger.error("[cond] cond 必须是字典")
-        raise ValidationError("cond 验证失败")
-    if not all(isinstance(v, (int, float)) for v in cond.values()):
-        logger.error("[cond] cond 值必须是数字")
-        raise ValidationError("cond 值必须是数字")
+    # 验证 conductivity_config
+    conductivity_config = params.get("conductivity_config")
+    if not conductivity_config or not isinstance(conductivity_config, dict):
+        logger.error("[conductivity_config] conductivity_config 必须是字典")
+        raise ValidationError("conductivity_config 验证失败")
+    if not all(isinstance(v, (int, float)) for v in conductivity_config.values()):
+        logger.error("[conductivity_config] conductivity_config 值必须是数字")
+        raise ValidationError("conductivity_config 值必须是数字")
 
     # 验证 anisotropy
     anisotropy = params.get("anisotropy")
@@ -360,12 +346,8 @@ def validate_message(message: dict[str, Any]) -> None:
     # 验证 type
     msg_type = message.get("type")
     if not msg_type or msg_type not in ("model", "forward", "inverse", "ack_test"):
-        logger.error(
-            '[type] type 必须是 "model", "forward", "inverse" 或 "ack_test"'
-        )
-        raise ValidationError(
-            'type 必须是 "model", "forward", "inverse" 或 "ack_test"'
-        )
+        logger.error('[type] type 必须是 "model", "forward", "inverse" 或 "ack_test"')
+        raise ValidationError('type 必须是 "model", "forward", "inverse" 或 "ack_test"')
 
     # 验证 params
     params = message.get("params")

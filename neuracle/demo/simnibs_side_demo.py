@@ -89,12 +89,12 @@ def process_message_async(
         elif msg_type == "forward":
             result = {
                 "T1": f"/data/{msg_id}/T1.nii.gz",
-                "TI_file": f"/data/{msg_id}/forward_result.mz3",
+                "TI_file": f"/data/{msg_id}/forward_result.nii.gz",
             }
         else:
             result = {
                 "T1": f"/data/{msg_id}/T1.nii.gz",
-                "TI_file": f"/data/{msg_id}/inverse_result.mz3",
+                "TI_file": f"/data/{msg_id}/inverse_result.nii.gz",
                 "electrode_A": ["F3", "FC5"],
                 "electrode_B": ["P3", "PO7"],
             }
