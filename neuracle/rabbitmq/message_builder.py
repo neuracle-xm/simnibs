@@ -45,7 +45,6 @@ def build_model_message(
 def build_forward_message(
     id: str,
     dir_path: str,
-    msh_file_path: str,
     montage: str,
     electrode_A: list[str],
     electrode_B: list[str],
@@ -61,8 +60,7 @@ def build_forward_message(
     Args:
         id: 任务唯一标识符
         dir_path: 头模所在文件夹路径
-        msh_file_path: 头模网格文件路径
-        montage: 电极导联配置文件路径
+        montage: 电极导联名称
         electrode_A: 电极组 A 名称列表
         electrode_B: 电极组 B 名称列表
         current_A: 电极组 A 电流值列表
@@ -79,7 +77,6 @@ def build_forward_message(
         "type": "forward",
         "params": {
             "dir_path": dir_path,
-            "msh_file_path": msh_file_path,
             "montage": montage,
             "electrode_A": electrode_A,
             "electrode_B": electrode_B,
@@ -97,7 +94,6 @@ def build_forward_message(
 def build_inverse_message(
     id: str,
     dir_path: str,
-    msh_file_path: str,
     montage: str,
     current_A: list[float],
     current_B: list[float],
@@ -114,8 +110,7 @@ def build_inverse_message(
     Args:
         id: 任务唯一标识符
         dir_path: 头模所在文件夹路径
-        msh_file_path: 头模网格文件路径
-        montage: 电极导联配置文件路径
+        montage: 电极导联名称
         current_A: 电极组 A 电流值列表
         current_B: 电极组 B 电流值列表
         roi_type: ROI 类型（"atlas" 或 "mni_pos"）
@@ -133,7 +128,6 @@ def build_inverse_message(
         "type": "inverse",
         "params": {
             "dir_path": dir_path,
-            "msh_file_path": msh_file_path,
             "montage": montage,
             "current_A": current_A,
             "current_B": current_B,

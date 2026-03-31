@@ -48,20 +48,22 @@ def get_assume_role(
     """
     aliyun_config = get_aliyun_config()
     config = open_api_models.Config(
-        access_key_id=aliyun_config['access_key_id'],
-        access_key_secret=aliyun_config['access_key_secret'],
-        endpoint=aliyun_config['sts_endpoint'],
+        access_key_id=aliyun_config["access_key_id"],
+        access_key_secret=aliyun_config["access_key_secret"],
+        endpoint=aliyun_config["sts_endpoint"],
     )
     client = StsClient(config)
     assume_role_request = sts_models.AssumeRoleRequest(
         duration_seconds=duration_seconds,
-        role_arn=aliyun_config['sts_role_arn'],
+        role_arn=aliyun_config["sts_role_arn"],
         role_session_name=role_session_name,
     )
     assume_role = client.assume_role(assume_role_request)
     if show_progress:
         logger.info("access_key_id: %s", assume_role.body.credentials.access_key_id)
-        logger.info("access_key_secret: %s", assume_role.body.credentials.access_key_secret)
+        logger.info(
+            "access_key_secret: %s", assume_role.body.credentials.access_key_secret
+        )
         logger.info("security_token: %s", assume_role.body.credentials.security_token)
     return assume_role
 
@@ -86,8 +88,8 @@ def get_bucket() -> oss2.Bucket:
     )
     bucket = oss2.Bucket(
         auth,
-        aliyun_config['oss_endpoint'],
-        aliyun_config['bucket_name'],
+        aliyun_config["oss_endpoint"],
+        aliyun_config["bucket_name"],
     )
     return bucket
 
@@ -172,11 +174,68 @@ def download_folder_from_oss(
             logger.error("下载文件失败: %s [%s]", e, oss_rel_path)
 
 
-def upload_bytes_to_oss(
+def download_file_from_oss(
     bucket: oss2.Bucket,
-    data: bytes,
-    oss_key: str
+    oss_key: str,
+    local_path: Path,
 ) -> None:
+    """下载单个 OSS 文件到本地。"""
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        logger.info("正在下载文件: %s -> %s", oss_key, local_path)
+        bucket.get_object_to_file(oss_key, str(local_path))
+        logger.info("文件下载成功: %s", oss_key)
+    except oss2.exceptions.OssError as e:
+        logger.error("OSS错误: %s [%s]", e.message, oss_key)
+        raise
+    except Exception as e:
+        logger.error("下载文件失败: %s [%s]", e, oss_key)
+        raise
+
+
+def upload_file_to_oss(
+    bucket: oss2.Bucket,
+    local_path: Path,
+    oss_key: str,
+) -> None:
+    """上传单个本地文件到 OSS。"""
+    if not local_path.is_file():
+        raise FileNotFoundError(f"本地文件不存在: {local_path}")
+    try:
+        logger.info("正在上传文件: %s -> %s", local_path, oss_key)
+        bucket.put_object_from_file(oss_key, str(local_path))
+        logger.info("文件上传成功: %s", oss_key)
+    except oss2.exceptions.OssError as e:
+        logger.error("OSS错误: %s [%s]", e.message, oss_key)
+        raise
+    except Exception as e:
+        logger.error("上传文件失败: %s [%s]", e, oss_key)
+        raise
+
+
+def upload_folder_to_oss(
+    bucket: oss2.Bucket,
+    local_dir: Path,
+    oss_prefix: str,
+) -> list[str]:
+    """递归上传本地目录到 OSS 前缀。"""
+    if not local_dir.is_dir():
+        raise FileNotFoundError(f"本地目录不存在: {local_dir}")
+
+    uploaded_keys: list[str] = []
+    normalized_prefix = oss_prefix.strip("/")
+    for file_path in sorted(local_dir.rglob("*")):
+        if not file_path.is_file():
+            continue
+        rel_path = file_path.relative_to(local_dir).as_posix()
+        oss_key = f"{normalized_prefix}/{rel_path}" if normalized_prefix else rel_path
+        upload_file_to_oss(bucket, file_path, oss_key)
+        uploaded_keys.append(oss_key)
+
+    return uploaded_keys
+
+
+def upload_bytes_to_oss(bucket: oss2.Bucket, data: bytes, oss_key: str) -> None:
     """上传字节数据到 OSS
 
     原理：
@@ -237,10 +296,13 @@ def download_bytes_from_oss(
 
 
 __all__ = [
-    'get_assume_role',
-    'get_bucket',
-    'get_file_keys_from_oss',
-    'download_folder_from_oss',
-    'upload_bytes_to_oss',
-    'download_bytes_from_oss',
+    "get_assume_role",
+    "get_bucket",
+    "get_file_keys_from_oss",
+    "download_file_from_oss",
+    "download_folder_from_oss",
+    "upload_file_to_oss",
+    "upload_folder_to_oss",
+    "upload_bytes_to_oss",
+    "download_bytes_from_oss",
 ]

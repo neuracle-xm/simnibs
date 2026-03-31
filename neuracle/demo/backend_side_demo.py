@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # 配置
 config = get_rabbitmq_config()
+DEMO_DIR_PATH = "m2m_ernie"
 
 
 def result_callback(channel, method, properties, body):
@@ -178,27 +179,26 @@ def get_test_messages():
     # 1. 头模生成 - 必填参数（仅 T1）
     msg1 = build_model_message(
         id="test_model_001",
-        dir_path="/tmp/test_model_001",
-        T1_file_path="/tmp/test_t1.nii.gz",
+        dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
     )
     messages.append(("model_必填参数", msg1))
 
     # 2. 头模生成 - 包含可选参数（T2 + DTI）
     msg2 = build_model_message(
         id="test_model_002",
-        dir_path="/tmp/test_model_002",
-        T1_file_path="/tmp/test_t1.nii.gz",
-        T2_file_path="/tmp/test_t2.nii.gz",
-        DTI_file_path="/tmp/test_dti.nii.gz",
+        dir_path=DEMO_DIR_PATH,
+        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        T2_file_path=f"{DEMO_DIR_PATH}/T2_reg.nii.gz",
+        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("model_可选参数", msg2))
 
     # 3. 正向仿真 - anisotropy=False
     msg3 = build_forward_message(
         id="test_forward_001",
-        dir_path="/tmp/test_forward",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_UI_Jurak_2007",
         electrode_A=["F5", "P5"],
         electrode_B=["F5", "P5"],
         current_A=[0.002, -0.002],
@@ -211,41 +211,38 @@ def get_test_messages():
     # 4. 正向仿真 - anisotropy=True with DTI
     msg4 = build_forward_message(
         id="test_forward_002",
-        dir_path="/tmp/test_forward",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_Cutini_2011",
         electrode_A=["F5", "P5"],
         electrode_B=["P5", "F5"],
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
         cond={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
         anisotropy=True,
-        DTI_file_path="/tmp/test_dti.nii.gz",
+        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("forward_anisotropy_true", msg4))
 
     # 5. 正向仿真 - anisotropy=False with DTI
     msg5 = build_forward_message(
         id="test_forward_004",
-        dir_path="/tmp/test_forward",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_UI_Jurak_2007",
         electrode_A=["F5", "P5"],
         electrode_B=["F5", "P5"],
         current_A=[0.002, -0.002],
         current_B=[0.001, -0.001],
         cond={"White Matter": 0.126, "Gray Matter": 0.275},
         anisotropy=False,
-        DTI_file_path="/tmp/test_dti.nii.gz",
+        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("forward_anisotropy_false_with_dti", msg5))
 
     # 6. 正向仿真 - 多电极配置
     msg6 = build_forward_message(
         id="test_forward_003",
-        dir_path="/tmp/test_forward",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-20_Okamoto_2004",
         electrode_A=["F3", "FC5", "FC1", "Cz"],
         electrode_B=["P3", "PO7", "PO3", "O1"],
         current_A=[0.001, 0.001, -0.001, -0.001],
@@ -264,9 +261,8 @@ def get_test_messages():
     # 7. 逆向仿真 - Atlas ROI
     msg7 = build_inverse_message(
         id="test_inverse_001",
-        dir_path="/tmp/test_inverse",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_Cutini_2011",
         current_A=[0.002, -0.002],
         current_B=[0.001, -0.001],
         roi_type="atlas",
@@ -283,9 +279,8 @@ def get_test_messages():
     # 8. 逆向仿真 - MNI Position ROI
     msg8 = build_inverse_message(
         id="test_inverse_002",
-        dir_path="/tmp/test_inverse",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
         roi_type="mni_pos",
@@ -296,16 +291,15 @@ def get_test_messages():
         target_threshold=0.7,
         cond={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
         anisotropy=True,
-        DTI_file_path="/tmp/test_dti.nii.gz",
+        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("inverse_mni_pos_roi", msg8))
 
     # 9. 逆向仿真 - 边界值测试（threshold=0）
     msg9 = build_inverse_message(
         id="test_inverse_003",
-        dir_path="/tmp/test_inverse",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/test_montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
         roi_type="atlas",
@@ -345,9 +339,8 @@ def get_error_messages():
     # 3. forward - electrode_A 和 current_A 长度不一致
     msg3 = build_forward_message(
         id="test_error_002",
-        dir_path="/tmp",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_UI_Jurak_2007",
         electrode_A=["F5", "P5", "P3"],
         electrode_B=["F5", "P5"],
         current_A=[0.001, -0.001],
@@ -360,9 +353,8 @@ def get_error_messages():
     # 4. inverse - roi_type 非法值
     msg4 = build_inverse_message(
         id="test_error_003",
-        dir_path="/tmp",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
         roi_type="invalid_type",
@@ -379,9 +371,8 @@ def get_error_messages():
     # 5. inverse - target_threshold 为负数
     msg5 = build_inverse_message(
         id="test_error_004",
-        dir_path="/tmp",
-        msh_file_path="/tmp/test.msh",
-        montage="/tmp/montage.csv",
+        dir_path=DEMO_DIR_PATH,
+        montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
         roi_type="atlas",

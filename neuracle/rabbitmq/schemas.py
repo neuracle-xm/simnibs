@@ -49,7 +49,6 @@ class ForwardParams:
 
     id: str
     dir_path: str
-    msh_file_path: str
     montage: str
     electrode_A: list[str]
     electrode_B: list[str]
@@ -66,7 +65,6 @@ class InverseParams:
 
     id: str
     dir_path: str
-    msh_file_path: str
     montage: str
     current_A: list[float]
     current_B: list[float]

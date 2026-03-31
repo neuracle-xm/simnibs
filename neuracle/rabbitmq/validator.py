@@ -66,7 +66,6 @@ def validate_forward_params(params: dict[str, Any]) -> None:
 
     验证规则：
     - dir_path: 非空字符串
-    - msh_file_path: 非空字符串
     - montage: 非空字符串
     - electrode_A: 非空列表，元素为字符串
     - electrode_B: 非空列表，元素为字符串
@@ -89,12 +88,6 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     if not dir_path or not isinstance(dir_path, str):
         logger.error("[dir_path] dir_path 必须是字符串")
         raise ValidationError("dir_path 验证失败")
-
-    # 验证 msh_file_path
-    msh_path = params.get("msh_file_path")
-    if not msh_path or not isinstance(msh_path, str):
-        logger.error("[msh_file_path] msh_file_path 必须是字符串")
-        raise ValidationError("msh_file_path 验证失败")
 
     # 验证 montage
     montage = params.get("montage")
@@ -190,7 +183,6 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
 
     验证规则：
     - dir_path: 非空字符串
-    - msh_file_path: 非空字符串
     - montage: 非空字符串
     - current_A: 非空列表，元素为浮点数，总和必须为 0
     - current_B: 非空列表，元素为浮点数，总和必须为 0
@@ -214,12 +206,6 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     if not dir_path or not isinstance(dir_path, str):
         logger.error("[dir_path] dir_path 必须是字符串")
         raise ValidationError("dir_path 验证失败")
-
-    # 验证 msh_file_path
-    msh_path = params.get("msh_file_path")
-    if not msh_path or not isinstance(msh_path, str):
-        logger.error("[msh_file_path] msh_file_path 必须是字符串")
-        raise ValidationError("msh_file_path 验证失败")
 
     # 验证 montage
     montage = params.get("montage")

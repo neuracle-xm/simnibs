@@ -31,7 +31,6 @@ def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
     return ForwardParams(
         id=task_id,
         dir_path=data["dir_path"],
-        msh_file_path=data["msh_file_path"],
         montage=data["montage"],
         electrode_A=data["electrode_A"],
         electrode_B=data["electrode_B"],
@@ -61,7 +60,6 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
     return InverseParams(
         id=task_id,
         dir_path=data["dir_path"],
-        msh_file_path=data["msh_file_path"],
         montage=data["montage"],
         current_A=data["current_A"],
         current_B=data["current_B"],

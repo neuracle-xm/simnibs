@@ -26,24 +26,18 @@ logger = logging.getLogger("neuracle.demo.main_sender_demo")
 PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
-DEMO_DATA_DIR = os.path.join(
-    PROJECT_ROOT,
-    "data",
-    "m2m_ernie",
-)
+DEMO_DIR_PATH = "m2m_ernie"
 
 
 def create_model_message(task_id: str, with_dti: bool = False) -> dict:
     """创建 model 任务消息"""
     params = {
-        "T1_file_path": os.path.join(DEMO_DATA_DIR, "T1.nii.gz"),
-        "T2_file_path": os.path.join(DEMO_DATA_DIR, "T2_reg.nii.gz"),
-        "dir_path": DEMO_DATA_DIR,
+        "T1_file_path": f"{DEMO_DIR_PATH}/T1.nii.gz",
+        "T2_file_path": f"{DEMO_DIR_PATH}/T2_reg.nii.gz",
+        "dir_path": DEMO_DIR_PATH,
     }
     if with_dti:
-        params["DTI_file_path"] = os.path.join(
-            DEMO_DATA_DIR, "DTI_coregT1_tensor.nii.gz"
-        )
+        params["DTI_file_path"] = f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "model", "params": params}
 
 
@@ -60,8 +54,7 @@ def create_forward_message(
     if electrode_b is None:
         electrode_b = ["F6", "P6"]
     params = {
-        "dir_path": DEMO_DATA_DIR,
-        "msh_file_path": os.path.join(DEMO_DATA_DIR, "model.msh"),
+        "dir_path": DEMO_DIR_PATH,
         "montage": montage,
         "electrode_A": electrode_a,
         "electrode_B": electrode_b,
@@ -71,9 +64,7 @@ def create_forward_message(
         "anisotropy": anisotropy,
     }
     if anisotropy:
-        params["DTI_file_path"] = os.path.join(
-            DEMO_DATA_DIR, "DTI_coregT1_tensor.nii.gz"
-        )
+        params["DTI_file_path"] = f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "forward", "params": params}
 
 
@@ -82,8 +73,7 @@ def create_inverse_message(
 ) -> dict:
     """创建 inverse 任务消息"""
     params = {
-        "dir_path": DEMO_DATA_DIR,
-        "msh_file_path": os.path.join(DEMO_DATA_DIR, "model.msh"),
+        "dir_path": DEMO_DIR_PATH,
         "montage": montage,
         "current_A": [0.002, -0.002],
         "current_B": [0.001, -0.001],
@@ -100,9 +90,7 @@ def create_inverse_message(
         "anisotropy": anisotropy,
     }
     if anisotropy:
-        params["DTI_file_path"] = os.path.join(
-            DEMO_DATA_DIR, "DTI_coregT1_tensor.nii.gz"
-        )
+        params["DTI_file_path"] = f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "inverse", "params": params}
 
 
@@ -120,8 +108,7 @@ def create_inverse_atlas_message(
         neuracle/docs/atlas_roi_offline_preprocessing_plan.md 中记录的预处理脚本。
     """
     params = {
-        "dir_path": DEMO_DATA_DIR,
-        "msh_file_path": os.path.join(DEMO_DATA_DIR, "model.msh"),
+        "dir_path": DEMO_DIR_PATH,
         "montage": montage,
         "current_A": [0.002, -0.002],
         "current_B": [0.001, -0.001],
@@ -138,9 +125,7 @@ def create_inverse_atlas_message(
         "anisotropy": anisotropy,
     }
     if anisotropy:
-        params["DTI_file_path"] = os.path.join(
-            DEMO_DATA_DIR, "DTI_coregT1_tensor.nii.gz"
-        )
+        params["DTI_file_path"] = f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "inverse", "params": params}
 
 

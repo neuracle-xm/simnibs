@@ -346,6 +346,7 @@ def run_optimization(
 
 def export_mz3(
     output_dir: str,
+    msh_name: str,
     surface_type: str = "central",
 ) -> str:
     """
@@ -354,7 +355,9 @@ def export_mz3(
     Parameters
     ----------
     output_dir : str
-        优化输出目录
+        MZ3 输出目录
+    msh_name : str
+        源 .msh 文件名称（不含路径）
     surface_type : str
         表面类型 (default: "central")
 
@@ -363,16 +366,10 @@ def export_mz3(
     str
         MZ3 文件路径
     """
+    msh_path = os.path.join(output_dir, msh_name)
 
-    # 查找优化结果 mesh 文件
-    msh_path = None
-    for f in os.listdir(output_dir):
-        if f.endswith(".msh"):
-            msh_path = os.path.join(output_dir, f)
-            break
-
-    if msh_path is None:
-        raise FileNotFoundError(f"在 {output_dir} 中未找到 .msh 文件")
+    if not os.path.exists(msh_path):
+        raise FileNotFoundError(f"msh 文件不存在: {msh_path}")
 
     logger.info("导出优化结果到 MZ3 格式...")
     mz3_path = msh_to_mz3(

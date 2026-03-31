@@ -14,6 +14,7 @@ import shutil
 import threading
 import time
 from functools import partial
+from pathlib import Path
 from queue import Queue
 from typing import Any
 
@@ -27,6 +28,13 @@ from neuracle.charm import (
     run_segmentation,
 )
 from neuracle.logger import setup_logging
+from neuracle.oss_tool import (
+    download_file_from_oss,
+    download_folder_from_oss,
+    get_bucket,
+    upload_file_to_oss,
+    upload_folder_to_oss,
+)
 from neuracle.rabbitmq.listener import RabbitMQListener
 from neuracle.rabbitmq.message_builder import build_progress_message
 from neuracle.rabbitmq.schemas import (
@@ -74,9 +82,15 @@ from neuracle.utils import (
     get_standardized_roi_path,
     load_env,
 )
-from neuracle.utils.env import get_rabbitmq_config
+from neuracle.utils.env import get_aliyun_config, get_rabbitmq_config
 
 logger = logging.getLogger(__name__)
+
+# DEBUG 模式：True 时跳过 output_dir 删除
+DEBUG = False
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_ROOT = PROJECT_ROOT / "data"
 
 
 def _ack_in_consumer_thread(
@@ -159,6 +173,118 @@ def reset_task_output_dir(output_dir: str) -> None:
         shutil.rmtree(output_dir)
 
 
+DEFAULT_DIR_PATH = "m2m_ernie"
+DEFAULT_DTI_FILE_PATH = "DTI_coregT1_tensor.nii.gz"
+
+
+def normalize_dir_path(dir_path: str) -> str:
+    """规范化相对目录路径，禁止绝对路径和父级跳转。空字符串使用默认值 m2m_ernie。"""
+    normalized = dir_path.replace("\\", "/").strip().strip("/")
+    if not normalized:
+        normalized = DEFAULT_DIR_PATH
+        logger.info("dir_path 为空，使用默认值: %s", normalized)
+    path_obj = Path(normalized)
+    if path_obj.is_absolute() or ".." in path_obj.parts:
+        raise ValueError(f"非法 dir_path: {dir_path}")
+    return normalized
+
+
+def get_subject_dir(dir_path: str) -> Path:
+    return DATA_ROOT / Path(normalize_dir_path(dir_path))
+
+
+def get_task_output_dir(dir_path: str, suffix: str, task_id: str | None = None) -> Path:
+    normalized = normalize_dir_path(dir_path)
+    if task_id:
+        return DATA_ROOT / f"{normalized}_{suffix}_{task_id}"
+    return DATA_ROOT / f"{normalized}_{suffix}"
+
+
+def get_model_mesh_path(dir_path: str) -> Path:
+    return get_subject_dir(dir_path) / "model.msh"
+
+
+def resolve_local_dti_path(dir_path: str, dti_file_path: str | None) -> str | None:
+    if not dti_file_path:
+        dti_file_path = DEFAULT_DTI_FILE_PATH
+        logger.info("DTI_file_path 为空，使用默认值: %s", dti_file_path)
+    return str(get_subject_dir(dir_path) / dti_file_path)
+
+
+def build_storage_key(path: str) -> str:
+    """将逻辑 OSS key 映射到真实存储 key。"""
+    bucket_target = get_aliyun_config().get("bucket_target", "").strip("/")
+    logical_key = path.strip("/")
+    if bucket_target:
+        return f"{bucket_target}/{logical_key}"
+    return logical_key
+
+
+def ensure_data_root() -> None:
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_subject_cache(bucket: Any, dir_path: str) -> Path:
+    """确保本地 subject 缓存存在；不存在时从 OSS 按前缀下载。"""
+    ensure_data_root()
+    normalized = normalize_dir_path(dir_path)
+    subject_dir = get_subject_dir(normalized)
+    if subject_dir.is_dir():
+        logger.info("命中本地缓存: %s", subject_dir)
+        return subject_dir
+
+    logger.info("未命中本地缓存，开始下载前缀: %s", normalized)
+    subject_dir.mkdir(parents=True, exist_ok=True)
+    download_folder_from_oss(
+        bucket,
+        build_storage_key(normalized),
+        subject_dir,
+    )
+    return subject_dir
+
+
+def download_input_file(bucket: Any, oss_key: str, local_path: Path) -> Path:
+    """下载单个输入文件并返回本地路径。"""
+    download_file_from_oss(bucket, build_storage_key(oss_key), local_path)
+    return local_path
+
+
+def upload_model_outputs(
+    bucket: Any, dir_path: str, subject_dir: Path
+) -> dict[str, str]:
+    normalized = normalize_dir_path(dir_path)
+    uploaded: dict[str, str] = {}
+    folder_mappings = {
+        f"{normalized}/eeg_positions": subject_dir / "eeg_positions",
+        f"{normalized}/label_prep": subject_dir / "label_prep",
+        f"{normalized}/surfaces": subject_dir / "surfaces",
+        f"{normalized}/toMNI": subject_dir / "toMNI",
+    }
+    for oss_prefix, local_dir in folder_mappings.items():
+        if local_dir.is_dir():
+            logger.info("上传目录到 OSS: %s -> %s", local_dir, oss_prefix)
+            upload_folder_to_oss(bucket, local_dir, build_storage_key(oss_prefix))
+            uploaded[local_dir.name] = f"{oss_prefix}/"
+
+    file_mappings = {
+        f"{normalized}/model.msh": subject_dir / "model.msh",
+        f"{normalized}/model.msh.opt": subject_dir / "model.msh.opt",
+    }
+    for oss_key, local_file in file_mappings.items():
+        if local_file.is_file():
+            logger.info("上传文件到 OSS: %s -> %s", local_file, oss_key)
+            upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
+            uploaded[local_file.name] = oss_key
+
+    return uploaded
+
+
+def upload_task_result(bucket: Any, local_file: Path, oss_key: str) -> str:
+    logger.info("上传任务结果到 OSS: %s -> %s", local_file, oss_key)
+    upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
+    return oss_key
+
+
 def mask_rabbitmq_config(config: dict[str, Any]) -> dict[str, Any]:
     """隐藏敏感配置，避免密码写入日志。"""
     masked = dict(config)
@@ -218,42 +344,67 @@ def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -
     params : ModelParams
         头模生成参数
     """
+    bucket = get_bucket()
+    subject_dir = get_subject_dir(params.dir_path)
+    ensure_data_root()
+    subject_dir.mkdir(parents=True, exist_ok=True)
+    t1_local_path = download_input_file(
+        bucket,
+        params.T1_file_path,
+        subject_dir / Path(params.T1_file_path).name,
+    )
+    t2_local_path = None
+    if params.T2_file_path:
+        t2_local_path = download_input_file(
+            bucket,
+            params.T2_file_path,
+            subject_dir / Path(params.T2_file_path).name,
+        )
+    # 头模生成本身不需要DTI文件，但是要先下载下来，仿真时要用
+    if params.DTI_file_path:
+        download_input_file(
+            bucket,
+            params.DTI_file_path,
+            subject_dir / Path(params.DTI_file_path).name,
+        )
+
     # 0% - 任务开始
     send_progress(message_queue, task_id, "model", 0, "任务开始")
 
     # 10% - prepare_t1
-    prepare_t1(params.dir_path, params.T1_file_path)
+    prepare_t1(str(subject_dir), str(t1_local_path))
     send_progress(message_queue, task_id, "model", 10, "已完成: T1 图像准备与格式转换")
 
     # 20% - prepare_t2
-    if params.T2_file_path:
+    if t2_local_path:
         try:
-            prepare_t2(params.dir_path, params.T2_file_path)
+            prepare_t2(str(subject_dir), str(t2_local_path))
         except Exception:
-            prepare_t2(params.dir_path, params.T2_file_path, force_sform=True)
+            prepare_t2(str(subject_dir), str(t2_local_path), force_sform=True)
         send_progress(message_queue, task_id, "model", 20, "已完成: T2 图像配准与准备")
 
     # 35% - denoise
-    denoise_inputs(params.dir_path)
+    denoise_inputs(str(subject_dir))
     send_progress(message_queue, task_id, "model", 35, "已完成: 输入图像降噪")
 
     # 50% - init_atlas
-    init_atlas(params.dir_path)
+    init_atlas(str(subject_dir))
     send_progress(
         message_queue, task_id, "model", 50, "已完成: Atlas 初始仿射配准与颈部校正"
     )
 
     # 70% - segment
-    run_segmentation(params.dir_path)
+    run_segmentation(str(subject_dir))
     send_progress(message_queue, task_id, "model", 70, "已完成: 体积与表面分割")
 
     # 85% - create_surfaces
-    create_surfaces(params.dir_path)
+    create_surfaces(str(subject_dir))
     send_progress(message_queue, task_id, "model", 85, "已完成: 皮层表面重建")
 
     # 100% - mesh
-    create_mesh(params.dir_path)
-    msh_path = os.path.join(params.dir_path, "model.msh")
+    create_mesh(str(subject_dir))
+    upload_model_outputs(bucket, params.dir_path, subject_dir)
+    msh_path = f"{normalize_dir_path(params.dir_path)}/model.msh"
     result = {"msh_file_path": msh_path}
     logger.debug("msh_file_path: %s", msh_path)
     send_progress(
@@ -276,24 +427,28 @@ def handle_forward_task(
     params : ForwardParams
         正向仿真参数
     """
-    output_dir = os.path.join(params.dir_path, "TI_simulation", task_id)
+    bucket = get_bucket()
+    subject_dir = ensure_subject_cache(bucket, params.dir_path)
+    output_dir = get_task_output_dir(params.dir_path, "TI_simulation", task_id)
     anisotropy_type = "vn" if params.anisotropy else "scalar"
-    reset_task_output_dir(output_dir)
+    reset_task_output_dir(str(output_dir))
 
     # 获取 EEG 电极帽 CSV 文件路径
-    eeg_cap = find_montage_file(params.dir_path, params.montage)
+    eeg_cap = find_montage_file(str(subject_dir), params.montage)
+    mesh_path = get_model_mesh_path(params.dir_path)
+    dti_path = resolve_local_dti_path(params.dir_path, params.DTI_file_path)
 
     # 0% - 任务开始
     send_progress(message_queue, task_id, "forward", 0, "任务开始")
 
     # 10% - setup_session
     S = setup_session(
-        subject_dir=params.dir_path,
-        msh_file_path=params.msh_file_path,
-        output_dir=output_dir,
+        subject_dir=str(subject_dir),
+        msh_file_path=str(mesh_path),
+        output_dir=str(output_dir),
         anisotropy_type=anisotropy_type,
         cond=cond_dict_to_list(params.cond),
-        fname_tensor=params.DTI_file_path,
+        fname_tensor=dti_path,
         eeg_cap=eeg_cap,
     )
     send_progress(message_queue, task_id, "forward", 10, "已完成: 配置会话参数")
@@ -317,8 +472,8 @@ def handle_forward_task(
     # 70% - run_tdcs
     mesh1_path, mesh2_path = run_tdcs_simulation(
         session=S,
-        subject_dir=params.dir_path,
-        output_dir=output_dir,
+        subject_dir=str(subject_dir),
+        output_dir=str(output_dir),
         n_workers=N_WORKERS,
     )
     send_progress(message_queue, task_id, "forward", 70, "已完成: TDCS 仿真计算")
@@ -327,20 +482,30 @@ def handle_forward_task(
     ti_mesh_path = calculate_ti(
         mesh1_path=mesh1_path,
         mesh2_path=mesh2_path,
-        output_dir=output_dir,
+        output_dir=str(output_dir),
     )
     send_progress(message_queue, task_id, "forward", 85, "已完成: TI 场计算")
 
     # 95% - export_mz3
     mz3_path = sim_export_mz3(
         ti_mesh_path=ti_mesh_path,
-        output_dir=output_dir,
+        output_dir=str(output_dir),
         surface_type="central",
     )
     send_progress(message_queue, task_id, "forward", 95, "已完成: 导出 MZ3 格式")
 
-    result = {"TI_file": mz3_path}
-    logger.debug("TI_file: %s", mz3_path)
+    ti_file_key = upload_task_result(
+        bucket,
+        Path(mz3_path),
+        f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}/TI.mz3",
+    )
+    if DEBUG:
+        logger.info("DEBUG 模式，跳过删除 output_dir: %s", output_dir)
+    else:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+    result = {"TI_file": ti_file_key}
+    logger.debug("TI_file: %s", ti_file_key)
     send_progress(message_queue, task_id, "forward", 100, "已完成: 仿真完成", result)
 
 
@@ -359,12 +524,16 @@ def handle_inverse_task(
     params : InverseParams
         逆向仿真参数
     """
-    output_dir = os.path.join(params.dir_path, "TI_optimization", task_id)
+    bucket = get_bucket()
+    subject_dir = ensure_subject_cache(bucket, params.dir_path)
+    output_dir = get_task_output_dir(params.dir_path, "TI_optimization", task_id)
     anisotropy_type = "vn" if params.anisotropy else "scalar"
-    reset_task_output_dir(output_dir)
+    reset_task_output_dir(str(output_dir))
 
     # 获取 EEG 电极帽 CSV 文件路径（用于电极映射）
-    net_electrode_file = find_montage_file(params.dir_path, params.montage)
+    net_electrode_file = find_montage_file(str(subject_dir), params.montage)
+    mesh_path = get_model_mesh_path(params.dir_path)
+    dti_path = resolve_local_dti_path(params.dir_path, params.DTI_file_path)
 
     # 电极和 ROI 参数
     roi_center = None
@@ -396,12 +565,12 @@ def handle_inverse_task(
 
     # 10% - init_optimization
     opt = init_optimization(
-        subject_dir=params.dir_path,
-        msh_file_path=params.msh_file_path,
-        output_dir=output_dir,
+        subject_dir=str(subject_dir),
+        msh_file_path=str(mesh_path),
+        output_dir=str(output_dir),
         anisotropy_type=anisotropy_type,
         cond=cond_dict_to_list(params.cond),
-        fname_tensor=params.DTI_file_path,
+        fname_tensor=dti_path,
     )
     send_progress(message_queue, task_id, "inverse", 10, "已完成: 初始化优化结构")
 
@@ -438,24 +607,38 @@ def handle_inverse_task(
     send_progress(message_queue, task_id, "inverse", 85, "已完成: 优化算法执行")
 
     # 90% - get_electrode_mapping
-    electrode_A, electrode_B = get_electrode_mapping(output_dir=output_dir)
+    electrode_A, electrode_B = get_electrode_mapping(output_dir=str(output_dir))
     send_progress(message_queue, task_id, "inverse", 90, "已完成: 获取电极映射结果")
 
     # 95% - export_mz3
+    # 从 mesh_path 中提取 modelid，格式如 data/xxx/model.msh -> model
+    modelid = Path(mesh_path).stem
+    msh_name = f"{modelid}_tes_mapped_opt_surface_mesh.msh"
     mz3_path = optimize_export_mz3(
-        output_dir=output_dir,
+        output_dir=str(output_dir / "mapped_electrodes_simulation"),
+        msh_name=msh_name,
         surface_type="central",
     )
     send_progress(message_queue, task_id, "inverse", 95, "已完成: 导出 MZ3 格式")
 
+    ti_file_key = upload_task_result(
+        bucket,
+        Path(mz3_path),
+        f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}/TI.mz3",
+    )
+    if DEBUG:
+        logger.info("DEBUG 模式，跳过删除 output_dir: %s", output_dir)
+    else:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
     result = {
-        "TI_file": mz3_path,
+        "TI_file": ti_file_key,
         "electrode_A": electrode_A,
         "electrode_B": electrode_B,
     }
     logger.debug(
         "TI_file: %s, electrode_A: %s, electrode_B: %s",
-        mz3_path,
+        ti_file_key,
         electrode_A,
         electrode_B,
     )
