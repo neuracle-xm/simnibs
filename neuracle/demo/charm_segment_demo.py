@@ -26,7 +26,7 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(os.path.join(PROJECT_ROOT, "neuracle", "log"))
+    setup_logging(os.path.join(PROJECT_ROOT, "neuracle", "log", "charm_segment"))
 
     # 设置路径
     subject_dir = os.path.join(DATA_DIR, "m2m_ernie")

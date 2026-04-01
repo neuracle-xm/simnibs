@@ -492,7 +492,7 @@ class SESSION(object):
         log_fn = os.path.join(
             self.pathfem,
             fname_prefix + '_{0}.log'.format(self.time_str))
-        fh = logging.FileHandler(log_fn, mode='w')
+        fh = logging.FileHandler(log_fn, mode='w', encoding='utf-8')
         formatter = logging.Formatter(
             f'[ %(name)s {__version__} - %(asctime)s - %(process)d ]%(levelname)s: %(message)s')
         fh.setFormatter(formatter)
@@ -503,7 +503,7 @@ class SESSION(object):
 
         if summary:
             fn_summary = os.path.join(self.pathfem, 'fields_summary.txt')
-            fh_s = logging.FileHandler(fn_summary, mode='w')
+            fh_s = logging.FileHandler(fn_summary, mode='w', encoding='utf-8')
             fh_s.setFormatter(logging.Formatter('%(message)s'))
             fh_s.setLevel(25)
             logger.addHandler(fh_s)

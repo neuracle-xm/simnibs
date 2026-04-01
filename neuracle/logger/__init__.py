@@ -74,6 +74,7 @@ def _create_console_handler() -> logging.StreamHandler:
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
+    console_handler.stream.reconfigure(encoding="utf-8")  # type: ignore
     return console_handler
 
 

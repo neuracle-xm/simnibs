@@ -26,6 +26,7 @@ CHARM 步骤6: 皮层表面重建
 
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -221,7 +222,17 @@ def _create_surfaces_from_cat12(
     proc = subprocess.run(
         [sys.executable] + multithreading_script + args_list, stderr=subprocess.PIPE
     )
-    logger.debug(proc.stderr.decode("ASCII", errors="ignore").replace("\r", ""))
+    # 过滤 CAT12 进度条噪声
+    stderr_text = proc.stderr.decode("ASCII", errors="ignore")
+    stderr_text = re.sub(r"/-\|/-", "", stderr_text)
+    stderr_text = re.sub(
+        r"Selecting intersections ... \d{1,3} %Selecting intersections ... \d{1,3} %",
+        "",
+        stderr_text,
+    )
+    stderr_text = stderr_text.replace("\r", "")
+    if stderr_text.strip():
+        logger.debug(stderr_text)
     if proc.returncode != 0:
         logger.error("CAT12 子进程执行失败，返回码: %d", proc.returncode)
         logger.error("错误信息: %s", proc.stderr.decode("ASCII", errors="ignore"))

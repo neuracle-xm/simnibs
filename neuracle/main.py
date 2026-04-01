@@ -13,6 +13,7 @@ import os
 import shutil
 import threading
 import time
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from queue import Queue
@@ -838,7 +839,12 @@ def run_service(config: dict) -> None:
 
 def main() -> None:
     """主入口函数"""
-    setup_logging()
+    # 不同的worker使用不同的日志目录，防止多进程问题
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+    log_dir = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "log", f"worker_{timestamp}"
+    )
+    setup_logging(log_dir)
     load_env()
     config = get_rabbitmq_config()
     logger.info("RabbitMQ 配置: %s", mask_rabbitmq_config(config))
