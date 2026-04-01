@@ -7,21 +7,19 @@ Angular gyrus LH,角回左侧
 Angular gyrus RH,角回右侧
 Angular gyrus anterior LH,角回前部左侧
 Angular gyrus anterior RH,角回前部右侧
-Angular gyrus antero-inferior LH,角回下部左侧
+Angular gyrus antero-inferior LH,角回前下部左侧
 Angular gyrus antero-superior LH,角回前上部左侧
 Angular gyrus antero-superior RH,角回前上部右侧
 Angular gyrus inferior,角回下部
 Angular gyrus inferior LH,角回下部左侧
 Angular gyrus inferior RH,角回下部右侧
-Angular gyrus mid-anterior RH,角回前部右侧
-Angular gyrus mid-posterior RH,角回后部右侧
-Angular gyrus mid-superior RH,角回上部右侧
+Angular gyrus mid-anterior RH,角回中部前侧右侧
+Angular gyrus mid-posterior RH,角回中部后侧右侧
+Angular gyrus mid-superior RH,角回中部上侧右侧
 Angular gyrus middle RH,角回中部右侧
 Angular gyrus posterior,角回后部
 Angular gyrus posterior LH,角回后部左侧
 Angular gyrus posterior RH,角回后部右侧
-Angular gyrus posterior inferior RH,角回后部下部右侧
-Angular gyrus posterior superior RH,角回后部上部右侧
 Angular gyrus postero-inferior LH,角回后下部左侧
 Angular gyrus postero-inferior RH,角回后下部右侧
 Angular gyrus postero-superior LH,角回后上部左侧
@@ -29,109 +27,102 @@ Angular gyrus postero-superior RH,角回后上部右侧
 Angular gyrus superior,角回上部
 Angular gyrus superior LH,角回上部左侧
 Angular gyrus superior RH,角回上部右侧
-Angular gyrus superior anterior LH,角回上部前部左侧
-Angular gyrus superior posterior LH,角回上部后部左侧
+Angular gyrus superior anterior LH,角回上前部左侧
+Angular gyrus superior posterior LH,角回上后部左侧
 Angular sulcus anterior LH,角沟前部左侧
 Angular sulcus anterior RH,角沟前部右侧
 Angular sulcus inferior LH,角沟下部左侧
 Angular sulcus inferior RH,角沟下部右侧
-Angular sulcus mid-anterior LH,角沟前部左侧
-Angular sulcus mid-anterior RH,角沟前部右侧
-Angular sulcus mid-posterior LH,角沟后部左侧
-Angular sulcus mid-posterior RH,角沟后部右侧
+Angular sulcus mid-anterior LH,角沟中部前侧左侧
+Angular sulcus mid-anterior RH,角沟中部前侧右侧
+Angular sulcus mid-posterior LH,角沟中部后侧左侧
+Angular sulcus mid-posterior RH,角沟中部后侧右侧
 Angular sulcus posterior LH,角沟后部左侧
 Angular sulcus posterior RH,角沟后部右侧
 Angular sulcus superior LH,角沟上部左侧
 Angular sulcus superior RH,角沟上部右侧
-Anterior Cingulate Cortex,前部扣带皮层
-Anterior cingulate cortex,前部扣带皮层
-Anterior cingulate cortex anterior LH,前部扣带皮层前部左侧
-Anterior cingulate cortex inferior,前部扣带皮层下部
-Anterior cingulate cortex inferior LH,前部扣带皮层下部左侧
-Anterior cingulate cortex middle,前部扣带皮层中部
-Anterior cingulate cortex superior,前部扣带皮层上部
-Anterior commissure,前部连合
-Anterior corona radiata,前部放射冠
-Anterior corona radiata LH,前部放射冠左侧
-Anterior corona radiata RH,前部放射冠右侧
-Anterior corona radiata anterior LH,前部放射冠前部左侧
-Anterior corona radiata anterior RH,前部放射冠前部右侧
-Anterior corona radiata inferior LH,前部放射冠下部左侧
-Anterior corona radiata mid-inferior LH,前部放射冠下部左侧
-Anterior corona radiata superior LH,前部放射冠上部左侧
-Anterior corona radiata superior RH,前部放射冠上部右侧
-Anterior horizontal ramus lateral fissure RH,前部外侧裂右侧
-Anterior horizontal ramus of the Lateral fissure LH,前部的外侧裂左侧
-Anterior horizontal ramus of the lateral fissure LH,前部的外侧裂左侧
-Anterior insula LH,前部脑岛左侧
-Anterior insula anterior LH,前部脑岛前部左侧
-Anterior insula anterior RH,前部脑岛前部右侧
-Anterior insula antero-inferior RH,前部脑岛下部右侧
-Anterior insula antero-superior,前部脑岛前上部
-Anterior insula inferior LH,前部脑岛下部左侧
-Anterior insula mid-inferior LH,前部脑岛下部左侧
-Anterior insula posterior RH,前部脑岛后部右侧
-Anterior insula superior RH,前部脑岛上部右侧
-Anterior limb of internal capsule,前部的内囊
-Anterior occipital sulcus LH,前部沟左侧
-Anterior occipital sulcus RH,前部沟右侧
-Anterior occipital sulcus anterior RH,前部沟前部右侧
-Anterior occipital sulcus posterior RH,前部沟后部右侧
-Anterior occipital sulcus superior RH,前部沟上部右侧
-Anterior orbital gyrus LH,前部眶回左侧
-Anterior orbital gyrus RH,前部眶回右侧
-Anterior orbital gyrus lateral,前部眶回外侧
-Anterior orbital gyrus medial,前部眶回内侧
-Anterior parts of occipitotemporal and collateral sulci LH,前部和外侧左侧
-Anterior rami of the lateral fissure RH,前部的外侧裂右侧
-Anterior thalamic radiation LH,前部左侧
-Anterior thalamic radiation RH,前部右侧
-Anterior thalamic radiation antero-superior LH,前部前上部左侧
-Anterior thalamic radiation antero-superior RH,前部前上部右侧
-Anterior vertical ramus of the Lateral fissure RH,前部的外侧裂右侧
-Anterior vertical ramus of the lateral fissure LH,前部的外侧裂左侧
-Arcuate fasciculus anterior RH,前部右侧
-Arcuate fasciculus inferior LH,下部左侧
-Arcuate fasciculus mid-anterior RH,前部右侧
-Arcuate fasciculus middle LH,中部左侧
-Arcuate fasciculus middle RH,中部右侧
-Arcuate fasciculus posterior LH,后部左侧
-Arcuate fasciculus postero-inferior LH,后下部左侧
-Arcuate fasciculus postero-inferior RH,后下部右侧
-Arcuate fasciculus postero-superior,后上部
+Anterior cingulate cortex,前扣带皮层
+Anterior cingulate cortex anterior LH,前扣带皮层前部左侧
+Anterior cingulate cortex inferior,前扣带皮层下部
+Anterior cingulate cortex inferior LH,前扣带皮层下部左侧
+Anterior cingulate cortex middle,前扣带皮层中部
+Anterior cingulate cortex superior,前扣带皮层上部
+Anterior commissure,前连合
+Anterior corona radiata anterior LH,放射冠前部前侧左侧
+Anterior corona radiata anterior RH,放射冠前部前侧右侧
+Anterior corona radiata inferior LH,放射冠前部下部左侧
+Anterior corona radiata mid-inferior LH,放射冠前部中部下侧左侧
+Anterior corona radiata superior LH,放射冠前部上部左侧
+Anterior corona radiata superior RH,放射冠前部上部右侧
+Anterior horizontal ramus lateral fissure RH,外侧裂前水平支右侧
+Anterior horizontal ramus of the lateral fissure LH,外侧裂前水平支左侧
+Anterior insula LH,前岛叶左侧
+Anterior insula anterior LH,前岛叶前部左侧
+Anterior insula anterior RH,前岛叶前部右侧
+Anterior insula antero-inferior RH,前岛叶前下部右侧
+Anterior insula antero-superior,前岛叶前上部
+Anterior insula inferior LH,前岛叶下部左侧
+Anterior insula mid-inferior LH,前岛叶中部下侧左侧
+Anterior insula posterior RH,前岛叶后部右侧
+Anterior insula superior RH,前岛叶上部右侧
+Anterior occipital sulcus LH,枕前沟左侧
+Anterior occipital sulcus RH,枕前沟右侧
+Anterior occipital sulcus anterior RH,枕前沟前部右侧
+Anterior occipital sulcus posterior RH,枕前沟后部右侧
+Anterior occipital sulcus superior RH,枕前沟上部右侧
+Anterior orbital gyrus LH,前眶回左侧
+Anterior orbital gyrus RH,前眶回右侧
+Anterior orbital gyrus lateral,前眶回外侧
+Anterior orbital gyrus medial,前眶回内侧
+Anterior parts of occipitotemporal and collateral sulci LH,枕颞沟和侧副沟前部左侧
+Anterior thalamic radiation LH,丘脑辐射前部左侧
+Anterior thalamic radiation RH,丘脑辐射前部右侧
+Anterior thalamic radiation antero-superior LH,丘脑辐射前上部左侧
+Anterior thalamic radiation antero-superior RH,丘脑辐射前上部右侧
+Anterior vertical ramus of the Lateral fissure RH,外侧裂前垂直支右侧
+Anterior vertical ramus of the lateral fissure LH,外侧裂前垂直支左侧
+Arcuate fasciculus anterior RH,弓状束前部右侧
+Arcuate fasciculus inferior LH,弓状束下部左侧
+Arcuate fasciculus mid-anterior RH,弓状束中部前侧右侧
+Arcuate fasciculus middle LH,弓状束中部左侧
+Arcuate fasciculus middle RH,弓状束中部右侧
+Arcuate fasciculus posterior LH,弓状束后部左侧
+Arcuate fasciculus postero-inferior LH,弓状束后下部左侧
+Arcuate fasciculus postero-inferior RH,弓状束后下部右侧
+Arcuate fasciculus postero-superior,弓状束后上部
 Calcarine cortex anterior,距状皮层前部
 Calcarine cortex anterior RH,距状皮层前部右侧
-Calcarine cortex mid-anterior LH,距状皮层前部左侧
-Calcarine cortex mid-posterior LH,距状皮层后部左侧
-Calcarine cortex mid-posterior RH,距状皮层后部右侧
+Calcarine cortex mid-anterior LH,距状皮层中部前侧左侧
+Calcarine cortex mid-posterior LH,距状皮层中部后侧左侧
+Calcarine cortex mid-posterior RH,距状皮层中部后侧右侧
 Calcarine cortex posterior,距状皮层后部
 Calcarine cortex posterior LH,距状皮层后部左侧
 Calcarine cortex posterior RH,距状皮层后部右侧
-Calcarine sulcus anterior,沟前部
-Calcarine sulcus anterior LH,沟前部左侧
-Calcarine sulcus anterior RH,沟前部右侧
-Calcarine sulcus mid-anterior,沟前部
-Calcarine sulcus mid-anterior RH,沟前部右侧
-Calcarine sulcus mid-posterior LH,沟后部左侧
-Calcarine sulcus middle,沟中部
-Calcarine sulcus posterior,沟后部
-Calcarine sulcus posterior LH,沟后部左侧
-Calcarine sulcus posterior medial,沟后部内侧
-Callosal sulcus mid-anterior,沟前部
-Callosal sulcus mid-posterior,沟后部
-Callosal sulcus middle,沟中部
-Callosal sulcus posterior,沟后部
-Callosomarginal sulcus,胼胝体缘沟
-Callosomarginal sulcus inferior,胼胝体缘沟下部
-Callosomarginal sulcus inferior LH,胼胝体缘沟下部左侧
-Callosomarginal sulcus inferior RH,胼胝体缘沟下部右侧
-Callosomarginal sulcus mid-inferior,胼胝体缘沟下部
-Callosomarginal sulcus mid-superior,胼胝体缘沟上部
-Callosomarginal sulcus middle,胼胝体缘沟中部
-Callosomarginal sulcus middle LH,胼胝体缘沟中部左侧
-Callosomarginal sulcus superior,胼胝体缘沟上部
-Callosomarginal sulcus superior LH,胼胝体缘沟上部左侧
-Callosomarginal sulcus superior RH,胼胝体缘沟上部右侧
+Calcarine sulcus anterior,距状沟前部
+Calcarine sulcus anterior LH,距状沟前部左侧
+Calcarine sulcus anterior RH,距状沟前部右侧
+Calcarine sulcus mid-anterior,距状沟中部前侧
+Calcarine sulcus mid-anterior RH,距状沟中部前侧右侧
+Calcarine sulcus mid-posterior LH,距状沟中部后侧左侧
+Calcarine sulcus middle,距状沟中部
+Calcarine sulcus posterior,距状沟后部
+Calcarine sulcus posterior LH,距状沟后部左侧
+Calcarine sulcus posterior medial,距状沟后部内侧
+Callosal sulcus mid-anterior,胼胝体沟中部前侧
+Callosal sulcus mid-posterior,胼胝体沟中部后侧
+Callosal sulcus middle,胼胝体沟中部
+Callosal sulcus posterior,胼胝体沟后部
+Callosomarginal sulcus,胼胝体边缘沟
+Callosomarginal sulcus inferior,胼胝体边缘沟下部
+Callosomarginal sulcus inferior LH,胼胝体边缘沟下部左侧
+Callosomarginal sulcus inferior RH,胼胝体边缘沟下部右侧
+Callosomarginal sulcus mid-inferior,胼胝体边缘沟中部下侧
+Callosomarginal sulcus mid-superior,胼胝体边缘沟中部上侧
+Callosomarginal sulcus middle,胼胝体边缘沟中部
+Callosomarginal sulcus middle LH,胼胝体边缘沟中部左侧
+Callosomarginal sulcus superior,胼胝体边缘沟上部
+Callosomarginal sulcus superior LH,胼胝体边缘沟上部左侧
+Callosomarginal sulcus superior RH,胼胝体边缘沟上部右侧
 Caudate,尾状核
 Caudate LH,尾状核左侧
 Caudate RH,尾状核右侧
@@ -139,147 +130,141 @@ Caudate anterior,尾状核前部
 Caudate anterior RH,尾状核前部右侧
 Caudate antero-superior,尾状核前上部
 Caudate inferior,尾状核下部
-Caudate nucleus,尾状核
-Caudate nucleus tail,尾状核
+Caudate nucleus tail,尾状核尾部
 Caudate posterior,尾状核后部
 Caudate posterior LH,尾状核后部左侧
 Caudate posterior RH,尾状核后部右侧
 Caudate superior,尾状核上部
-Caudate superior anterior,尾状核上部前部
-Caudate superior posterior,尾状核上部后部
-Central and postcentral sulci mid-superior,和上部
-Central and postcentral sulci superior,和上部
-Central opercula,中央盖区
-Central opercular cortex,中央盖区皮层
-Central opercular cortex LH,中央盖区皮层左侧
-Central operculum LH,盖左侧
-Central operculum RH,盖右侧
-Central operculum anterior RH,盖前部右侧
-Central operculum cortex,盖皮层
-Central operculum posterior RH,盖后部右侧
-Central operculum superior LH,盖上部左侧
+Caudate superior anterior,尾状核上部前侧
+Caudate superior posterior,尾状核上部后侧
+Central and postcentral sulci mid-superior,中央沟和中央后沟中部上侧
+Central opercula,中央岛盖
+Central opercular cortex,中央岛盖皮层
+Central opercular cortex LH,中央岛盖皮层左侧
+Central operculum superior LH,中央岛盖上部左侧
+Central operculum LH,中央岛盖左侧
+Central operculum RH,中央岛盖右侧
+Central operculum anterior RH,中央岛盖前部右侧
+Central operculum posterior RH,中央岛盖后部右侧
 Central sulcus,中央沟
 Central sulcus LH,中央沟左侧
-Central sulcus and postcentral sulcus superior,中央沟和中央后沟上部
 Central sulcus inferior,中央沟下部
 Central sulcus inferior LH,中央沟下部左侧
 Central sulcus inferior RH,中央沟下部右侧
-Central sulcus mid-inferior LH,中央沟下部左侧
-Central sulcus mid-inferior RH,中央沟下部右侧
-Central sulcus mid-inferior medial RH,中央沟下部内侧右侧
-Central sulcus mid-superior,中央沟上部
-Central sulcus mid-superior LH,中央沟上部左侧
-Central sulcus mid-superior RH,中央沟上部右侧
+Central sulcus mid-inferior LH,中央沟中部下侧左侧
+Central sulcus mid-inferior RH,中央沟中部下侧右侧
+Central sulcus mid-inferior medial RH,中央沟中部下侧内侧右侧
+Central sulcus mid-superior,中央沟中部上侧
+Central sulcus mid-superior LH,中央沟中部上侧左侧
+Central sulcus mid-superior RH,中央沟中部上侧右侧
 Central sulcus middle,中央沟中部
 Central sulcus middle LH,中央沟中部左侧
 Central sulcus middle RH,中央沟中部右侧
 Central sulcus middle medial RH,中央沟中部内侧右侧
-Central sulcus middle posterior RH,中央沟中部后部右侧
-Central sulcus of the insula postero-inferior,中央沟的脑岛后下部
+Central sulcus middle posterior RH,中央沟中部后侧右侧
+Central sulcus of the insula postero-inferior,岛叶后下部中央沟
 Central sulcus superior,中央沟上部
 Central sulcus superior LH,中央沟上部左侧
 Central sulcus superior RH,中央沟上部右侧
 Cerebellar peduncle,小脑脚
-Cerebellar peduncles,小脑脚
-Cerebellum Crus I,小脑
-Cerebellum Crus I LH,小脑左侧
-Cerebellum Crus I RH,小脑右侧
-Cerebellum Crus I anterior,小脑前部
-Cerebellum Crus I anterior LH,小脑前部左侧
-Cerebellum Crus I anterior RH,小脑前部右侧
-Cerebellum Crus I lateral LH,小脑外侧左侧
-Cerebellum Crus I lateral RH,小脑外侧右侧
-Cerebellum Crus I medial RH,小脑内侧右侧
-Cerebellum Crus I posterior,小脑后部
-Cerebellum Crus I posterior LH,小脑后部左侧
-Cerebellum Crus I posterior RH,小脑后部右侧
-Cerebellum Crus I superior,小脑上部
-Cerebellum Crus I superior RH,小脑上部右侧
-Cerebellum Crus II,小脑
-Cerebellum Crus II LH,小脑左侧
-Cerebellum Crus II RH,小脑右侧
-Cerebellum Crus II anterior LH,小脑前部左侧
-Cerebellum Crus II medial RH,小脑内侧右侧
-Cerebellum Crus II posterior,小脑后部
-Cerebellum Crus II posterior LH,小脑后部左侧
-Cerebellum I-V,小脑
-Cerebellum III anterior,小脑前部
-Cerebellum III inferior,小脑下部
-Cerebellum III superior,小脑上部
-Cerebellum IV,小脑
-Cerebellum IV LH,小脑左侧
-Cerebellum IV and V,小脑和
-Cerebellum IV and middle cerebellar peduncle,小脑和中部小脑脚
-Cerebellum IV inferior,小脑下部
-Cerebellum IV superior,小脑上部
-Cerebellum IX,小脑
-Cerebellum IX and cerebellar peduncle,小脑和小脑脚
-Cerebellum IX anterior,小脑前部
-Cerebellum IX inferior,小脑下部
-Cerebellum IX middle,小脑中部
-Cerebellum V,小脑
-Cerebellum V LH,小脑左侧
-Cerebellum V RH,小脑右侧
-Cerebellum V anterior,小脑前部
-Cerebellum V superior,小脑上部
-Cerebellum VI,小脑
-Cerebellum VI LH,小脑左侧
-Cerebellum VI RH,小脑右侧
-Cerebellum VI anterior,小脑前部
-Cerebellum VI anterior RH,小脑前部右侧
-Cerebellum VI antero-inferior LH,小脑下部左侧
-Cerebellum VI antero-superior LH,小脑前上部左侧
-Cerebellum VI lateral RH,小脑外侧右侧
-Cerebellum VI medial,小脑内侧
-Cerebellum VI medial RH,小脑内侧右侧
-Cerebellum VI posterior,小脑后部
-Cerebellum VI posterior LH,小脑后部左侧
-Cerebellum VI superior,小脑上部
-Cerebellum VI superior LH,小脑上部左侧
-Cerebellum VI superior RH,小脑上部右侧
-Cerebellum VI superior lateral,小脑上部外侧
-Cerebellum VI superior medial,小脑上部内侧
-Cerebellum VIIIa,小脑
-Cerebellum VIIIa LH,小脑左侧
-Cerebellum VIIIab,小脑
-Cerebellum VIIIb anterior,小脑前部
-Cerebellum VIIIb inferior,小脑下部
-Cerebellum VIIIb medial,小脑内侧
-Cerebellum VIIIb posterior,小脑后部
-Cerebellum VIIb,小脑
-Cerebellum Vermis,小脑
-Cerebellum Vermis IX,小脑
-Cerebellum Vermis X,小脑
-Cerebellum X,小脑
-Cerebellum horizontal fissure,小脑裂
-Cerebellum horizontal fissure LH,小脑裂左侧
-Cerebellum horizontal fissure medial,小脑裂内侧
-Cerebellum secondary fissure,小脑裂
-Cerebellum superior posterior fissure,小脑上部后部裂
-Cerebellum superior posterior fissure LH,小脑上部后部裂左侧
-Cerebellum superior posterior fissure RH,小脑上部后部裂右侧
-Cerebellum superior posterior fissure central,小脑上部后部裂
+Cerebellum Crus I,小脑Crus I
+Cerebellum Crus I LH,小脑Crus I左侧
+Cerebellum Crus I RH,小脑Crus I右侧
+Cerebellum Crus I anterior,小脑Crus I前部
+Cerebellum Crus I anterior LH,小脑Crus I前部左侧
+Cerebellum Crus I anterior RH,小脑Crus I前部右侧
+Cerebellum Crus I lateral LH,小脑Crus I外侧左侧
+Cerebellum Crus I lateral RH,小脑Crus I外侧右侧
+Cerebellum Crus I medial RH,小脑Crus I内侧右侧
+Cerebellum Crus I posterior,小脑Crus I后部
+Cerebellum Crus I posterior LH,小脑Crus I后部左侧
+Cerebellum Crus I posterior RH,小脑Crus I后部右侧
+Cerebellum Crus I superior,小脑Crus I上部
+Cerebellum Crus I superior RH,小脑Crus I上部右侧
+Cerebellum Crus II,小脑Crus II
+Cerebellum Crus II LH,小脑Crus II左侧
+Cerebellum Crus II RH,小脑Crus II右侧
+Cerebellum Crus II anterior LH,小脑Crus II前部左侧
+Cerebellum Crus II medial RH,小脑Crus II内侧右侧
+Cerebellum Crus II posterior,小脑Crus II后部
+Cerebellum Crus II posterior LH,小脑Crus II后部左侧
+Cerebellum I-V,小脑I-V
+Cerebellum III anterior,小脑III前部
+Cerebellum III inferior,小脑III下部
+Cerebellum III superior,小脑III上部
+Cerebellum IV,小脑IV
+Cerebellum IV LH,小脑IV左侧
+Cerebellum IV and V,小脑IV和V
+Cerebellum IV and middle cerebellar peduncle,小脑IV和中小脑脚
+Cerebellum IV inferior,小脑IV下部
+Cerebellum IV superior,小脑IV上部
+Cerebellum IX,小脑IX
+Cerebellum IX and cerebellar peduncle,小脑IX和小脑脚
+Cerebellum IX anterior,小脑IX前部
+Cerebellum IX inferior,小脑IX下部
+Cerebellum IX middle,小脑IX中部
+Cerebellum V,小脑V
+Cerebellum V LH,小脑V左侧
+Cerebellum V RH,小脑V右侧
+Cerebellum V anterior,小脑V前部
+Cerebellum V superior,小脑V上部
+Cerebellum VI,小脑VI
+Cerebellum VI LH,小脑VI左侧
+Cerebellum VI RH,小脑VI右侧
+Cerebellum VI anterior,小脑VI前部
+Cerebellum VI anterior RH,小脑VI前部右侧
+Cerebellum VI antero-inferior LH,小脑VI前下部左侧
+Cerebellum VI antero-superior LH,小脑VI前上部左侧
+Cerebellum VI lateral RH,小脑VI外侧右侧
+Cerebellum VI medial,小脑VI内侧
+Cerebellum VI medial RH,小脑VI内侧右侧
+Cerebellum VI posterior,小脑VI后部
+Cerebellum VI posterior LH,小脑VI后部左侧
+Cerebellum VI superior,小脑VI上部
+Cerebellum VI superior LH,小脑VI上部左侧
+Cerebellum VI superior RH,小脑VI上部右侧
+Cerebellum VI superior lateral,小脑VI上部外侧
+Cerebellum VI superior medial,小脑VI上部内侧
+Cerebellum VIIIa,小脑VIIIa
+Cerebellum VIIIa LH,小脑VIIIa左侧
+Cerebellum VIIIab,小脑VIIIab
+Cerebellum VIIIb anterior,小脑VIIIb前部
+Cerebellum VIIIb inferior,小脑VIIIb下部
+Cerebellum VIIIb medial,小脑VIIIb内侧
+Cerebellum VIIIb posterior,小脑VIIIb后部
+Cerebellum VIIb,小脑VIIb
+Cerebellum Vermis,小脑蚓部
+Cerebellum Vermis IX,小脑蚓部IX
+Cerebellum Vermis X,小脑蚓部X
+Cerebellum X,小脑X
+Cerebellum horizontal fissure,小脑水平裂
+Cerebellum horizontal fissure LH,小脑水平裂左侧
+Cerebellum horizontal fissure medial,小脑水平裂内侧
+Cerebellum secondary fissure,小脑次裂
+Cerebellum superior posterior fissure,小脑上后裂
+Cerebellum superior posterior fissure LH,小脑上后裂左侧
+Cerebellum superior posterior fissure RH,小脑上后裂右侧
+Cerebellum superior posterior fissure central,小脑上后裂中央
 Cerebral peduncles,大脑脚
 Cerebral peduncles superior,大脑脚上部
-Cerebrospinal fluid (between Central sulcus and skull),中央沟与颅骨之间的脑脊液
-Cerebrospinal fluid (between Parieto-occipital sulcus and skull),顶枕沟与颅骨之间的脑脊液
-Cerebrospinal fluid (between Precentral gyrus and skull LH),中央前回与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between Precentral sulcus and skull),中央前沟与颅骨之间的脑脊液
 Cerebrospinal fluid (between angular gyrus and skull LH),角回与颅骨左侧之间的脑脊液
-Cerebrospinal fluid (between anterior part of superior frontal gyrus and skull),前部额上回与颅骨之间的脑脊液
+Cerebrospinal fluid (between callosomarginal sulcus and skull LH),胼胝体缘沟与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between callosomarginal sulcus and skull RH),胼胝体缘沟与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between central sulcus and skull LH),中央沟与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between central sulcus and skull RH),中央沟与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between central sulcus and skull),中央沟与颅骨之间的脑脊液
 Cerebrospinal fluid (between cerebellum and cerebellar peduncles),小脑与小脑脚之间的脑脊液
+Cerebrospinal fluid (between cerebellum and pons),小脑与脑桥之间的脑脊液
+Cerebrospinal fluid (between cingulate gyrus and cerebellum),扣带回与小脑之间的脑脊液
 Cerebrospinal fluid (between frontal pole and skull RH),额极与颅骨右侧之间的脑脊液
-Cerebrospinal fluid (between inferior frontal sulcus and skull LH),下部沟与颅骨左侧之间的脑脊液
-Cerebrospinal fluid (between interhemispheric fissure and superior frontal gyrus superio ),大脑纵裂与额上回之间的脑脊液
+Cerebrospinal fluid (between inferior frontal sulcus and skull LH),额下沟与颅骨左侧之间的脑脊液
+Cerebrospinal fluid (between interhemispheric fissure and superior frontal gyrus superior),大脑纵裂与额上回上部之间的脑脊液
 Cerebrospinal fluid (between intraparietal sulcus and skull LH),顶内沟与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between intraparietal sulcus and skull RH),顶内沟与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between intraparietal sulcus and skull),顶内沟与颅骨之间的脑脊液
 Cerebrospinal fluid (between lateral occipital cortex and skull LH),外侧枕叶皮层与颅骨左侧之间的脑脊液
-Cerebrospinal fluid (between lingual gyrus and cerebellum),回与小脑之间的脑脊液
+Cerebrospinal fluid (between lingual gyrus and cerebellum),舌回与小脑之间的脑脊液
 Cerebrospinal fluid (between middle frontal gyrus RH and skull),额中回右侧与颅骨之间的脑脊液
 Cerebrospinal fluid (between middle frontal gyrus and skull LH),额中回与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between middle frontal gyrus and skull RH),额中回与颅骨右侧之间的脑脊液
@@ -294,32 +279,30 @@ Cerebrospinal fluid (between middle frontal gyrus superior and skull LH),额中�
 Cerebrospinal fluid (between occipital pole and cerebellum),枕极与小脑之间的脑脊液
 Cerebrospinal fluid (between occipital pole superior and skull),枕极上部与颅骨之间的脑脊液
 Cerebrospinal fluid (between paracentral lobule and skull),旁中央小叶与颅骨之间的脑脊液
-Cerebrospinal fluid (between parietal lobe and skull),与颅骨之间的脑脊液
+Cerebrospinal fluid (between parietal lobe and skull),顶叶与颅骨之间的脑脊液
 Cerebrospinal fluid (between parieto-occipital sulcus and skull),顶枕沟与颅骨之间的脑脊液
-Cerebrospinal fluid (between pars orbitalis and skull LH),与颅骨左侧之间的脑脊液
+Cerebrospinal fluid (between pars orbitalis and skull LH),眶部与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between postcentral gyrus RH and skull),中央后回右侧与颅骨之间的脑脊液
 Cerebrospinal fluid (between postcentral gyrus and skull RH),中央后回与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between postcentral gyrus and skull),中央后回与颅骨之间的脑脊液
 Cerebrospinal fluid (between postcentral gyrus inferior and skull LH),中央后回下部与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between postcentral gyrus superior and skull LH),中央后回上部与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between postcentral sulcus and skull RH),中央后沟与颅骨右侧之间的脑脊液
-Cerebrospinal fluid (between posterior intraparietal sulcus and skull LH),后部顶内沟与颅骨左侧之间的脑脊液
-Cerebrospinal fluid (between pre and postcentral gyri and skull LH),和与颅骨左侧之间的脑脊液
+Cerebrospinal fluid (between posterior intraparietal sulcus and skull LH),后顶内沟与颅骨左侧之间的脑脊液
+Cerebrospinal fluid (between pre and postcentral gyri and skull LH),中央前回和中央后回与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between precentral and postcentral gyri LH and skull),中央前回和中央后回左侧与颅骨之间的脑脊液
 Cerebrospinal fluid (between precentral gyrus and skull LH),中央前回与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between precentral gyrus and skull RH),中央前回与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between precentral gyrus and skull),中央前回与颅骨之间的脑脊液
 Cerebrospinal fluid (between precentral gyrus superior and skull RH),中央前回上部与颅骨右侧之间的脑脊液
-Cerebrospinal fluid (between precentral gyrus superior and skull),中央前回上部与颅骨之间的脑脊液
 Cerebrospinal fluid (between precuneus and skull),楔前叶与颅骨之间的脑脊液
-Cerebrospinal fluid (between superior cerebellum and limbic lobe),上部小脑与之间的脑脊液
+Cerebrospinal fluid (between superior cerebellum and limbic lobe),上部小脑与边缘叶之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus and skull LH),额上回与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus and skull RH),额上回与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus and skull),额上回与颅骨之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus anterior and skull LH),额上回前部与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus anterior and skull),额上回前部与颅骨之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus lateral RH and skull),额上回外侧右侧与颅骨之间的脑脊液
-Cerebrospinal fluid (between superior frontal gyrus mid-posterior and skull LH),额上回后部与颅骨左侧之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus middle and skull),额上回中部与颅骨之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus middle superior and skull),额上回中部上部与颅骨之间的脑脊液
 Cerebrospinal fluid (between superior frontal gyrus posterior and skull LH),额上回后部与颅骨左侧之间的脑脊液
@@ -335,59 +318,55 @@ Cerebrospinal fluid (between superior parietal lobule and skull LH),顶上小叶
 Cerebrospinal fluid (between superior parietal lobule and skull RH),顶上小叶与颅骨右侧之间的脑脊液
 Cerebrospinal fluid (between superior parietal lobule and skull),顶上小叶与颅骨之间的脑脊液
 Cerebrospinal fluid (between superior parietal lobule posterior and skull RH),顶上小叶后部与颅骨右侧之间的脑脊液
-Cerebrospinal fluid (between superior part of superior frontal gyrus and skull),上部额上回与颅骨之间的脑脊液
-Cerebrospinal fluid (between superior precentral gyrus and skull),上部中央前回与颅骨之间的脑脊液
+Cerebrospinal fluid (between superior precentral gyrus and skull),中央前回上部与颅骨之间的脑脊液
 Cerebrospinal fluid (between supramarginal gyrus and skull LH),缘上回与颅骨左侧之间的脑脊液
-Cerebrospinal fluid (superior of Central sulcus),中央沟上方的脑脊液
-Cerebrospinal fluid between cingulate gyrus and cerebellum),扣带回与小脑之间的脑脊液
-Cererbrospinal fluid (between callosomarginal sulcus and skull LH),(胼胝体缘沟和颅骨左侧)
-Cingulate anterior,前部
-Cingulate anterior RH,前部右侧
-Cingulate cortex mid-anterior,扣带皮层前部
-Cingulate cortex mid-anterior LH,扣带皮层前部左侧
-Cingulate cortex mid-posterior,扣带皮层后部
-Cingulate cortex posterior,扣带皮层后部
-Cingulate gyrus mid-anterior,扣带回前部
-Cingulate gyrus mid-posterior,扣带回后部
+Cerebrospinal fluid (superior of central sulcus),中央沟上方的脑脊液
+Cingulate anterior,扣带前回
+Cingulate anterior RH,扣带前回右侧
+Cingulate cortex mid-anterior,扣带皮层中前部
+Cingulate cortex mid-anterior LH,扣带皮层中前部左侧
+Cingulate cortex mid-posterior,扣带皮层中后部
+Cingulate cortex posterior,后部扣带皮层
+Cingulate gyrus mid-anterior,扣带回中前部
+Cingulate gyrus mid-posterior,扣带回中后部
 Cingulate gyrus middle inferior,扣带回中部下部
 Cingulate gyrus middle superior,扣带回中部上部
-Cingulate mid-anterior,前部
-Cingulate mid-anterior RH,前部右侧
-Cingulate mid-posterior,后部
-Cingulate middle RH,中部右侧
-Cingulate middle anterior RH,中部前部右侧
-Cingulate middle posterior RH,中部后部右侧
-Cingulate posterior,后部
-Cingulate posterior LH,后部左侧
-Cingulate sulcus anterior RH,沟前部右侧
-Cingulate sulcus antero-inferior,沟下部
-Cingulate sulcus mid-anterior,沟前部
-Cingulate sulcus mid-anterior LH,沟前部左侧
-Cingulate sulcus mid-anterior RH,沟前部右侧
-Cingulate sulcus mid-posterior,沟后部
-Cingulate sulcus mid-posterior LH,沟后部左侧
-Cingulate sulcus middle,沟中部
-Cingulate sulcus posterior,沟后部
-Cingulate sulcus posterior LH,沟后部左侧
-Cingulate sulcus posterior RH,沟后部右侧
-Cingulum anterior,前部
-Cingulum inferior,下部
-Cingulum mid-anterior,前部
-Cingulum mid-posterior,后部
-Cingulum mid-posterior LH,后部左侧
-Cingulum middle,中部
-Cingulum middle RH,中部右侧
-Cingulum posterior,后部
-Circular sulcus of the insula anterior,沟的脑岛前部
-Circular sulcus of the insula antero-superior LH,沟的脑岛前上部左侧
-Circular sulcus of the insula inferior,沟的脑岛下部
-Circular sulcus of the insula mid-posterior RH,沟的脑岛后部右侧
-Circular sulcus of the insula posterior LH,沟的脑岛后部左侧
-Circular sulcus of the insula posterior RH,沟的脑岛后部右侧
-Circular sulcus of the insula superior,沟的脑岛上部
+Cingulate mid-anterior,扣带中前部
+Cingulate mid-anterior RH,扣带中前部右侧
+Cingulate mid-posterior,扣带中后部
+Cingulate middle RH,扣带中部右侧
+Cingulate middle anterior RH,扣带中部前部右侧
+Cingulate middle posterior RH,扣带中部后部右侧
+Cingulate posterior,扣带后部
+Cingulate posterior LH,扣带后部左侧
+Cingulate sulcus anterior RH,扣带沟前部右侧
+Cingulate sulcus antero-inferior,扣带沟前下部
+Cingulate sulcus mid-anterior,扣带沟中前部
+Cingulate sulcus mid-anterior LH,扣带沟中前部左侧
+Cingulate sulcus mid-anterior RH,扣带沟中前部右侧
+Cingulate sulcus mid-posterior,扣带沟中后部
+Cingulate sulcus mid-posterior LH,扣带沟中后部左侧
+Cingulate sulcus middle,扣带沟中部
+Cingulate sulcus posterior,扣带沟后部
+Cingulate sulcus posterior LH,扣带沟后部左侧
+Cingulate sulcus posterior RH,扣带沟后部右侧
+Cingulum anterior,扣带束前回
+Cingulum inferior,扣带束下部
+Cingulum mid-anterior,扣带束中前部
+Cingulum mid-posterior,扣带束中后部
+Cingulum mid-posterior LH,扣带束中后部左侧
+Cingulum middle,扣带束中部
+Cingulum middle RH,扣带束中部右侧
+Cingulum posterior,扣带束后部
+Circular sulcus of the insula anterior,脑岛前环状沟
+Circular sulcus of the insula antero-superior LH,脑岛前上部环状沟左侧
+Circular sulcus of the insula inferior,脑岛下部环状沟
+Circular sulcus of the insula mid-posterior RH,脑岛中部后部环状沟右侧
+Circular sulcus of the insula posterior LH,脑岛后部环状沟左侧
+Circular sulcus of the insula posterior RH,脑岛后部环状沟右侧
+Circular sulcus of the insula superior,脑岛上部环状沟
 Collateral sulcus anterior,外侧沟前部
 Collateral sulcus anterior LH,外侧沟前部左侧
-Collateral sulcus mid-posterior LH,外侧沟后部左侧
 Collateral sulcus middle,外侧沟中部
 Collateral sulcus middle LH,外侧沟中部左侧
 Collateral sulcus middle RH,外侧沟中部右侧
@@ -403,42 +382,42 @@ Corona radiata posterior LH,放射冠后部左侧
 Corona radiata superior,放射冠上部
 Corpus callosum anterior body,胼胝体前部
 Corpus callosum forceps minor LH,胼胝体小钳左侧
-Corpus callosum genu,胼胝体
-Corpus callosum genu LH,胼胝体左侧
-Corpus callosum genu RH,胼胝体右侧
-Corpus callosum genu inferior,胼胝体下部
-Corpus callosum genu posterior,胼胝体后部
-Corpus callosum genu superior,胼胝体上部
-Corpus callosum isthmus,胼胝体
-Corpus callosum isthmus anterior,胼胝体前部
-Corpus callosum isthmus inferior,胼胝体下部
-Corpus callosum isthmus posterior,胼胝体后部
+Corpus callosum genu,胼胝体膝部
+Corpus callosum genu LH,胼胝体膝部左侧
+Corpus callosum genu RH,胼胝体膝部右侧
+Corpus callosum genu inferior,胼胝体膝部下部
+Corpus callosum genu posterior,胼胝体膝部后部
+Corpus callosum genu superior,胼胝体膝部上部
+Corpus callosum isthmus,胼胝体峡部
+Corpus callosum isthmus anterior,胼胝体峡部前部
+Corpus callosum isthmus inferior,胼胝体峡部下部
+Corpus callosum isthmus posterior,胼胝体峡部后部
 Corpus callosum middle body,胼胝体中部
 Corpus callosum posterior body,胼胝体后部
 Corpus callosum posterior body anterior,胼胝体后部前部
-Corpus callosum posterior body radiation RH,胼胝体后部右侧
-Corpus callosum rostrum,胼胝体
-Corpus callosum splenium,胼胝体
-Corpus callosum splenium RH,胼胝体右侧
-Corpus callosum splenium superior,胼胝体上部
-Corpus callosum tapetum,胼胝体
-Corticospinal tract LH,左侧
-Corticospinal tract mid-superior RH,上部右侧
-Corticospinal tract middle RH,中部右侧
-Corticospinal tract postero-superior RH,后上部右侧
-Corticospinal tract precentral gyrus LH,中央前回左侧
-Corticospinal tract superior,上部
-Corticospinal tract superior RH,上部右侧
-Corticospinal tract superior posterior,上部后部
+Corpus callosum posterior body radiation RH,胼胝体后部辐射右侧
+Corpus callosum rostrum,胼胝体嘴部
+Corpus callosum splenium,胼胝体压部
+Corpus callosum splenium RH,胼胝体压部右侧
+Corpus callosum splenium superior,胼胝体压部上部
+Corpus callosum tapetum,胼胝体毯部
+Corticospinal tract LH,皮质脊髓束左侧
+Corticospinal tract mid-superior RH,皮质脊髓束中部上部右侧
+Corticospinal tract middle RH,皮质脊髓束中部右侧
+Corticospinal tract postero-superior RH,皮质脊髓束后上部右侧
+Corticospinal tract precentral gyrus LH,中央前回皮质脊髓束左侧
+Corticospinal tract superior,皮质脊髓束上部
+Corticospinal tract superior RH,皮质脊髓束上部右侧
+Corticospinal tract superior posterior,皮质脊髓束上部后部
 Cuneus,楔叶
 Cuneus anterior,楔叶前部
 Cuneus anterior LH,楔叶前部左侧
 Cuneus anterior RH,楔叶前部右侧
-Cuneus antero-inferior,楔叶下部
+Cuneus antero-inferior,楔叶前下部
 Cuneus antero-superior RH,楔叶前上部右侧
 Cuneus inferior,楔叶下部
 Cuneus inferior RH,楔叶下部右侧
-Cuneus mid-posterior,楔叶后部
+Cuneus mid-posterior,楔叶后中部
 Cuneus middle,楔叶中部
 Cuneus middle posterior RH,楔叶中部后部右侧
 Cuneus posterior,楔叶后部
@@ -449,38 +428,36 @@ Cuneus postero-superior LH,楔叶后上部左侧
 Cuneus superior,楔叶上部
 Cuneus superior LH,楔叶上部左侧
 Cuneus superior RH,楔叶上部右侧
-Descending occipital gyrus,回
-Descending occipital gyrus inferior LH,回下部左侧
-Descending occipital gyrus superior,回上部
-Descending occipital gyrus superior LH,回上部左侧
-Dorsal visual stream RH,背侧右侧
-Dorsal visual stream posterior LH,背侧后部左侧
-Dorsal visual stream posterior RH,背侧后部右侧
-Dorsal visual stream superior,背侧上部
-Dorsolateral prefrontal cortex LH,外侧皮层左侧
-Dorsomedial prefrontal cortex,内侧皮层
-Dorsomedial prefrontal cortex LH,内侧皮层左侧
-Dorsomedial prefrontal cortex RH,内侧皮层右侧
-Dorsomedial prefrontal cortex anterior,内侧皮层前部
-Dorsomedial prefrontal cortex anterior LH,内侧皮层前部左侧
-Dorsomedial prefrontal cortex anterior RH,内侧皮层前部右侧
-Dorsomedial prefrontal cortex antero-superior,内侧皮层前上部
-Dorsomedial prefrontal cortex antero-superior LH,内侧皮层前上部左侧
-Dorsomedial prefrontal cortex antero-superior RH,内侧皮层前上部右侧
-Dorsomedial prefrontal cortex anteromedial,内侧皮层内侧
-Dorsomedial prefrontal cortex posterior,内侧皮层后部
-Dorsomedial prefrontal cortex superior RH,内侧皮层上部右侧
-Entorhinal cortex,皮层
-External capsule LH,左侧
-External capsule anterior LH,前部左侧
-External capsule middle LH,中部左侧
-External capsule posterior RH,后部右侧
-External capsule posterior inferior LH,后部下部左侧
-External capsule posterior superior LH,后部上部左侧
-Fluid between cerebellum and occipital cortex,小脑和皮层
-Fluid between cerebellum and peduncle inferior,小脑和下部
-Fluid between cerebellum and peduncle superior,小脑和上部
-Fluid between cerebellum and pons,小脑和脑桥
+Descending occipital gyrus inferior LH,枕下回下部左侧
+Descending occipital gyrus superior,枕上回
+Descending occipital gyrus superior LH,枕上回左侧
+Dorsal visual stream RH,背侧视觉流右侧
+Dorsal visual stream posterior LH,背侧视觉流后部左侧
+Dorsal visual stream posterior RH,背侧视觉流后部右侧
+Dorsal visual stream superior,背侧视觉流上部
+Dorsolateral prefrontal cortex LH,背外侧前额叶皮层左侧
+Dorsomedial prefrontal cortex,内侧前额叶皮层
+Dorsomedial prefrontal cortex LH,内侧前额叶皮层左侧
+Dorsomedial prefrontal cortex RH,内侧前额叶皮层右侧
+Dorsomedial prefrontal cortex anterior,内侧前额叶皮层前部
+Dorsomedial prefrontal cortex anterior LH,内侧前额叶皮层前部左侧
+Dorsomedial prefrontal cortex anterior RH,内侧前额叶皮层前部右侧
+Dorsomedial prefrontal cortex antero-superior,内侧前额叶皮层前上部
+Dorsomedial prefrontal cortex antero-superior LH,内侧前额叶皮层前上部左侧
+Dorsomedial prefrontal cortex antero-superior RH,内侧前额叶皮层前上部右侧
+Dorsomedial prefrontal cortex anteromedial,内侧前额叶皮层前内侧
+Dorsomedial prefrontal cortex posterior,内侧前额叶皮层后部
+Dorsomedial prefrontal cortex superior RH,内侧前额叶皮层上部右侧
+Entorhinal cortex,内嗅皮层
+External capsule LH,外囊左侧
+External capsule anterior LH,外囊前部左侧
+External capsule middle LH,外囊中部左侧
+External capsule posterior RH,外囊后部右侧
+External capsule posterior inferior LH,外囊后下部左侧
+External capsule posterior superior LH,外囊后上部左侧
+Fluid between cerebellum and occipital cortex,小脑与枕叶之间的脑脊液
+Fluid between cerebellum and peduncle inferior,小脑与脚部下部之间的脑脊液
+Fluid between cerebellum and peduncle superior,小脑与脚部上部之间的脑脊液
 Forceps major,大钳
 Forceps major LH,大钳左侧
 Forceps major RH,大钳右侧
@@ -495,17 +472,17 @@ Forceps minor middle LH,小钳中部左侧
 Forceps minor middle RH,小钳中部右侧
 Forceps minor posterior LH,小钳后部左侧
 Forceps minor posterior RH,小钳后部右侧
-Fornix anterior,前部
-Fornix antero-superior,前上部
-Fornix body,穹隆体
-Fornix middle body,中部
-Fornix posterior,后部
-Fornix postero-superior,后上部
-Fornix superior,上部
+Fornix anterior,穹窿前部
+Fornix antero-superior,穹窿前上部
+Fornix body,穹窿体
+Fornix middle body,穹窿中间体
+Fornix posterior,穹窿后部
+Fornix postero-superior,穹窿后上部
+Fornix superior,穹窿上部
 Fourth ventricle,第四脑室
-Frontal opercula medial,内侧
-Frontal operculum LH,盖左侧
-Frontal operculum RH,盖右侧
+Frontal opercula medial,额叶岛盖内侧
+Frontal operculum LH,额叶岛盖左侧
+Frontal operculum RH,额叶岛盖右侧
 Frontal pole,额极
 Frontal pole LH,额极左侧
 Frontal pole RH,额极右侧
@@ -516,56 +493,56 @@ Frontal pole lateral LH,额极外侧左侧
 Frontal pole lateral RH,额极外侧右侧
 Frontal pole medial,额极内侧
 Frontal pole medial LH,额极内侧左侧
-Frontal pole mid-superior RH,额极上部右侧
+Frontal pole mid-superior RH,额极中上部右侧
 Frontal pole superior,额极上部
 Frontal pole superior LH,额极上部左侧
 Frontal pole superior RH,额极上部右侧
-Frontomarginal gyrus,回
-Frontomarginal gyrus LH,回左侧
-Frontomarginal gyrus RH,回右侧
-Frontomarginal sulcus,沟
-Frontomarginal sulcus LH,沟左侧
-Frontomarginal sulcus RH,沟右侧
-Frontoparietal operculum LH,盖左侧
+Frontomarginal gyrus,额缘回
+Frontomarginal gyrus LH,额缘回左侧
+Frontomarginal gyrus RH,额缘回右侧
+Frontomarginal sulcus,额缘沟
+Frontomarginal sulcus LH,额缘沟左侧
+Frontomarginal sulcus RH,额缘沟右侧
+Frontoparietal operculum LH,额顶岛盖左侧
 Fusiform gyrus,梭状回
 Fusiform gyrus LH,梭状回左侧
 Fusiform gyrus RH,梭状回右侧
 Fusiform gyrus anterior,梭状回前部
 Fusiform gyrus anterior LH,梭状回前部左侧
 Fusiform gyrus anterior RH,梭状回前部右侧
-Fusiform gyrus mid-anterior LH,梭状回前部左侧
-Fusiform gyrus mid-anterior RH,梭状回前部右侧
-Fusiform gyrus mid-posterior LH,梭状回后部左侧
-Fusiform gyrus mid-posterior RH,梭状回后部右侧
+Fusiform gyrus mid-anterior LH,梭状回中前部左侧
+Fusiform gyrus mid-anterior RH,梭状回中前部右侧
+Fusiform gyrus mid-posterior LH,梭状回中后部左侧
+Fusiform gyrus mid-posterior RH,梭状回中后部右侧
 Fusiform gyrus middle RH,梭状回中部右侧
-Fusiform gyrus middle inferior RH,梭状回中部下部右侧
-Fusiform gyrus middle superior RH,梭状回中部上部右侧
+Fusiform gyrus middle inferior RH,梭状回中下部右侧
+Fusiform gyrus middle superior RH,梭状回中上部右侧
 Fusiform gyrus posterior,梭状回后部
 Fusiform gyrus posterior LH,梭状回后部左侧
 Fusiform gyrus posterior RH,梭状回后部右侧
-Genu of callosal body,的
+Genu of callosal body,胼胝体膝
 Globus pallidus,苍白球
 Globus pallidus RH,苍白球右侧
 Globus pallidus anterior,苍白球前部
 Globus pallidus inferior,苍白球下部
 Globus pallidus middle,苍白球中部
 Globus pallidus posterior,苍白球后部
-Gyrus rectus,回
-Heschl’s gyrus,’回
-Heschl’s gyrus LH,’回左侧
-Heschl’s gyrus RH,’回右侧
-Heschl’s gyrus anterior LH,’回前部左侧
-Heschl’s gyrus anterior lateral RH,’回前部外侧右侧
-Heschl’s gyrus anterior medial RH,’回前部内侧右侧
-Heschl’s gyrus inferior LH,’回下部左侧
-Heschl’s gyrus medial RH,’回内侧右侧
-Heschl’s gyrus middle RH,’回中部右侧
-Heschl’s gyrus posterior LH,’回后部左侧
-Heschl’s gyrus posterior RH,’回后部右侧
-Hippocampal fissure,裂
-Hippocampal gyrus,回
-Hippocampal gyrus RH,回右侧
-Hippocampal gyrus posterior LH,回后部左侧
+Gyrus rectus,直回
+Heschl's gyrus,颞横回
+Heschl's gyrus LH,颞横回左侧
+Heschl's gyrus RH,颞横回右侧
+Heschl's gyrus anterior LH,颞横回前部左侧
+Heschl's gyrus anterior lateral RH,颞横回前外侧右侧
+Heschl's gyrus anterior medial RH,颞横回前内侧右侧
+Heschl's gyrus inferior LH,颞横回下部左侧
+Heschl's gyrus medial RH,颞横回内侧右侧
+Heschl's gyrus middle RH,颞横回中部右侧
+Heschl's gyrus posterior LH,颞横回后部左侧
+Heschl's gyrus posterior RH,颞横回后部右侧
+Hippocampal fissure,海马裂
+Hippocampal gyrus,海马回
+Hippocampal gyrus RH,海马回右侧
+Hippocampal gyrus posterior LH,海马回后部左侧
 Hippocampus,海马
 Hippocampus anterior,海马前部
 Hippocampus anterior LH,海马前部左侧
@@ -573,113 +550,112 @@ Hippocampus middle,海马中部
 Hippocampus middle RH,海马中部右侧
 Hippocampus posterior,海马后部
 Hippocampus posterior RH,海马后部右侧
-Hippocampus posterior inferior,海马后部下部
-Hippocampus posterior superior,海马后部上部
-Hypothalamus,丘脑
+Hippocampus posterior inferior,海马后下部
+Hippocampus posterior superior,海马后上部
+Hypothalamus,下丘脑
 Inferior frontal gyrus,额下回
 Inferior frontal gyrus LH,额下回左侧
 Inferior frontal gyrus anterior LH,额下回前部左侧
 Inferior frontal gyrus anterior RH,额下回前部右侧
-Inferior frontal gyrus mid-anterior RH,额下回前部右侧
-Inferior frontal gyrus mid-posterior LH,额下回后部左侧
+Inferior frontal gyrus mid-anterior RH,额下回中前部右侧
+Inferior frontal gyrus mid-posterior LH,额下回中后部左侧
 Inferior frontal gyrus middle LH,额下回中部左侧
 Inferior frontal gyrus posterior LH,额下回后部左侧
 Inferior frontal gyrus posterior RH,额下回后部右侧
-Inferior frontal sulcus,下部沟
-Inferior frontal sulcus LH,下部沟左侧
-Inferior frontal sulcus RH,下部沟右侧
-Inferior frontal sulcus anterior LH,下部沟前部左侧
-Inferior frontal sulcus anterior RH,下部沟前部右侧
-Inferior frontal sulcus mid-anterior LH,下部沟前部左侧
-Inferior frontal sulcus mid-posterior RH,下部沟后部右侧
-Inferior frontal sulcus middle RH,下部沟中部右侧
-Inferior frontal sulcus posterior LH,下部沟后部左侧
-Inferior frontal sulcus posterior RH,下部沟后部右侧
-Inferior frontal sulcus posterior inferior LH,下部沟后部下部左侧
-Inferior frontal sulcus posterior medial RH,下部沟后部内侧右侧
-Inferior frontal sulcus posterior superior LH,下部沟后部上部左侧
-Inferior fronto-occipital fasciculus anterior LH,下部前部左侧
-Inferior fronto-occipital fasciculus anterior RH,下部前部右侧
-Inferior fronto-occipital fasciculus mid-posterior RH,下部后部右侧
-Inferior fronto-occipital fasciculus posterior LH,下部后部左侧
-Inferior fronto-occipital fasciculus posterior RH,下部后部右侧
-Inferior longitudinal fasciculus,下部
-Inferior longitudinal fasciculus anterior,下部前部
-Inferior longitudinal fasciculus mid-posterior LH,下部后部左侧
-Inferior longitudinal fasciculus mid-posterior RH,下部后部右侧
-Inferior longitudinal fasciculus middle LH,下部中部左侧
-Inferior longitudinal fasciculus middle RH,下部中部右侧
-Inferior longitudinal fasciculus posterior LH,下部后部左侧
-Inferior longitudinal fasciculus posterior RH,下部后部右侧
-Inferior occipital gyrus,下部回
-Inferior occipital gyrus LH,下部回左侧
-Inferior occipital gyrus RH,下部回右侧
-Inferior occipital gyrus anterior LH,下部回前部左侧
-Inferior occipital gyrus anterior RH,下部回前部右侧
-Inferior occipital gyrus posterior,下部回后部
-Inferior occipital gyrus posterior LH,下部回后部左侧
-Inferior occipital gyrus posterior RH,下部回后部右侧
-Inferior occipital sulcus,下部沟
-Inferior occipital sulcus inferior RH,下部沟下部右侧
-Inferior occipital sulcus superior RH,下部沟上部右侧
-Inferior rostral gyrus RH,下部回右侧
+Inferior frontal sulcus,额下沟
+Inferior frontal sulcus LH,额下沟左侧
+Inferior frontal sulcus RH,额下沟右侧
+Inferior frontal sulcus anterior LH,额下沟前部左侧
+Inferior frontal sulcus anterior RH,额下沟前部右侧
+Inferior frontal sulcus mid-anterior LH,额下沟中前部左侧
+Inferior frontal sulcus mid-posterior RH,额下沟中后部右侧
+Inferior frontal sulcus middle RH,额下沟中部右侧
+Inferior frontal sulcus posterior LH,额下沟后部左侧
+Inferior frontal sulcus posterior RH,额下沟后部右侧
+Inferior frontal sulcus posterior inferior LH,额下沟后下部左侧
+Inferior frontal sulcus posterior medial RH,额下沟后内侧右侧
+Inferior frontal sulcus posterior superior LH,额下沟后上部左侧
+Inferior fronto-occipital fasciculus anterior LH,额枕束前部左侧
+Inferior fronto-occipital fasciculus anterior RH,额枕束前部右侧
+Inferior fronto-occipital fasciculus mid-posterior RH,额枕束中后部右侧
+Inferior fronto-occipital fasciculus posterior LH,额枕束后部左侧
+Inferior fronto-occipital fasciculus posterior RH,额枕束后部右侧
+Inferior longitudinal fasciculus,下纵束
+Inferior longitudinal fasciculus anterior,下纵束前部
+Inferior longitudinal fasciculus mid-posterior LH,下纵束中后部左侧
+Inferior longitudinal fasciculus mid-posterior RH,下纵束中后部右侧
+Inferior longitudinal fasciculus middle LH,下纵束中部左侧
+Inferior longitudinal fasciculus middle RH,下纵束中部右侧
+Inferior longitudinal fasciculus posterior LH,下纵束后部左侧
+Inferior longitudinal fasciculus posterior RH,下纵束后部右侧
+Inferior occipital gyrus,枕下回
+Inferior occipital gyrus LH,枕下回左侧
+Inferior occipital gyrus RH,枕下回右侧
+Inferior occipital gyrus anterior LH,枕下回前部左侧
+Inferior occipital gyrus anterior RH,枕下回前部右侧
+Inferior occipital gyrus posterior,枕下回后部
+Inferior occipital gyrus posterior LH,枕下回后部左侧
+Inferior occipital gyrus posterior RH,枕下回后部右侧
+Inferior occipital sulcus,枕下沟
+Inferior occipital sulcus inferior RH,枕下沟下部右侧
+Inferior occipital sulcus superior RH,枕下沟上部右侧
+Inferior rostral gyrus RH,下喙回右侧
 Inferior temporal gyrus anterior RH,颞下回前部右侧
 Inferior temporal gyrus middle RH,颞下回中部右侧
 Inferior temporal gyrus posterior,颞下回后部
 Inferior temporal gyrus posterior LH,颞下回后部左侧
 Inferior temporal gyrus posterior RH,颞下回后部右侧
-Inferior temporal sulcus anterior LH,下部沟前部左侧
-Inferior temporal sulcus anterior RH,下部沟前部右侧
-Inferior temporal sulcus medial LH,下部沟内侧左侧
-Inferior temporal sulcus mid-anterior LH,下部沟前部左侧
-Inferior temporal sulcus mid-posterior LH,下部沟后部左侧
-Inferior temporal sulcus mid-posterior RH,下部沟后部右侧
-Inferior temporal sulcus middle RH,下部沟中部右侧
-Inferior temporal sulcus posterior LH,下部沟后部左侧
-Inferior temporal sulcus posterior RH,下部沟后部右侧
+Inferior temporal sulcus anterior LH,颞下沟前部左侧
+Inferior temporal sulcus anterior RH,颞下沟前部右侧
+Inferior temporal sulcus medial LH,颞下沟内侧左侧
+Inferior temporal sulcus mid-anterior LH,颞下沟中前部左侧
+Inferior temporal sulcus mid-posterior LH,颞下沟中后部左侧
+Inferior temporal sulcus mid-posterior RH,颞下沟中后部右侧
+Inferior temporal sulcus middle RH,颞下沟中部右侧
+Inferior temporal sulcus posterior LH,颞下沟后部左侧
+Inferior temporal sulcus posterior RH,颞下沟后部右侧
 Insula,脑岛
 Insula anterior,脑岛前部
-Insula antero-inferior,脑岛下部
+Insula antero-inferior,脑岛前下部
 Insula antero-superior,脑岛前上部
 Insula antero-superior LH,脑岛前上部左侧
 Insula antero-superior RH,脑岛前上部右侧
-Insula center and lateral fissure,脑岛和外侧裂
+Insula center and lateral fissure,脑岛中心和外侧裂
 Insula inferior RH,脑岛下部右侧
-Insula middle superior,脑岛中部上部
-Insula posterior inferior,脑岛后部下部
+Insula middle superior,脑岛中上部
 Insula postero-inferior,脑岛后下部
 Insula postero-inferior RH,脑岛后下部右侧
-Insula postero-inferior medial,脑岛后下部内侧
-Insula postero-superior lateral,脑岛后上部外侧
-Insula postero-superior lateral LH,脑岛后上部外侧左侧
+Insula postero-inferior medial,脑岛后下内侧
+Insula postero-superior lateral,脑岛后上外侧
+Insula postero-superior lateral LH,脑岛后上外侧左侧
 Insula superior,脑岛上部
 Insula superior LH,脑岛上部左侧
-Interhemispheric fissure parietal,大脑纵裂
-Interhemispheric fissure precentral gyrus,大脑纵裂中央前回
-Interhemispheric fissure precuneus,大脑纵裂楔前叶
-Interhemispheric fissure superior,大脑纵裂上部
-Intermediate primus of Jensen LH,的左侧
-Intermediate primus of Jensen RH,的右侧
-Intermediate primus of Jensen anterior RH,的前部右侧
-Intermediate primus of Jensen posterior RH,的后部右侧
+Interhemispheric fissure parietal,半球间裂顶部
+Interhemispheric fissure precentral gyrus,半球间裂中央前回
+Interhemispheric fissure precuneus,半球间裂楔前叶
+Interhemispheric fissure superior,半球间裂上部
+Intermediate primus of Jensen LH,简森中间初级区左侧
+Intermediate primus of Jensen RH,简森中间初级区右侧
+Intermediate primus of Jensen anterior RH,简森中间初级区前部右侧
+Intermediate primus of Jensen posterior RH,简森中间初级区后部右侧
 Internal capsule,内囊
-Internal capsule anterior horn RH,内囊前部右侧
-Internal capsule anterior limb,内囊前部
-Internal capsule anterior limb RH,内囊前部右侧
-Internal capsule anterior limb inferior,内囊前部下部
-Internal capsule anterior limb superior,内囊前部上部
-Internal capsule anterior limb superior LH,内囊前部上部左侧
-Internal capsule genu LH,内囊左侧
-Internal capsule genu anterior,内囊前部
-Internal capsule genu posterior,内囊后部
+Internal capsule anterior horn RH,内囊前角右侧
+Internal capsule anterior limb,内囊前肢
+Internal capsule anterior limb RH,内囊前肢右侧
+Internal capsule anterior limb inferior,内囊前肢下部
+Internal capsule anterior limb superior,内囊前肢上部
+Internal capsule anterior limb superior LH,内囊前肢上部左侧
+Internal capsule genu LH,内囊膝部左侧
+Internal capsule genu anterior,内囊膝部前份
+Internal capsule genu posterior,内囊膝部后份
 Internal capsule middle LH,内囊中部左侧
 Internal capsule posterior RH,内囊后部右侧
-Internal capsule posterior limb,内囊后部
-Internal capsule posterior limb LH,内囊后部左侧
-Internal capsule posterior limb RH,内囊后部右侧
-Internal capsule rentrolenticular LH,内囊左侧
-Intracalcarine cortex,距状皮层
-Intracalcarine cortex LH,距状皮层左侧
+Internal capsule posterior limb,内囊后肢
+Internal capsule posterior limb LH,内囊后肢左侧
+Internal capsule posterior limb RH,内囊后肢右侧
+Internal capsule rentrolenticular LH,内囊膝状体部左侧
+Intracalcarine cortex,距状沟皮质
+Intracalcarine cortex LH,距状沟皮质左侧
 Intraparietal sulcus,顶内沟
 Intraparietal sulcus LH,顶内沟左侧
 Intraparietal sulcus RH,顶内沟右侧
@@ -688,185 +664,180 @@ Intraparietal sulcus anterior LH,顶内沟前部左侧
 Intraparietal sulcus anterior RH,顶内沟前部右侧
 Intraparietal sulcus inferior RH,顶内沟下部右侧
 Intraparietal sulcus medial LH,顶内沟内侧左侧
-Intraparietal sulcus mid-anterior LH,顶内沟前部左侧
-Intraparietal sulcus mid-posterior LH,顶内沟后部左侧
-Intraparietal sulcus mid-posterior RH,顶内沟后部右侧
+Intraparietal sulcus mid-anterior LH,顶内沟中前部左侧
+Intraparietal sulcus mid-posterior LH,顶内沟中后部左侧
+Intraparietal sulcus mid-posterior RH,顶内沟中后部右侧
 Intraparietal sulcus middle LH,顶内沟中部左侧
 Intraparietal sulcus middle RH,顶内沟中部右侧
 Intraparietal sulcus posterior LH,顶内沟后部左侧
 Intraparietal sulcus posterior RH,顶内沟后部右侧
 Intraparietal sulcus superior LH,顶内沟上部左侧
 Intraparietal sulcus superior RH,顶内沟上部右侧
-Intraparietal sulcus superior posterior RH,顶内沟上部后部右侧
-Isthmus of corpus callosum,的胼胝体
+Intraparietal sulcus superior posterior RH,顶内沟上后部右侧
 Lateral fissure anterior,外侧裂前部
 Lateral fissure anterior LH,外侧裂前部左侧
 Lateral fissure anterior RH,外侧裂前部右侧
-Lateral fissure anterior rami RH,外侧裂前部右侧
+Lateral fissure anterior rami RH,外侧裂前支右侧
 Lateral fissure middle LH,外侧裂中部左侧
 Lateral fissure posterior,外侧裂后部
 Lateral fissure posterior LH,外侧裂后部左侧
-Lateral fissure posterior limb LH,外侧裂后部左侧
-Lateral fissure posterior limb RH,外侧裂后部右侧
-Lateral fissure posterior limb inferior RH,外侧裂后部下部右侧
-Lateral fissure posterior limb superior RH,外侧裂后部上部右侧
-Lateral fissure posterior ramus RH,外侧裂后部右侧
+Lateral fissure posterior limb LH,外侧裂后肢左侧
+Lateral fissure posterior limb RH,外侧裂后肢右侧
+Lateral fissure posterior limb inferior RH,外侧裂后肢下部右侧
+Lateral fissure posterior limb superior RH,外侧裂后肢上部右侧
+Lateral fissure posterior ramus RH,外侧裂后支右侧
 Lateral fissure superior RH,外侧裂上部右侧
 Lateral frontal pole,外侧额极
-Lateral geniculate nucleus LH,外侧左侧
-Lateral occipital cortex,外侧枕叶皮层
-Lateral occipital cortex LH,外侧枕叶皮层左侧
-Lateral occipital cortex anterior,外侧枕叶皮层前部
-Lateral occipital cortex anterior LH,外侧枕叶皮层前部左侧
-Lateral occipital cortex anterior RH,外侧枕叶皮层前部右侧
-Lateral occipital cortex antero-inferior LH,外侧枕叶皮层下部左侧
-Lateral occipital cortex antero-inferior RH,外侧枕叶皮层下部右侧
-Lateral occipital cortex antero-superior LH,外侧枕叶皮层前上部左侧
-Lateral occipital cortex antero-superior RH,外侧枕叶皮层前上部右侧
-Lateral occipital cortex inferior,外侧枕叶皮层下部
-Lateral occipital cortex inferior LH,外侧枕叶皮层下部左侧
-Lateral occipital cortex mid-anterior RH,外侧枕叶皮层前部右侧
-Lateral occipital cortex mid-superior RH,外侧枕叶皮层上部右侧
-Lateral occipital cortex middle LH,外侧枕叶皮层中部左侧
-Lateral occipital cortex middle RH,外侧枕叶皮层中部右侧
-Lateral occipital cortex posterior LH,外侧枕叶皮层后部左侧
-Lateral occipital cortex posterior RH,外侧枕叶皮层后部右侧
-Lateral occipital cortex postero-inferior RH,外侧枕叶皮层后下部右侧
-Lateral occipital cortex postero-superior LH,外侧枕叶皮层后上部左侧
-Lateral occipital cortex postero-superior RH,外侧枕叶皮层后上部右侧
-Lateral occipital cortex superior,外侧枕叶皮层上部
-Lateral occipital cortex superior LH,外侧枕叶皮层上部左侧
-Lateral occipital cortex superior RH,外侧枕叶皮层上部右侧
-Lateral occipital sulcus LH,外侧枕叶沟左侧
-Lateral occipital sulcus anterior RH,外侧枕叶沟前部右侧
-Lateral occipital sulcus mid-anterior RH,外侧枕叶沟前部右侧
-Lateral occipital sulcus mid-posterior RH,外侧枕叶沟后部右侧
-Lateral occipital sulcus posterior RH,外侧枕叶沟后部右侧
-Lateral orbital cortex,外侧皮层
-Lateral orbital cortex LH,外侧皮层左侧
-Lateral orbital gyrus LH,外侧眶回左侧
-Lateral orbital gyrus RH,外侧眶回右侧
-Lateral orbital gyrus anterior,外侧眶回前部
-Lateral ventricle RH,外侧右侧
-Lateral ventricles,外侧脑室
-Lateral ventricles anterior,外侧脑室前部
-Lateral ventricles anterior horns,外侧脑室前部
-Lateral ventricles middle,外侧脑室中部
-Lateral ventricles posterior,外侧脑室后部
-Lateral ventricles posterior horns,外侧脑室后部
-Lateral ventricles superior,外侧脑室上部
-Lingual gyrus,回
-Lingual gyrus anterior,回前部
-Lingual gyrus anterior LH,回前部左侧
-Lingual gyrus anterior RH,回前部右侧
-Lingual gyrus inferior,回下部
-Lingual gyrus inferior LH,回下部左侧
-Lingual gyrus lateral,回外侧
-Lingual gyrus medial,回内侧
-Lingual gyrus mid-anterior,回前部
-Lingual gyrus mid-anterior LH,回前部左侧
-Lingual gyrus mid-posterior,回后部
-Lingual gyrus mid-posterior LH,回后部左侧
-Lingual gyrus mid-posterior RH,回后部右侧
-Lingual gyrus middle,回中部
-Lingual gyrus middle LH,回中部左侧
-Lingual gyrus middle RH,回中部右侧
-Lingual gyrus posterior,回后部
-Lingual gyrus posterior LH,回后部左侧
-Lingual gyrus posterior RH,回后部右侧
-Lingual gyrus posterior inferior RH,回后部下部右侧
-Lunate sulcus,沟
-Lunate sulcus LH,沟左侧
-Lunate sulcus RH,沟右侧
-Lunate sulcus inferior LH,沟下部左侧
-Lunate sulcus inferior RH,沟下部右侧
-Lunate sulcus superior LH,沟上部左侧
-Lunate sulcus superior RH,沟上部右侧
+Lateral geniculate nucleus LH,外侧膝状体左侧
+Lateral occipital cortex,枕外侧皮质
+Lateral occipital cortex LH,枕外侧皮质左侧
+Lateral occipital cortex anterior,枕外侧皮质前部
+Lateral occipital cortex anterior LH,枕外侧皮质前部左侧
+Lateral occipital cortex anterior RH,枕外侧皮质前部右侧
+Lateral occipital cortex antero-inferior LH,枕外侧皮质前下部左侧
+Lateral occipital cortex antero-inferior RH,枕外侧皮质前下部右侧
+Lateral occipital cortex antero-superior LH,枕外侧皮质前上部左侧
+Lateral occipital cortex antero-superior RH,枕外侧皮质前上部右侧
+Lateral occipital cortex inferior,枕外侧皮质下部
+Lateral occipital cortex inferior LH,枕外侧皮质下部左侧
+Lateral occipital cortex mid-anterior RH,枕外侧皮质中前部右侧
+Lateral occipital cortex mid-superior RH,枕外侧皮质中上部右侧
+Lateral occipital cortex middle LH,枕外侧皮质中部左侧
+Lateral occipital cortex middle RH,枕外侧皮质中部右侧
+Lateral occipital cortex posterior LH,枕外侧皮质后部左侧
+Lateral occipital cortex posterior RH,枕外侧皮质后部右侧
+Lateral occipital cortex postero-inferior RH,枕外侧皮质后下部右侧
+Lateral occipital cortex postero-superior LH,枕外侧皮质后上部左侧
+Lateral occipital cortex postero-superior RH,枕外侧皮质后上部右侧
+Lateral occipital cortex superior,枕外侧皮质上部
+Lateral occipital cortex superior LH,枕外侧皮质上部左侧
+Lateral occipital cortex superior RH,枕外侧皮质上部右侧
+Lateral occipital sulcus LH,枕外侧沟左侧
+Lateral occipital sulcus anterior RH,枕外侧沟前部右侧
+Lateral occipital sulcus mid-anterior RH,枕外侧沟中前部右侧
+Lateral occipital sulcus mid-posterior RH,枕外侧沟中后部右侧
+Lateral occipital sulcus posterior RH,枕外侧沟后部右侧
+Lateral orbital cortex,眶外侧皮质
+Lateral orbital cortex LH,眶外侧皮质左侧
+Lateral orbital gyrus LH,眶外侧回左侧
+Lateral orbital gyrus RH,眶外侧回右侧
+Lateral orbital gyrus anterior,眶外侧回前部
+Lateral ventricle RH,侧脑室右侧
+Lateral ventricles,侧脑室
+Lateral ventricles anterior,侧脑室前部
+Lateral ventricles anterior horns,侧脑室前角
+Lateral ventricles middle,侧脑室中部
+Lateral ventricles posterior,侧脑室后部
+Lateral ventricles posterior horns,侧脑室后角
+Lateral ventricles superior,侧脑室上部
+Lingual gyrus,舌回
+Lingual gyrus anterior,舌回前部
+Lingual gyrus anterior LH,舌回前部左侧
+Lingual gyrus anterior RH,舌回前部右侧
+Lingual gyrus inferior,舌回下部
+Lingual gyrus inferior LH,舌回下部左侧
+Lingual gyrus lateral,舌回外侧
+Lingual gyrus medial,舌回内侧
+Lingual gyrus mid-anterior,舌回中前部
+Lingual gyrus mid-anterior LH,舌回中前部左侧
+Lingual gyrus mid-posterior,舌回中后部
+Lingual gyrus mid-posterior LH,舌回中后部左侧
+Lingual gyrus mid-posterior RH,舌回中后部右侧
+Lingual gyrus middle,舌回中部
+Lingual gyrus middle LH,舌回中部左侧
+Lingual gyrus middle RH,舌回中部右侧
+Lingual gyrus posterior,舌回后部
+Lingual gyrus posterior LH,舌回后部左侧
+Lingual gyrus posterior RH,舌回后部右侧
+Lingual gyrus posterior inferior RH,舌回后下部右侧
+Lunate sulcus,月状沟
+Lunate sulcus LH,月状沟左侧
+Lunate sulcus RH,月状沟右侧
+Lunate sulcus inferior LH,月状沟下部左侧
+Lunate sulcus inferior RH,月状沟下部右侧
+Lunate sulcus superior LH,月状沟上部左侧
+Lunate sulcus superior RH,月状沟上部右侧
 Mammillary bodies,乳头体
-Medial frontal cortex posterior,内侧皮层后部
+Medial frontal cortex posterior,内侧额叶皮层后部
 Medulla oblongata,延髓
 Medulla oblongata anterior,延髓前部
 Medulla oblongata posterior,延髓后部
 Medulla oblongata superior,延髓上部
-Midbrain anterior,前部
-Midbrain inferior,下部
-Midbrain posterior,后部
-Midbrain superior,上部
-Middle cerebellar peduncle inferior,中部小脑脚下部
-Middle cerebellar peduncle superior,中部小脑脚上部
+Midbrain anterior,中脑前部
+Midbrain inferior,中脑下部
+Midbrain posterior,中脑后部
+Midbrain superior,中脑上部
+Middle cerebellar peduncle inferior,小脑中脚下部
+Middle cerebellar peduncle superior,小脑中脚上部
 Middle frontal gyrus,额中回
 Middle frontal gyrus RH,额中回右侧
 Middle frontal gyrus anterior,额中回前部
 Middle frontal gyrus anterior LH,额中回前部左侧
 Middle frontal gyrus anterior RH,额中回前部右侧
-Middle frontal gyrus anterior lateral LH,额中回前部外侧左侧
-Middle frontal gyrus anterior lateral RH,额中回前部外侧右侧
-Middle frontal gyrus anterior medial RH,额中回前部内侧右侧
+Middle frontal gyrus anterior lateral LH,额中回前外侧左侧
+Middle frontal gyrus anterior lateral RH,额中回前外侧右侧
+Middle frontal gyrus anterior medial RH,额中回前内侧右侧
 Middle frontal gyrus lateral LH,额中回外侧左侧
 Middle frontal gyrus lateral RH,额中回外侧右侧
 Middle frontal gyrus medial LH,额中回内侧左侧
-Middle frontal gyrus mid-anterior LH,额中回前部左侧
-Middle frontal gyrus mid-anterior RH,额中回前部右侧
-Middle frontal gyrus mid-anterior inferior RH,额中回前部下部右侧
-Middle frontal gyrus mid-anterior superior RH,额中回前部上部右侧
-Middle frontal gyrus mid-posterior LH,额中回后部左侧
-Middle frontal gyrus mid-posterior RH,额中回后部右侧
-Middle frontal gyrus mid-posterior inferior RH,额中回后部下部右侧
-Middle frontal gyrus mid-posterior lateral LH,额中回后部外侧左侧
-Middle frontal gyrus mid-posterior superior RH,额中回后部上部右侧
+Middle frontal gyrus mid-anterior LH,额中回中前部左侧
+Middle frontal gyrus mid-anterior RH,额中回中前部右侧
+Middle frontal gyrus mid-anterior inferior RH,额中回中前下部右侧
+Middle frontal gyrus mid-anterior superior RH,额中回中前上部右侧
+Middle frontal gyrus mid-posterior LH,额中回中后部左侧
+Middle frontal gyrus mid-posterior RH,额中回中后部右侧
+Middle frontal gyrus mid-posterior inferior RH,额中回中后下部右侧
+Middle frontal gyrus mid-posterior lateral LH,额中回中后外侧左侧
+Middle frontal gyrus mid-posterior superior RH,额中回中后上部右侧
 Middle frontal gyrus middle,额中回中部
 Middle frontal gyrus middle LH,额中回中部左侧
 Middle frontal gyrus middle RH,额中回中部右侧
-Middle frontal gyrus middle inferior LH,额中回中部下部左侧
-Middle frontal gyrus middle inferior RH,额中回中部下部右侧
-Middle frontal gyrus middle superior LH,额中回中部上部左侧
-Middle frontal gyrus middle superior RH,额中回中部上部右侧
+Middle frontal gyrus middle inferior LH,额中回中下部左侧
+Middle frontal gyrus middle inferior RH,额中回中下部右侧
+Middle frontal gyrus middle superior LH,额中回中上部左侧
+Middle frontal gyrus middle superior RH,额中回中上部右侧
 Middle frontal gyrus posterior,额中回后部
 Middle frontal gyrus posterior LH,额中回后部左侧
 Middle frontal gyrus posterior RH,额中回后部右侧
-Middle frontal gyrus posterior inferior RH,额中回后部下部右侧
-Middle frontal gyrus posterior lateral RH,额中回后部外侧右侧
-Middle frontal gyrus posterior superior LH,额中回后部上部左侧
-Middle frontal gyrus posterior superior RH,额中回后部上部右侧
+Middle frontal gyrus posterior inferior RH,额中回后下部右侧
+Middle frontal gyrus posterior lateral RH,额中回后外侧右侧
+Middle frontal gyrus posterior superior RH,额中回后上部右侧
 Middle frontal gyrus postero-inferior LH,额中回后下部左侧
 Middle frontal gyrus postero-superior LH,额中回后上部左侧
 Middle frontal gyrus superior RH,额中回上部右侧
-Middle frontal sulcus RH,中部沟右侧
-Middle frontal sulcus anterior,中部沟前部
-Middle frontal sulcus anterior LH,中部沟前部左侧
-Middle frontal sulcus anterior RH,中部沟前部右侧
-Middle frontal sulcus inferior LH,中部沟下部左侧
-Middle frontal sulcus mid-anterior LH,中部沟前部左侧
-Middle frontal sulcus middle LH,中部沟中部左侧
-Middle frontal sulcus middle RH,中部沟中部右侧
-Middle frontal sulcus posterior RH,中部沟后部右侧
-Middle occipital sulcus LH,中部沟左侧
-Middle occipital sulcus RH,中部沟右侧
-Middle parts of postcentral gyrus and precentral gyrus RH,中部中央后回和中央前回右侧
+Middle frontal sulcus RH,额中沟右侧
+Middle frontal sulcus anterior,额中沟前部
+Middle frontal sulcus anterior LH,额中沟前部左侧
+Middle frontal sulcus anterior RH,额中沟前部右侧
+Middle frontal sulcus inferior LH,额中沟下部左侧
+Middle frontal sulcus mid-anterior LH,额中沟中前部左侧
+Middle frontal sulcus middle LH,额中沟中部左侧
+Middle frontal sulcus middle RH,额中沟中部右侧
+Middle frontal sulcus posterior RH,额中沟后部右侧
+Middle occipital sulcus LH,枕中沟左侧
+Middle occipital sulcus RH,枕中沟右侧
+Middle parts of postcentral gyrus and precentral gyrus RH,中央后回和中央前回中部右侧
 Middle temporal gyrus,颞中回
 Middle temporal gyrus LH,颞中回左侧
 Middle temporal gyrus RH,颞中回右侧
 Middle temporal gyrus anterior LH,颞中回前部左侧
 Middle temporal gyrus anterior RH,颞中回前部右侧
 Middle temporal gyrus medial LH,颞中回内侧左侧
-Middle temporal gyrus mid-anterior LH,颞中回前部左侧
-Middle temporal gyrus mid-anterior RH,颞中回前部右侧
-Middle temporal gyrus mid-anterior lateral LH,颞中回前部外侧左侧
-Middle temporal gyrus mid-anterior medial LH,颞中回前部内侧左侧
-Middle temporal gyrus mid-posterior LH,颞中回后部左侧
-Middle temporal gyrus mid-posterior RH,颞中回后部右侧
-Middle temporal gyrus mid-posterior medial LH,颞中回后部内侧左侧
+Middle temporal gyrus mid-anterior LH,颞中回中前部左侧
+Middle temporal gyrus mid-anterior RH,颞中回中前部右侧
+Middle temporal gyrus mid-anterior lateral LH,颞中回中前外侧左侧
+Middle temporal gyrus mid-anterior medial LH,颞中回中前内侧左侧
+Middle temporal gyrus mid-posterior LH,颞中回中后部左侧
+Middle temporal gyrus mid-posterior RH,颞中回中后部右侧
+Middle temporal gyrus mid-posterior medial LH,颞中回中后内侧左侧
 Middle temporal gyrus middle LH,颞中回中部左侧
 Middle temporal gyrus middle RH,颞中回中部右侧
-Middle temporal gyrus middle anterior LH,颞中回中部前部左侧
-Middle temporal gyrus middle inferior LH,颞中回中部下部左侧
-Middle temporal gyrus middle posterior LH,颞中回中部后部左侧
-Middle temporal gyrus middle superior LH,颞中回中部上部左侧
+Middle temporal gyrus middle inferior LH,颞中回中下部左侧
+Middle temporal gyrus middle superior LH,颞中回中上部左侧
 Middle temporal gyrus posterior,颞中回后部
 Middle temporal gyrus posterior LH,颞中回后部左侧
 Middle temporal gyrus posterior RH,颞中回后部右侧
-Middle temporal gyrus posterior inferior LH,颞中回后部下部左侧
-Middle temporal gyrus posterior superior LH,颞中回后部上部左侧
+Middle temporal gyrus posterior superior LH,颞中回后上部左侧
 Middle temporal gyrus postero-inferior LH,颞中回后下部左侧
 Middle temporal gyrus postero-inferior RH,颞中回后下部右侧
 Middle temporal gyrus postero-superior RH,颞中回后上部右侧
@@ -884,32 +855,28 @@ Occipital pole medial RH,枕极内侧右侧
 Occipital pole middle,枕极中部
 Occipital pole superior,枕极上部
 Occipital pole superior LH,枕极上部左侧
-Occipitotemporal gyrus anterior,回前部
-Occipitotemporal gyrus anterior LH,回前部左侧
-Occipitotemporal gyrus mid-posterior RH,回后部右侧
-Occipitotemporal gyrus posterior,回后部
-Occipitotemporal gyrus posterior LH,回后部左侧
-Occipitotemporal gyrus posterior RH,回后部右侧
-Occipitotemporal sulcus anterior RH,沟前部右侧
-Occipitotemporal sulcus mid-anterior RH,沟前部右侧
-Occipitotemporal sulcus mid-posterior LH,沟后部左侧
-Occipitotemporal sulcus mid-posterior RH,沟后部右侧
-Occipitotemporal sulcus middle LH,沟中部左侧
-Occipitotemporal sulcus middle RH,沟中部右侧
-Occipitotemporal sulcus posterior LH,沟后部左侧
-Occipitotemporal sulcus posterior RH,沟后部右侧
-Operculum orbitalis LH,盖左侧
+Occipitotemporal gyrus anterior,颞枕回前部
+Occipitotemporal gyrus anterior LH,颞枕回前部左侧
+Occipitotemporal gyrus posterior,颞枕回后部
+Occipitotemporal gyrus posterior LH,颞枕回后部左侧
+Occipitotemporal gyrus posterior RH,颞枕回后部右侧
+Occipitotemporal sulcus mid-anterior RH,颞枕沟前部右侧
+Occipitotemporal sulcus middle LH,颞枕沟中部左侧
+Occipitotemporal sulcus middle RH,颞枕沟中部右侧
+Occipitotemporal sulcus posterior LH,颞枕沟后部左侧
+Occipitotemporal sulcus posterior RH,颞枕沟后部右侧
+Operculum orbitalis LH,眶盖左侧
 Optic chiasm,视交叉
 Optic chiasm anterior,视交叉前部
-Optic radiation LH,左侧
-Optic radiation RH,右侧
-Optic radiation posterior LH,后部左侧
-Optic radiation posterior RH,后部右侧
-Orbital H-shaped sulcus,沟
-Orbital H-shaped sulcus RH,沟右侧
-Orbital cortex lateral RH,皮层外侧右侧
+Optic radiation LH,视辐射左侧
+Optic radiation RH,视辐射右侧
+Optic radiation posterior LH,视辐射后部左侧
+Optic radiation posterior RH,视辐射后部右侧
+Orbital H-shaped sulcus,H形眶沟
+Orbital H-shaped sulcus RH,H形眶沟右侧
+Orbital cortex lateral RH,眶皮层外侧右侧
 Orbitofrontal cortex,眶额皮层
-Paracentral gyrus RH,回右侧
+Paracentral gyrus RH,旁中央回右侧
 Paracentral lobule,旁中央小叶
 Paracentral lobule inferior,旁中央小叶下部
 Paracentral lobule inferior LH,旁中央小叶下部左侧
@@ -918,54 +885,54 @@ Paracentral lobule posterior LH,旁中央小叶后部左侧
 Paracentral lobule postero-inferior,旁中央小叶后下部
 Paracentral lobule postero-inferior RH,旁中央小叶后下部右侧
 Paracentral lobule superior,旁中央小叶上部
-Paracentral sulcus,中央沟
-Paracentral sulcus LH,中央沟左侧
-Paracentral sulcus inferior,中央沟下部
-Paracentral sulcus superior,中央沟上部
-Paracingulate gyrus anterior,扣带回前部
-Paracingulate gyrus anterior LH,扣带回前部左侧
-Paracingulate gyrus mid-anterior,扣带回前部
-Paracingulate gyrus mid-anterior LH,扣带回前部左侧
-Paracingulate gyrus mid-posterior LH,扣带回后部左侧
-Paracingulate gyrus middle,扣带回中部
-Paracingulate gyrus posterior,扣带回后部
-Paracingulate gyrus posterior LH,扣带回后部左侧
-Paracingulate gyrus posterior RH,扣带回后部右侧
-Paracingulate gyrus postero-inferior,扣带回后下部
-Paracingulate gyrus postero-superior,扣带回后上部
-Paracingulate sulcus LH,沟左侧
-Paracingulate sulcus anterior LH,沟前部左侧
-Paracingulate sulcus mid-posterior,沟后部
-Paracingulate sulcus mid-posterior RH,沟后部右侧
-Paracingulate sulcus middle LH,沟中部左侧
-Paracingulate sulcus posterior,沟后部
-Paracingulate sulcus posterior LH,沟后部左侧
-Paracingulate sulcus posterior RH,沟后部右侧
-Paracingulate sulcus superior RH,沟上部右侧
-Parahippocampal gyrus,海马旁回
-Parahippocampal gyrus anterior,海马旁回前部
-Parahippocampal gyrus middle RH,海马旁回中部右侧
-Parahippocampal gyrus posterior LH,海马旁回后部左侧
-Parahippocampal gyrus posterior RH,海马旁回后部右侧
-Parahippocampal sulcus,沟
-Parietal operculum,盖
-Parietal operculum LH,盖左侧
-Parietal operculum RH,盖右侧
-Parietal operculum anterior RH,盖前部右侧
-Parietal operculum medial RH,盖内侧右侧
-Parietal operculum posterior RH,盖后部右侧
+Paracentral sulcus,旁中央沟
+Paracentral sulcus LH,旁中央沟左侧
+Paracentral sulcus inferior,旁中央沟下部
+Paracentral sulcus superior,旁中央沟上部
+Paracingulate gyrus anterior,扣带回旁回前部
+Paracingulate gyrus anterior LH,扣带回旁回前部左侧
+Paracingulate gyrus mid-anterior,扣带回旁回中前部
+Paracingulate gyrus mid-anterior LH,扣带回旁回中前部左侧
+Paracingulate gyrus mid-posterior LH,扣带回旁回中后部左侧
+Paracingulate gyrus middle,扣带回旁回中部
+Paracingulate gyrus posterior,扣带回旁回后部
+Paracingulate gyrus posterior LH,扣带回旁回后部左侧
+Paracingulate gyrus posterior RH,扣带回旁回后部右侧
+Paracingulate gyrus postero-inferior,扣带回旁回后下部
+Paracingulate gyrus postero-superior,扣带回旁回后上部
+Paracingulate sulcus LH,扣带回旁沟左侧
+Paracingulate sulcus anterior LH,扣带回旁沟前部左侧
+Paracingulate sulcus mid-posterior,扣带回旁沟中后部
+Paracingulate sulcus mid-posterior RH,扣带回旁沟中后部右侧
+Paracingulate sulcus middle LH,扣带回旁沟中部左侧
+Paracingulate sulcus posterior,扣带回旁沟后部
+Paracingulate sulcus posterior LH,扣带回旁沟后部左侧
+Paracingulate sulcus posterior RH,扣带回旁沟后部右侧
+Paracingulate sulcus superior RH,扣带回旁沟上部右侧
+Parahippocampal gyrus,旁海马回
+Parahippocampal gyrus anterior,旁海马回前部
+Parahippocampal gyrus middle RH,旁海马回中部右侧
+Parahippocampal gyrus posterior LH,旁海马回后部左侧
+Parahippocampal gyrus posterior RH,旁海马回后部右侧
+Parahippocampal sulcus,海马旁沟
+Parietal operculum,顶叶盖
+Parietal operculum LH,顶叶盖左侧
+Parietal operculum RH,顶叶盖右侧
+Parietal operculum anterior RH,顶叶盖前部右侧
+Parietal operculum medial RH,顶叶盖内侧右侧
+Parietal operculum posterior RH,顶叶盖后部右侧
 Parieto-occipital sulcus,顶枕沟
 Parieto-occipital sulcus anterior,顶枕沟前部
 Parieto-occipital sulcus anterior LH,顶枕沟前部左侧
 Parieto-occipital sulcus anterior RH,顶枕沟前部右侧
 Parieto-occipital sulcus antero-superior,顶枕沟前上部
-Parieto-occipital sulcus central,顶枕沟
+Parieto-occipital sulcus central,顶枕沟中央
 Parieto-occipital sulcus inferior LH,顶枕沟下部左侧
-Parieto-occipital sulcus mid-anterior,顶枕沟前部
-Parieto-occipital sulcus mid-anterior LH,顶枕沟前部左侧
-Parieto-occipital sulcus mid-anterior RH,顶枕沟前部右侧
-Parieto-occipital sulcus mid-posterior,顶枕沟后部
-Parieto-occipital sulcus mid-superior,顶枕沟上部
+Parieto-occipital sulcus mid-anterior,顶枕沟中前部
+Parieto-occipital sulcus mid-anterior LH,顶枕沟中前部左侧
+Parieto-occipital sulcus mid-anterior RH,顶枕沟中前部右侧
+Parieto-occipital sulcus mid-posterior,顶枕沟中后部
+Parieto-occipital sulcus mid-superior,顶枕沟中上部
 Parieto-occipital sulcus middle,顶枕沟中部
 Parieto-occipital sulcus middle LH,顶枕沟中部左侧
 Parieto-occipital sulcus middle RH,顶枕沟中部右侧
@@ -980,15 +947,15 @@ Parieto-occipital sulcus postero-inferior RH,顶枕沟后下部右侧
 Parieto-occipital sulcus postero-superior,顶枕沟后上部
 Parieto-occipital sulcus postero-superior RH,顶枕沟后上部右侧
 Parieto-occipital sulcus superior,顶枕沟上部
-Pars opercularis,盖部
-Pars opercularis LH,盖部左侧
-Pars opercularis RH,盖部右侧
-Pars opercularis inferior LH,盖部下部左侧
-Pars opercularis lateral LH,盖部外侧左侧
-Pars opercularis pars triangularis LH,盖部三角部左侧
-Pars opercularis superior LH,盖部上部左侧
-Pars orbitalis LH,左侧
-Pars orbitalis RH,右侧
+Pars opercularis,岛盖部
+Pars opercularis LH,岛盖部左侧
+Pars opercularis RH,岛盖部右侧
+Pars opercularis inferior LH,岛盖部下部左侧
+Pars opercularis lateral LH,岛盖部外侧左侧
+Pars opercularis pars triangularis LH,岛盖部三角部左侧
+Pars opercularis superior LH,岛盖部上部左侧
+Pars orbitalis LH,眶部左侧
+Pars orbitalis RH,眶部右侧
 Pars triangularis,三角部
 Pars triangularis LH,三角部左侧
 Pars triangularis RH,三角部右侧
@@ -996,13 +963,12 @@ Pars triangularis anterior LH,三角部前部左侧
 Pars triangularis inferior LH,三角部下部左侧
 Pars triangularis posterior LH,三角部后部左侧
 Pars triangularis superior RH,三角部上部右侧
-Pericallosal sulcus middle,沟中部
-Perirhinal cortex,皮层
+Pericallosal sulcus middle,胼胝体周围沟中部
+Perirhinal cortex,嗅皮层
 Planum polare,颞极平面
 Planum polare LH,颞极平面左侧
 Planum polare inferior,颞极平面下部
 Planum polare superior,颞极平面上部
-Planum porale,颞前平面
 Planum temporale,颞平面
 Planum temporale LH,颞平面左侧
 Planum temporale RH,颞平面右侧
@@ -1018,11 +984,11 @@ Postcentral gyrus RH,中央后回右侧
 Postcentral gyrus inferior,中央后回下部
 Postcentral gyrus inferior LH,中央后回下部左侧
 Postcentral gyrus inferior RH,中央后回下部右侧
-Postcentral gyrus mid-inferior,中央后回下部
-Postcentral gyrus mid-inferior LH,中央后回下部左侧
-Postcentral gyrus mid-inferior lateral LH,中央后回下部外侧左侧
-Postcentral gyrus mid-superior LH,中央后回上部左侧
-Postcentral gyrus mid-superior RH,中央后回上部右侧
+Postcentral gyrus mid-inferior,中央后回中部下部
+Postcentral gyrus mid-inferior LH,中央后回中部下部左侧
+Postcentral gyrus mid-inferior lateral LH,中央后回中部下部外侧左侧
+Postcentral gyrus mid-superior LH,中央后回中部上部左侧
+Postcentral gyrus mid-superior RH,中央后回中部上部右侧
 Postcentral gyrus middle,中央后回中部
 Postcentral gyrus middle LH,中央后回中部左侧
 Postcentral gyrus middle RH,中央后回中部右侧
@@ -1038,50 +1004,49 @@ Postcentral sulcus inferior LH,中央后沟下部左侧
 Postcentral sulcus inferior RH,中央后沟下部右侧
 Postcentral sulcus inferior medial LH,中央后沟下部内侧左侧
 Postcentral sulcus medial,中央后沟内侧
-Postcentral sulcus mid-superior LH,中央后沟上部左侧
-Postcentral sulcus mid-superior RH,中央后沟上部右侧
+Postcentral sulcus mid-superior LH,中央后沟中部上部左侧
+Postcentral sulcus mid-superior RH,中央后沟中部上部右侧
 Postcentral sulcus middle LH,中央后沟中部左侧
 Postcentral sulcus middle RH,中央后沟中部右侧
 Postcentral sulcus superior,中央后沟上部
 Postcentral sulcus superior LH,中央后沟上部左侧
 Postcentral sulcus superior RH,中央后沟上部右侧
-Posterior cingulate,后部
-Posterior cingulate cortex,后部扣带皮层
-Posterior cingulate cortex LH,后部扣带皮层左侧
-Posterior cingulate cortex anterior,后部扣带皮层前部
-Posterior cingulate cortex antero-inferior,后部扣带皮层下部
-Posterior cingulate cortex inferior,后部扣带皮层下部
-Posterior cingulate cortex inferior LH,后部扣带皮层下部左侧
-Posterior cingulate cortex middle,后部扣带皮层中部
-Posterior cingulate cortex posterior,后部扣带皮层后部
-Posterior cingulate cortex postero-inferior,后部扣带皮层后下部
-Posterior cingulate cortex superior,后部扣带皮层上部
-Posterior corona radiata LH,后部放射冠左侧
-Posterior corona radiata RH,后部放射冠右侧
-Posterior corona radiata inferior LH,后部放射冠下部左侧
-Posterior corona radiata inferior RH,后部放射冠下部右侧
-Posterior horns of lateral ventricles,后部的外侧脑室
-Posterior insula RH,后部脑岛右侧
-Posterior insula inferior,后部脑岛下部
-Posterior insula inferior LH,后部脑岛下部左侧
-Posterior insula inferior RH,后部脑岛下部右侧
-Posterior insula postero-superior RH,后部脑岛后上部右侧
-Posterior insula superior LH,后部脑岛上部左侧
-Posterior lateral ventricles,后部外侧脑室
-Posterior orbital gyrus,后部眶回
-Posterior orbital gyrus LH,后部眶回左侧
-Posterior orbital gyrus RH,后部眶回右侧
-Posterior orbital gyrus posterior,后部眶回后部
+Posterior cingulate,后扣带
+Posterior cingulate cortex,后扣带皮层
+Posterior cingulate cortex LH,后扣带皮层左侧
+Posterior cingulate cortex anterior,后扣带皮层前部
+Posterior cingulate cortex antero-inferior,后扣带皮层前下部
+Posterior cingulate cortex inferior,后扣带皮层下部
+Posterior cingulate cortex inferior LH,后扣带皮层下部左侧
+Posterior cingulate cortex middle,后扣带皮层中部
+Posterior cingulate cortex posterior,后扣带皮层后部
+Posterior cingulate cortex postero-inferior,后扣带皮层后下部
+Posterior cingulate cortex superior,后扣带皮层上部
+Posterior corona radiata LH,后放射冠左侧
+Posterior corona radiata RH,后放射冠右侧
+Posterior corona radiata inferior LH,后放射冠下部左侧
+Posterior corona radiata inferior RH,后放射冠下部右侧
+Posterior insula RH,后脑岛右侧
+Posterior insula inferior,后脑岛下部
+Posterior insula inferior LH,后脑岛下部左侧
+Posterior insula inferior RH,后脑岛下部右侧
+Posterior insula postero-superior RH,后脑岛后上部右侧
+Posterior insula superior LH,后脑岛上部左侧
+Posterior lateral ventricles,外侧脑室后部
+Posterior orbital gyrus,后眶回
+Posterior orbital gyrus LH,后眶回左侧
+Posterior orbital gyrus RH,后眶回右侧
+Posterior orbital gyrus posterior,后眶回后部
 Precentral gyrus antero-superior LH,中央前回前上部左侧
 Precentral gyrus inferior,中央前回下部
 Precentral gyrus inferior LH,中央前回下部左侧
 Precentral gyrus inferior RH,中央前回下部右侧
 Precentral gyrus medial,中央前回内侧
-Precentral gyrus mid-inferior LH,中央前回下部左侧
-Precentral gyrus mid-inferior RH,中央前回下部右侧
-Precentral gyrus mid-superior,中央前回上部
-Precentral gyrus mid-superior LH,中央前回上部左侧
-Precentral gyrus mid-superior RH,中央前回上部右侧
+Precentral gyrus mid-inferior LH,中央前回中部下部左侧
+Precentral gyrus mid-inferior RH,中央前回中部下部右侧
+Precentral gyrus mid-superior,中央前回中部上部
+Precentral gyrus mid-superior LH,中央前回中部上部左侧
+Precentral gyrus mid-superior RH,中央前回中部上部右侧
 Precentral gyrus middle,中央前回中部
 Precentral gyrus middle LH,中央前回中部左侧
 Precentral gyrus middle anterior LH,中央前回中部前部左侧
@@ -1090,7 +1055,7 @@ Precentral gyrus middle posterior LH,中央前回中部后部左侧
 Precentral gyrus superior,中央前回上部
 Precentral gyrus superior LH,中央前回上部左侧
 Precentral gyrus superior RH,中央前回上部右侧
-Precentral gyrus superior and superior frontal gyrus RH,中央前回上部和额上回右侧
+Precentral gyrus superior and superior frontal gyrus RH,中央前回上部合并额上回右侧
 Precentral sulcus RH,中央前沟右侧
 Precentral sulcus inferior LH,中央前沟下部左侧
 Precentral sulcus inferior RH,中央前沟下部右侧
@@ -1098,10 +1063,10 @@ Precentral sulcus medial,中央前沟内侧
 Precentral sulcus medial LH,中央前沟内侧左侧
 Precentral sulcus medial RH,中央前沟内侧右侧
 Precentral sulcus medial inferior LH,中央前沟内侧下部左侧
-Precentral sulcus mid-inferior LH,中央前沟下部左侧
-Precentral sulcus mid-inferior RH,中央前沟下部右侧
-Precentral sulcus mid-superior LH,中央前沟上部左侧
-Precentral sulcus mid-superior RH,中央前沟上部右侧
+Precentral sulcus mid-inferior LH,中央前沟中部下部左侧
+Precentral sulcus mid-inferior RH,中央前沟中部下部右侧
+Precentral sulcus mid-superior LH,中央前沟中部上部左侧
+Precentral sulcus mid-superior RH,中央前沟中部上部右侧
 Precentral sulcus middle LH,中央前沟中部左侧
 Precentral sulcus middle RH,中央前沟中部右侧
 Precentral sulcus superior,中央前沟上部
@@ -1111,19 +1076,18 @@ Precentral sulcus superior medial LH,中央前沟上部内侧左侧
 Precuneus RH,楔前叶右侧
 Precuneus anterior,楔前叶前部
 Precuneus anterior LH,楔前叶前部左侧
-Precuneus antero-inferior,楔前叶下部
-Precuneus antero-inferior RH,楔前叶下部右侧
+Precuneus antero-inferior,楔前叶前下部
+Precuneus antero-inferior RH,楔前叶前下部右侧
 Precuneus antero-superior,楔前叶前上部
 Precuneus antero-superior LH,楔前叶前上部左侧
 Precuneus inferior,楔前叶下部
 Precuneus inferior LH,楔前叶下部左侧
 Precuneus interhemispheric fissure,楔前叶大脑纵裂
-Precuneus mid-posterior,楔前叶后部
-Precuneus mid-superior LH,楔前叶上部左侧
+Precuneus mid-posterior,楔前叶后中部
+Precuneus mid-superior LH,楔前叶中部上部左侧
 Precuneus middle,楔前叶中部
 Precuneus middle LH,楔前叶中部左侧
 Precuneus middle RH,楔前叶中部右侧
-Precuneus middle superior LH,楔前叶中部上部左侧
 Precuneus middle superior RH,楔前叶中部上部右侧
 Precuneus posterior,楔前叶后部
 Precuneus posterior LH,楔前叶后部左侧
@@ -1152,249 +1116,247 @@ Putamen postero-inferior,壳核后下部
 Putamen postero-superior,壳核后上部
 Putamen superior,壳核上部
 Putamen superior RH,壳核上部右侧
-Retrocalcarine cortex,距状皮层
-Retrocalcarine cortex LH,距状皮层左侧
-Retrocalcarine cortex RH,距状皮层右侧
-Retrocalcarine sulcus LH,沟左侧
-Retrosplenial cortex,皮层
-Retrosplenial cortex inferior,皮层下部
-Retrosplenial cortex posterior,皮层后部
-Retrosplenial cortex superior,皮层上部
-Subcallosal cortex,皮层
-Subcallosal cortex inferior,皮层下部
-Subcallosal cortex superior,皮层上部
-Subcentral gyrus LH,回左侧
-Subcentral gyrus RH,回右侧
-Subcentral gyrus anterior RH,回前部右侧
-Subcentral gyrus posterior LH,回后部左侧
-Subcentral gyrus posterior RH,回后部右侧
-Subgenual cortex,皮层
-Suborbital cortex,皮层
-Suborbital cortex medial,皮层内侧
-Suborbital sulcus,沟
-Suborbital sulcus LH,沟左侧
-Subparietal sulcus,沟
-Subparietal sulcus LH,沟左侧
-Subparietal sulcus RH,沟右侧
-Subparietal sulcus anterior LH,沟前部左侧
-Subparietal sulcus anterior RH,沟前部右侧
-Subparietal sulcus inferior LH,沟下部左侧
-Subparietal sulcus inferior RH,沟下部右侧
-Subparietal sulcus posterior,沟后部
-Subparietal sulcus posterior RH,沟后部右侧
-Subsplenial area,胼胝体压部下区
-Subthalamic nuclei,底丘脑核
-Superio occipital sulcus superior RH,沟上部右侧
-Superior corona radiata RH,上部放射冠右侧
-Superior corona radiata anterior LH,上部放射冠前部左侧
-Superior corona radiata posterior LH,上部放射冠后部左侧
-Superior fornix and isthmus,上部和
-Superior frontal gyrus,额上回
-Superior frontal gyrus anterior,额上回前部
-Superior frontal gyrus anterior LH,额上回前部左侧
-Superior frontal gyrus anterior RH,额上回前部右侧
-Superior frontal gyrus anterior medial,额上回前部内侧
-Superior frontal gyrus antero-superior,额上回前上部
-Superior frontal gyrus antero-superior RH,额上回前上部右侧
-Superior frontal gyrus medial,额上回内侧
-Superior frontal gyrus medial anterior,额上回内侧前部
-Superior frontal gyrus medial mid-anterior,额上回内侧前部
-Superior frontal gyrus medial mid-anterior LH,额上回内侧前部左侧
-Superior frontal gyrus medial mid-posterior,额上回内侧后部
-Superior frontal gyrus medial mid-posterior LH,额上回内侧后部左侧
-Superior frontal gyrus medial middle,额上回内侧中部
-Superior frontal gyrus medial posterior,额上回内侧后部
-Superior frontal gyrus medial superior,额上回内侧上部
-Superior frontal gyrus mid-anterior LH,额上回前部左侧
-Superior frontal gyrus mid-posterior,额上回后部
-Superior frontal gyrus mid-posterior LH,额上回后部左侧
-Superior frontal gyrus mid-posterior RH,额上回后部右侧
-Superior frontal gyrus mid-posterior lateral RH,额上回后部外侧右侧
-Superior frontal gyrus middle,额上回中部
-Superior frontal gyrus middle LH,额上回中部左侧
-Superior frontal gyrus middle RH,额上回中部右侧
-Superior frontal gyrus posterior,额上回后部
-Superior frontal gyrus posterior LH,额上回后部左侧
-Superior frontal gyrus posterior RH,额上回后部右侧
-Superior frontal gyrus posterior lateral LH,额上回后部外侧左侧
-Superior frontal gyrus posterior lateral RH,额上回后部外侧右侧
-Superior frontal gyrus posterior medial RH,额上回后部内侧右侧
-Superior frontal gyrus posterior superior LH,额上回后部上部左侧
-Superior frontal gyrus postero-superior LH,额上回后上部左侧
-Superior frontal gyrus superior,额上回上部
-Superior frontal gyrus superior RH,额上回上部右侧
-Superior frontal sulcus,额上沟
-Superior frontal sulcus LH,额上沟左侧
-Superior frontal sulcus RH,额上沟右侧
-Superior frontal sulcus anterior,额上沟前部
-Superior frontal sulcus anterior LH,额上沟前部左侧
-Superior frontal sulcus anterior RH,额上沟前部右侧
-Superior frontal sulcus mid-anterior LH,额上沟前部左侧
-Superior frontal sulcus mid-anterior RH,额上沟前部右侧
-Superior frontal sulcus mid-posterior LH,额上沟后部左侧
-Superior frontal sulcus mid-posterior RH,额上沟后部右侧
-Superior frontal sulcus middle,额上沟中部
-Superior frontal sulcus middle LH,额上沟中部左侧
-Superior frontal sulcus middle RH,额上沟中部右侧
-Superior frontal sulcus posterior LH,额上沟后部左侧
-Superior frontal sulcus posterior RH,额上沟后部右侧
-Superior frontal sulcus posterior inferior LH,额上沟后部下部左侧
-Superior longitudinal fasciculus I,上部
-Superior longitudinal fasciculus I LH,上部左侧
-Superior longitudinal fasciculus I anterior,上部前部
-Superior longitudinal fasciculus I anterior LH,上部前部左侧
-Superior longitudinal fasciculus I anterior RH,上部前部右侧
-Superior longitudinal fasciculus I mid-anterior LH,上部前部左侧
-Superior longitudinal fasciculus I mid-anterior RH,上部前部右侧
-Superior longitudinal fasciculus I mid-posterior LH,上部后部左侧
-Superior longitudinal fasciculus I middle RH,上部中部右侧
-Superior longitudinal fasciculus I posterior,上部后部
-Superior longitudinal fasciculus I posterior LH,上部后部左侧
-Superior longitudinal fasciculus I posterior RH,上部后部右侧
-Superior longitudinal fasciculus II LH,上部左侧
-Superior longitudinal fasciculus II anterior LH,上部前部左侧
-Superior longitudinal fasciculus II anterior RH,上部前部右侧
-Superior longitudinal fasciculus II mid-posterior LH,上部后部左侧
-Superior longitudinal fasciculus II mid-posterior RH,上部后部右侧
-Superior longitudinal fasciculus II middle,上部中部
-Superior longitudinal fasciculus II middle LH,上部中部左侧
-Superior longitudinal fasciculus II middle RH,上部中部右侧
-Superior longitudinal fasciculus II posterior LH,上部后部左侧
-Superior longitudinal fasciculus II posterior RH,上部后部右侧
-Superior longitudinal fasciculus III anterior LH,上部前部左侧
-Superior longitudinal fasciculus III anterior RH,上部前部右侧
-Superior longitudinal fasciculus III mid-anterior LH,上部前部左侧
-Superior longitudinal fasciculus III mid-anterior RH,上部前部右侧
-Superior longitudinal fasciculus III mid-posterior LH,上部后部左侧
-Superior longitudinal fasciculus III middle LH,上部中部左侧
-Superior longitudinal fasciculus III middle RH,上部中部右侧
-Superior longitudinal fasciculus III posterior LH,上部后部左侧
-Superior longitudinal fasciculus III posterior RH,上部后部右侧
-Superior occipital fasciculus II mid-anterior,上部前部
-Superior occipital gyrus,枕上回
-Superior occipital gyrus LH,枕上回左侧
-Superior occipital gyrus RH,枕上回右侧
-Superior occipital gyrus inferior LH,枕上回下部左侧
-Superior occipital gyrus inferior RH,枕上回下部右侧
-Superior occipital gyrus mid-superior,枕上回上部
-Superior occipital gyrus posterior LH,枕上回后部左侧
-Superior occipital gyrus superior,枕上回上部
-Superior occipital gyrus superior LH,枕上回上部左侧
-Superior occipital gyrus superior RH,枕上回上部右侧
-Superior occipital sulcus,上部沟
-Superior occipital sulcus LH,上部沟左侧
-Superior occipital sulcus RH,上部沟右侧
-Superior occipital sulcus inferior,上部沟下部
-Superior occipital sulcus inferior LH,上部沟下部左侧
-Superior occipital sulcus inferior RH,上部沟下部右侧
-Superior occipital sulcus middle RH,上部沟中部右侧
-Superior occipital sulcus posterior LH,上部沟后部左侧
-Superior occipital sulcus superior LH,上部沟上部左侧
-Superior occipital sulcus superior RH,上部沟上部右侧
-Superior occipito-frontal fasciculus middle,上部中部
-Superior parietal lobule,顶上小叶
-Superior parietal lobule LH,顶上小叶左侧
-Superior parietal lobule RH,顶上小叶右侧
-Superior parietal lobule anterior,顶上小叶前部
-Superior parietal lobule anterior LH,顶上小叶前部左侧
-Superior parietal lobule anterior RH,顶上小叶前部右侧
-Superior parietal lobule antero-inferior RH,顶上小叶下部右侧
-Superior parietal lobule antero-superior LH,顶上小叶前上部左侧
-Superior parietal lobule antero-superior RH,顶上小叶前上部右侧
-Superior parietal lobule inferior LH,顶上小叶下部左侧
-Superior parietal lobule medial RH,顶上小叶内侧右侧
-Superior parietal lobule mid-posterior LH,顶上小叶后部左侧
-Superior parietal lobule middle,顶上小叶中部
-Superior parietal lobule posterior,顶上小叶后部
-Superior parietal lobule posterior LH,顶上小叶后部左侧
-Superior parietal lobule posterior RH,顶上小叶后部右侧
-Superior parietal lobule postero-inferior posterior,顶上小叶后下部后部
-Superior parietal lobule postero-superior LH,顶上小叶后上部左侧
-Superior parietal lobule postero-superior RH,顶上小叶后上部右侧
-Superior parietal lobule superior,顶上小叶上部
-Superior parietal sulcus,上部沟
-Superior parietal sulcus LH,上部沟左侧
-Superior parietal sulcus RH,上部沟右侧
-Superior parietal sulcus inferior LH,上部沟下部左侧
-Superior parietal sulcus inferior RH,上部沟下部右侧
-Superior parietal sulcus mid-inferior LH,上部沟下部左侧
-Superior parietal sulcus middle LH,上部沟中部左侧
-Superior parietal sulcus superior,上部沟上部
-Superior parietal sulcus superior LH,上部沟上部左侧
-Superior parietal sulcus superior RH,上部沟上部右侧
-Superior parts of Postcentral and Precentral gyri,上部中央后回和中央前回
-Superior parts of central and postcentral gyrus,上部和中央后回
-Superior parts of central and postcentral sulci,上部和
-Superior parts of central and postcentral sulci LH,上部和左侧
-Superior parts of central and postcentral sulci RH,上部和右侧
-Superior parts of central and precentral sulci RH,上部和右侧
-Superior precentral and postcentral sulci anterior,上部和前部
-Superior precentral and postcentral sulci posterior,上部和后部
-Superior rostral gyrus,上部回
-Superior rostral gyrus anterior,上部回前部
-Superior temporal gyrus LH,颞上回左侧
-Superior temporal gyrus anterior,颞上回前部
-Superior temporal gyrus anterior LH,颞上回前部左侧
-Superior temporal gyrus anterior RH,颞上回前部右侧
-Superior temporal gyrus anterior medial,颞上回前部内侧
-Superior temporal gyrus anterior medial RH,颞上回前部内侧右侧
-Superior temporal gyrus medial,颞上回内侧
-Superior temporal gyrus medial anterior,颞上回内侧前部
-Superior temporal gyrus medial anterior RH,颞上回内侧前部右侧
-Superior temporal gyrus mid-anterior LH,颞上回前部左侧
-Superior temporal gyrus mid-posterior RH,颞上回后部右侧
-Superior temporal gyrus middle,颞上回中部
-Superior temporal gyrus middle LH,颞上回中部左侧
-Superior temporal gyrus middle RH,颞上回中部右侧
-Superior temporal gyrus middle superior LH,颞上回中部上部左侧
-Superior temporal gyrus posterior LH,颞上回后部左侧
-Superior temporal gyrus posterior RH,颞上回后部右侧
-Superior temporal gyrus posterior lateral LH,颞上回后部外侧左侧
-Superior temporal gyrus posterior medial LH,颞上回后部内侧左侧
-Superior temporal gyrus superior LH,颞上回上部左侧
-Superior temporal gyrus superior RH,颞上回上部右侧
-Superior temporal sulcus LH,上部沟左侧
-Superior temporal sulcus RH,上部沟右侧
-Superior temporal sulcus anterior LH,上部沟前部左侧
-Superior temporal sulcus anterior RH,上部沟前部右侧
-Superior temporal sulcus mid-anterior LH,上部沟前部左侧
-Superior temporal sulcus mid-anterior RH,上部沟前部右侧
-Superior temporal sulcus mid-posterior LH,上部沟后部左侧
-Superior temporal sulcus mid-posterior RH,上部沟后部右侧
-Superior temporal sulcus middle LH,上部沟中部左侧
-Superior temporal sulcus middle RH,上部沟中部右侧
-Superior temporal sulcus middle-inferior RH,上部沟中部-下部右侧
-Superior temporal sulcus middle-superior RH,上部沟中部-上部右侧
-Superior temporal sulcus posterior LH,上部沟后部左侧
-Superior temporal sulcus posterior RH,上部沟后部右侧
-Superior temporal sulcus postero-superior LH,上部沟后上部左侧
-Superior temporal sulcus postero-superior RH,上部沟后上部右侧
-Superior temporal sulcus with angular gyrus,上部沟伴角回
-Superior termporal gyrus medial RH,上部回内侧右侧
-Supracalcarine cortex RH,距状皮层右侧
+Retrocalcarine cortex,距后皮质
+Retrocalcarine cortex LH,距后皮质左侧
+Retrocalcarine cortex RH,距后皮质右侧
+Retrocalcarine sulcus LH,距后沟左侧
+Retrosplenial cortex,压后皮质
+Retrosplenial cortex inferior,压后皮质下部
+Retrosplenial cortex posterior,压后皮质后部
+Retrosplenial cortex superior,压后皮质上部
+Subcallosal cortex,胼胝体下皮质
+Subcallosal cortex inferior,胼胝体下皮质下部
+Subcallosal cortex superior,胼胝体下皮质上部
+Subcentral gyrus LH,中央下回左侧
+Subcentral gyrus RH,中央下回右侧
+Subcentral gyrus anterior RH,中央下回前部右侧
+Subcentral gyrus posterior LH,中央下回后部左侧
+Subcentral gyrus posterior RH,中央下回后部右侧
+Subgenual cortex,膝下皮质
+Suborbital cortex,眶下皮质
+Suborbital cortex medial,眶下皮质内侧
+Suborbital sulcus,眶下沟
+Suborbital sulcus LH,眶下沟左侧
+Subparietal sulcus,顶下沟
+Subparietal sulcus LH,顶下沟左侧
+Subparietal sulcus RH,顶下沟右侧
+Subparietal sulcus anterior LH,顶下沟前部左侧
+Subparietal sulcus anterior RH,顶下沟前部右侧
+Subparietal sulcus inferior LH,顶下沟下部左侧
+Subparietal sulcus inferior RH,顶下沟下部右侧
+Subparietal sulcus posterior,顶下沟后部
+Subparietal sulcus posterior RH,顶下沟后部右侧
+Subsplenial area,压部下区
+Subthalamic nuclei,丘脑底核
+Superior corona radiata RH,上放射冠右侧
+Superior corona radiata anterior LH,上放射冠前部左侧
+Superior corona radiata posterior LH,上放射冠后部左侧
+Superior fornix and isthmus,穹窿上部及峡部
+Superior frontal gyrus,上额回
+Superior frontal gyrus anterior,上额回前部
+Superior frontal gyrus anterior LH,上额回前部左侧
+Superior frontal gyrus anterior RH,上额回前部右侧
+Superior frontal gyrus anterior medial,上额回前部内侧
+Superior frontal gyrus antero-superior,上额回前上部
+Superior frontal gyrus antero-superior RH,上额回前上部右侧
+Superior frontal gyrus medial,上额回内侧
+Superior frontal gyrus medial anterior,上额回内侧前部
+Superior frontal gyrus medial mid-anterior,上额回内侧中部前
+Superior frontal gyrus medial mid-anterior LH,上额回内侧中部前左侧
+Superior frontal gyrus medial mid-posterior,上额回内侧中部后
+Superior frontal gyrus medial mid-posterior LH,上额回内侧中部后左侧
+Superior frontal gyrus medial middle,上额回内侧中部
+Superior frontal gyrus medial posterior,上额回内侧后部
+Superior frontal gyrus medial superior,上额回内侧上部
+Superior frontal gyrus mid-anterior LH,上额回中部前左侧
+Superior frontal gyrus mid-posterior,上额回中部后
+Superior frontal gyrus mid-posterior LH,上额回中部后左侧
+Superior frontal gyrus mid-posterior RH,上额回中部后右侧
+Superior frontal gyrus mid-posterior lateral RH,上额回中部后外侧右侧
+Superior frontal gyrus middle,上额回中部
+Superior frontal gyrus middle LH,上额回中部左侧
+Superior frontal gyrus middle RH,上额回中部右侧
+Superior frontal gyrus posterior,上额回后部
+Superior frontal gyrus posterior LH,上额回后部左侧
+Superior frontal gyrus posterior RH,上额回后部右侧
+Superior frontal gyrus posterior lateral LH,上额回后部外侧左侧
+Superior frontal gyrus posterior lateral RH,上额回后部外侧右侧
+Superior frontal gyrus posterior medial RH,上额回后部内侧右侧
+Superior frontal gyrus posterior superior LH,上额回后部上部左侧
+Superior frontal gyrus postero-superior LH,上额回后上部左侧
+Superior frontal gyrus superior,上额回上部
+Superior frontal gyrus superior RH,上额回上部右侧
+Superior frontal sulcus,上额沟
+Superior frontal sulcus LH,上额沟左侧
+Superior frontal sulcus RH,上额沟右侧
+Superior frontal sulcus anterior,上额沟前部
+Superior frontal sulcus anterior LH,上额沟前部左侧
+Superior frontal sulcus anterior RH,上额沟前部右侧
+Superior frontal sulcus mid-anterior LH,上额沟中部前左侧
+Superior frontal sulcus mid-anterior RH,上额沟中部前右侧
+Superior frontal sulcus mid-posterior LH,上额沟中部后左侧
+Superior frontal sulcus mid-posterior RH,上额沟中部后右侧
+Superior frontal sulcus middle,上额沟中部
+Superior frontal sulcus middle LH,上额沟中部左侧
+Superior frontal sulcus middle RH,上额沟中部右侧
+Superior frontal sulcus posterior LH,上额沟后部左侧
+Superior frontal sulcus posterior RH,上额沟后部右侧
+Superior frontal sulcus posterior inferior LH,上额沟后下部左侧
+Superior longitudinal fasciculus I,上纵束I
+Superior longitudinal fasciculus I LH,上纵束I左侧
+Superior longitudinal fasciculus I anterior,上纵束I前部
+Superior longitudinal fasciculus I anterior LH,上纵束I前部左侧
+Superior longitudinal fasciculus I anterior RH,上纵束I前部右侧
+Superior longitudinal fasciculus I mid-anterior LH,上纵束I中部前左侧
+Superior longitudinal fasciculus I mid-anterior RH,上纵束I中部前右侧
+Superior longitudinal fasciculus I mid-posterior LH,上纵束I中部后左侧
+Superior longitudinal fasciculus I middle RH,上纵束I中部右侧
+Superior longitudinal fasciculus I posterior,上纵束I后部
+Superior longitudinal fasciculus I posterior LH,上纵束I后部左侧
+Superior longitudinal fasciculus I posterior RH,上纵束I后部右侧
+Superior longitudinal fasciculus II LH,上纵束II左侧
+Superior longitudinal fasciculus II anterior LH,上纵束II前部左侧
+Superior longitudinal fasciculus II anterior RH,上纵束II前部右侧
+Superior longitudinal fasciculus II mid-posterior LH,上纵束II中部后左侧
+Superior longitudinal fasciculus II mid-posterior RH,上纵束II中部后右侧
+Superior longitudinal fasciculus II middle,上纵束II中部
+Superior longitudinal fasciculus II middle LH,上纵束II中部左侧
+Superior longitudinal fasciculus II middle RH,上纵束II中部右侧
+Superior longitudinal fasciculus II posterior LH,上纵束II后部左侧
+Superior longitudinal fasciculus II posterior RH,上纵束II后部右侧
+Superior longitudinal fasciculus III anterior LH,上纵束III前部左侧
+Superior longitudinal fasciculus III anterior RH,上纵束III前部右侧
+Superior longitudinal fasciculus III mid-anterior LH,上纵束III中部前左侧
+Superior longitudinal fasciculus III mid-anterior RH,上纵束III中部前右侧
+Superior longitudinal fasciculus III mid-posterior LH,上纵束III中部后左侧
+Superior longitudinal fasciculus III middle LH,上纵束III中部左侧
+Superior longitudinal fasciculus III middle RH,上纵束III中部右侧
+Superior longitudinal fasciculus III posterior LH,上纵束III后部左侧
+Superior longitudinal fasciculus III posterior RH,上纵束III后部右侧
+Superior occipital fasciculus II mid-anterior,上枕束II中部前
+Superior occipital gyrus,上枕回
+Superior occipital gyrus LH,上枕回左侧
+Superior occipital gyrus RH,上枕回右侧
+Superior occipital gyrus inferior LH,上枕回下部左侧
+Superior occipital gyrus inferior RH,上枕回下部右侧
+Superior occipital gyrus mid-superior,上枕回中部上部
+Superior occipital gyrus posterior LH,上枕回后部左侧
+Superior occipital gyrus superior,上枕回上部
+Superior occipital gyrus superior LH,上枕回上部左侧
+Superior occipital gyrus superior RH,上枕回上部右侧
+Superior occipital sulcus,上枕沟
+Superior occipital sulcus LH,上枕沟左侧
+Superior occipital sulcus RH,上枕沟右侧
+Superior occipital sulcus inferior,上枕沟下部
+Superior occipital sulcus inferior LH,上枕沟下部左侧
+Superior occipital sulcus inferior RH,上枕沟下部右侧
+Superior occipital sulcus middle RH,上枕沟中部右侧
+Superior occipital sulcus posterior LH,上枕沟后部左侧
+Superior occipital sulcus superior LH,上枕沟上部左侧
+Superior occipital sulcus superior RH,上枕沟上部右侧
+Superior occipito-frontal fasciculus middle,上枕额束中部
+Superior parietal lobule,上顶叶
+Superior parietal lobule LH,上顶叶左侧
+Superior parietal lobule RH,上顶叶右侧
+Superior parietal lobule anterior,上顶叶前部
+Superior parietal lobule anterior LH,上顶叶前部左侧
+Superior parietal lobule anterior RH,上顶叶前部右侧
+Superior parietal lobule antero-inferior RH,上顶叶前下部右侧
+Superior parietal lobule antero-superior LH,上顶叶前上部左侧
+Superior parietal lobule antero-superior RH,上顶叶前上部右侧
+Superior parietal lobule inferior LH,上顶叶下部左侧
+Superior parietal lobule medial RH,上顶叶内侧右侧
+Superior parietal lobule mid-posterior LH,上顶叶中部后左侧
+Superior parietal lobule middle,上顶叶中部
+Superior parietal lobule posterior,上顶叶后部
+Superior parietal lobule posterior LH,上顶叶后部左侧
+Superior parietal lobule posterior RH,上顶叶后部右侧
+Superior parietal lobule postero-inferior posterior,上顶叶后下部后
+Superior parietal lobule postero-superior LH,上顶叶后上部左侧
+Superior parietal lobule postero-superior RH,上顶叶后上部右侧
+Superior parietal lobule superior,上顶叶上部
+Superior parietal sulcus,上顶沟
+Superior parietal sulcus LH,上顶沟左侧
+Superior parietal sulcus RH,上顶沟右侧
+Superior parietal sulcus inferior LH,上顶沟下部左侧
+Superior parietal sulcus inferior RH,上顶沟下部右侧
+Superior parietal sulcus mid-inferior LH,上顶沟中部下左侧
+Superior parietal sulcus middle LH,上顶沟中部左侧
+Superior parietal sulcus superior,上顶沟上部
+Superior parietal sulcus superior LH,上顶沟上部左侧
+Superior parietal sulcus superior RH,上顶沟上部右侧
+Superior parts of Postcentral and Precentral gyri,中央后回和中央前回上部
+Superior parts of central and postcentral gyrus,中央回和中央后回上部
+Superior parts of central and postcentral sulci,中央沟和中央后沟上部
+Superior parts of central and postcentral sulci LH,中央沟和中央后沟上部左侧
+Superior parts of central and postcentral sulci RH,中央沟和中央后沟上部右侧
+Superior parts of central and precentral sulci RH,中央沟和中央前沟上部右侧
+Superior precentral and postcentral sulci anterior,中央前沟和中央后沟前部上部
+Superior precentral and postcentral sulci posterior,中央前沟和中央后沟后部上部
+Superior rostral gyrus,上喙回
+Superior rostral gyrus anterior,上喙回前部
+Superior temporal gyrus LH,上颞回左侧
+Superior temporal gyrus anterior,上颞回前部
+Superior temporal gyrus anterior LH,上颞回前部左侧
+Superior temporal gyrus anterior RH,上颞回前部右侧
+Superior temporal gyrus anterior medial,上颞回前部内侧
+Superior temporal gyrus anterior medial RH,上颞回前部内侧右侧
+Superior temporal gyrus medial,上颞回内侧
+Superior temporal gyrus medial anterior,上颞回内侧前部
+Superior temporal gyrus medial anterior RH,上颞回内侧前部右侧
+Superior temporal gyrus mid-anterior LH,上颞回中部前左侧
+Superior temporal gyrus mid-posterior RH,上颞回中部后右侧
+Superior temporal gyrus middle,上颞回中部
+Superior temporal gyrus middle LH,上颞回中部左侧
+Superior temporal gyrus middle RH,上颞回中部右侧
+Superior temporal gyrus middle superior LH,上颞回中部上部左侧
+Superior temporal gyrus posterior LH,上颞回后部左侧
+Superior temporal gyrus posterior RH,上颞回后部右侧
+Superior temporal gyrus posterior lateral LH,上颞回后部外侧左侧
+Superior temporal gyrus posterior medial LH,上颞回后部内侧左侧
+Superior temporal gyrus superior LH,上颞回上部左侧
+Superior temporal gyrus superior RH,上颞回上部右侧
+Superior temporal sulcus LH,上颞沟左侧
+Superior temporal sulcus RH,上颞沟右侧
+Superior temporal sulcus anterior LH,上颞沟前部左侧
+Superior temporal sulcus anterior RH,上颞沟前部右侧
+Superior temporal sulcus mid-anterior LH,上颞沟中部前左侧
+Superior temporal sulcus mid-anterior RH,上颞沟中部前右侧
+Superior temporal sulcus mid-posterior LH,上颞沟中部后左侧
+Superior temporal sulcus mid-posterior RH,上颞沟中部后右侧
+Superior temporal sulcus middle LH,上颞沟中部左侧
+Superior temporal sulcus middle RH,上颞沟中部右侧
+Superior temporal sulcus middle-inferior RH,上颞沟中部下部右侧
+Superior temporal sulcus middle-superior RH,上颞沟中部上部右侧
+Superior temporal sulcus posterior LH,上颞沟后部左侧
+Superior temporal sulcus posterior RH,上颞沟后部右侧
+Superior temporal sulcus postero-superior LH,上颞沟后上部左侧
+Superior temporal sulcus postero-superior RH,上颞沟后上部右侧
+Superior temporal sulcus with angular gyrus,上颞沟与角回
+Superior termporal gyrus medial RH,上颞回内侧右侧
+Supracalcarine cortex RH,距上皮质右侧
 Supramarginal gyrus,缘上回
 Supramarginal gyrus LH,缘上回左侧
 Supramarginal gyrus RH,缘上回右侧
 Supramarginal gyrus anterior LH,缘上回前部左侧
 Supramarginal gyrus anterior RH,缘上回前部右侧
-Supramarginal gyrus antero-inferior LH,缘上回下部左侧
-Supramarginal gyrus antero-inferior RH,缘上回下部右侧
+Supramarginal gyrus antero-inferior LH,缘上回前下部左侧
+Supramarginal gyrus antero-inferior RH,缘上回前下部右侧
 Supramarginal gyrus antero-superior LH,缘上回前上部左侧
 Supramarginal gyrus antero-superior RH,缘上回前上部右侧
 Supramarginal gyrus inferior LH,缘上回下部左侧
 Supramarginal gyrus inferior RH,缘上回下部右侧
 Supramarginal gyrus middle LH,缘上回中部左侧
-Supramarginal gyrus perisylvian LH,缘上回左侧
+Supramarginal gyrus perisylvian LH,缘上回环侧裂左侧
 Supramarginal gyrus posterior LH,缘上回后部左侧
 Supramarginal gyrus posterior RH,缘上回后部右侧
-Supramarginal gyrus posterior inferior RH,缘上回后部下部右侧
 Supramarginal gyrus postero-inferior LH,缘上回后下部左侧
 Supramarginal gyrus postero-inferior RH,缘上回后下部右侧
 Supramarginal gyrus postero-superior LH,缘上回后上部左侧
 Supramarginal gyrus postero-superior RH,缘上回后上部右侧
 Supramarginal gyrus superior LH,缘上回上部左侧
 Supramarginal gyrus superior RH,缘上回上部右侧
-Temporal horn of lateral ventricle RH,的外侧右侧
+Temporal horn of lateral ventricle RH,侧脑室颞角右侧
 Temporal pole,颞极
 Temporal pole LH,颞极左侧
 Temporal pole RH,颞极右侧
@@ -1402,7 +1364,7 @@ Temporal pole inferior,颞极下部
 Temporal pole superior,颞极上部
 Temporal pole superior RH,颞极上部右侧
 Temporal pole superior medial LH,颞极上部内侧左侧
-Thalamic radiation mid-posterior,后部
+Thalamic radiation mid-posterior,丘脑辐射中后部
 Thalamus,丘脑
 Thalamus LH,丘脑左侧
 Thalamus and globus pallidus,丘脑和苍白球
@@ -1410,9 +1372,9 @@ Thalamus anterior,丘脑前部
 Thalamus anterior RH,丘脑前部右侧
 Thalamus antero-superior,丘脑前上部
 Thalamus inferior,丘脑下部
-Thalamus lateral,丘脑外侧
-Thalamus lateral LH,丘脑外侧左侧
-Thalamus medial,丘脑内侧
+Thalamus lateral,丘脑外侧部
+Thalamus lateral LH,丘脑外侧部左侧
+Thalamus medial,丘脑内侧部
 Thalamus middle,丘脑中部
 Thalamus posterior,丘脑后部
 Thalamus posterior RH,丘脑后部右侧
@@ -1420,19 +1382,19 @@ Thalamus superior,丘脑上部
 Third ventricle,第三脑室
 Third ventricle anterior,第三脑室前部
 Third ventricle posterior,第三脑室后部
-Transverse occipital sulcus,沟
+Transverse occipital sulcus,枕横沟
 Transverse sinus,横窦
 Uncinate fasciculus,钩束
 Uncinate fasciculus anterior,钩束前部
-Ventral striatum RH,腹侧右侧
-Ventral visual stream,腹侧
-Ventrolateral prefrontal cortex LH,外侧皮层左侧
-Ventrolateral prefrontal cortex RH,外侧皮层右侧
-Ventromedial prefrontal cortex,内侧皮层
-Ventromedial prefrontal cortex LH,内侧皮层左侧
-Ventromedial prefrontal cortex anterior,内侧皮层前部
-Ventromedial prefrontal cortex anterior LH,内侧皮层前部左侧
-Ventromedial prefrontal cortex antero-inferior,内侧皮层下部
-Ventromedial prefrontal cortex posterior,内侧皮层后部
-Ventromedial prefrontal cortex posterior RH,内侧皮层后部右侧
+Ventral striatum RH,腹侧纹状体右侧
+Ventral visual stream,腹侧视觉通路
+Ventrolateral prefrontal cortex LH,左腹外侧前额叶皮层
+Ventrolateral prefrontal cortex RH,右腹外侧前额叶皮层
+Ventromedial prefrontal cortex,腹内侧前额叶皮层
+Ventromedial prefrontal cortex LH,左腹内侧前额叶皮层
+Ventromedial prefrontal cortex anterior,腹内侧前额叶皮层前部
+Ventromedial prefrontal cortex anterior LH,左腹内侧前额叶皮层前部
+Ventromedial prefrontal cortex antero-inferior,腹内侧前额叶皮层前下部
+Ventromedial prefrontal cortex posterior,腹内侧前额叶皮层后部
+Ventromedial prefrontal cortex posterior RH,右腹内侧前额叶皮层后部
 ventricles,脑室

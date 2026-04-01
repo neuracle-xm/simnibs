@@ -1,6 +1,6 @@
 Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 1,Superior occipital sulcus inferior LH,DorsAttnB,DorsAttnA,0.575880204048519,0.346929160668202,0.077030615468404
-2,Superior occipital gyrus ,VisCent,VisCent,0.472506536319639,0.495570263438484,0.031931908059592
+2,Superior occipital gyrus,VisCent,VisCent,0.472506536319639,0.495570263438484,0.031931908059592
 3,Insula antero-inferior,SalVentAttnA,SalVentAttnA,0.720733158038355,0.054171998907319,0.225070424257053
 4,Middle frontal gyrus middle RH,ContA,SalVentAttnB,0.643418730456513,0.245515795486429,0.068014269704251
 5,Calcarine cortex posterior LH,VisCent,VisCent,0.553855657557484,0.41481505452939,0.031008928025195
@@ -40,7 +40,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 39,Cerebrospinal fluid (between middle frontal gyrus and skull),DefaultB,DefaultB,0.401517489436016,0.016921211701708,0.114356378327112
 40,Cerebellum III anterior,LimbicA,DefaultC,0.498736098129503,0.132502712499279,0.313075873204501
 41,Central sulcus middle RH,SomMotA,SomMotA,0.509983044827729,0.34612212451355,0.142123435348433
-42,Cerebrospinal fluid (between interhemispheric fissure and superior frontal gyrus superio ),SalVentAttnA,SalVentAttnA,0.443981589775502,0.034462534265979,0.21873230653495
+42,Cerebrospinal fluid (between interhemispheric fissure and superior frontal gyrus superior),SalVentAttnA,SalVentAttnA,0.443981589775502,0.034462534265979,0.21873230653495
 43,Superior frontal gyrus superior RH,DefaultB,DefaultB,0.659105575272927,0.268342522738459,0.061915794442372
 44,Frontal pole superior RH,DefaultB,DefaultA,0.529705763986234,0.091767189169963,0.095294292693146
 45,Postcentral sulcus LH,DorsAttnB,DorsAttnB,0.655613934723604,0.253170918348794,0.091178842016689
@@ -63,11 +63,11 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 62,Cuneus middle posterior RH,VisCent,VisPeri,0.479114605274806,0.456160883451592,0.062404865909595
 63,Cerebrospinal fluid (between middle frontal gyrus superior and skull LH),DefaultB,ContB,0.539266980449119,0.048796793486655,0.143612240232782
 64,Paracingulate gyrus posterior LH,SomMotA,SomMotA,0.633962149354026,0.241173420483716,0.124873362501505
-65,Precentral gyrus mid-superior ,SomMotA,DorsAttnB,0.464979086341916,0.080382549442312,0.193265161803024
+65,Precentral gyrus mid-superior,SomMotA,DorsAttnB,0.464979086341916,0.080382549442312,0.193265161803024
 66,Superior temporal gyrus mid-anterior LH,DefaultB,TempPar,0.797321850918149,0.089637930242816,0.108515935450005
 67,Fusiform gyrus anterior,VisCent,DefaultC,0.788815608583646,0.144645125292875,0.066550640670038
 68,Superior frontal gyrus medial anterior,DefaultB,DefaultA,0.666300245895942,0.096696209639528,0.229399290876764
-69,Superior frontal gyrus mid-posterior ,ContA,SalVentAttnB,0.537307017107775,0.412071667273419,0.04557738607386
+69,Superior frontal gyrus mid-posterior,ContA,SalVentAttnB,0.537307017107775,0.412071667273419,0.04557738607386
 70,Cerebellum IX,No network found,No network found,0.723533867039055,0.188568602291995,0.087908178331731
 71,Thalamus posterior,No network found,No network found,0.736321992690553,0.259094425665986,0.004576952894171
 72,Globus pallidus RH,No network found,No network found,0.16107474348773,0.838355039335477,0.000577517354543
@@ -156,10 +156,10 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 155,Intraparietal sulcus mid-anterior LH,ContA,ContA,0.515276946532107,0.440427281017783,0.044295404003337
 156,Arcuate fasciculus postero-inferior RH,No network found,TempPar,0.221291963409227,0.774072280918729,0.00462776519463
 157,Frontal pole lateral RH,ContA,ContB,0.55241669975694,0.071978584912322,0.122404457813269
-158,Cerebellum VIIIb inferior ,No network found,No network found,0.870803491775441,0.108935418260688,0.018819098252399
+158,Cerebellum VIIIb inferior,No network found,No network found,0.870803491775441,0.108935418260688,0.018819098252399
 159,Parieto-occipital sulcus middle superior LH,VisCent,ContC,0.68899646229311,0.206042525728599,0.104944590959008
 160,Anterior rami of the lateral fissure RH,SalVentAttnA,SalVentAttnB,0.640547453087034,0.277084040227952,0.080721589911503
-161,Cingulate gyrus mid-posterior ,SalVentAttnA,SalVentAttnA,0.794944015041969,0.062322980608068,0.142738430864117
+161,Cingulate gyrus mid-posterior,SalVentAttnA,SalVentAttnA,0.794944015041969,0.062322980608068,0.142738430864117
 162,Superior frontal sulcus posterior LH,DorsAttnB,ContA,0.574393658433819,0.358879795507455,0.065979252797042
 163,Superior longitudinal fasciculus I posterior LH,DorsAttnB,DorsAttnB,0.286586322174713,0.686925397341042,0.026468838978965
 164,Cerebellum IV inferior,No network found,No network found,0.695116647002333,0.274991158800313,0.029905629413305
@@ -174,7 +174,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 173,Superior longitudinal fasciculus II posterior RH,No network found,ContA,0.182129711659583,0.813457098218251,0.004411705265022
 174,Superior frontal gyrus anterior,DefaultB,DefaultB,0.365141095713463,0.606505776214761,0.027730490101745
 175,Cuneus posterior RH,VisCent,VisCent,0.394531073984052,0.577161308777273,0.028292585980342
-176,Superior parts of central and postcentral sulci ,SomMotA,SomMotA,0.469438640814286,0.331313431380329,0.184870181588832
+176,Superior parts of central and postcentral sulci,SomMotA,SomMotA,0.469438640814286,0.331313431380329,0.184870181588832
 177,Calcarine sulcus mid-anterior,VisCent,VisPeri,0.500559020978929,0.397775258472873,0.101659855535355
 178,Middle temporal gyrus medial LH,SalVentAttnA,SalVentAttnA,0.372035050785688,0.607886702143549,0.020071391398587
 179,Occipital pole lateral LH,VisCent,VisCent,0.52937919778319,0.340603593753908,0.109710782230861
@@ -215,7 +215,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 214,Intraparietal sulcus anterior RH,ContA,ContA,0.620849634892963,0.178271975402055,0.183721515373353
 215,Superior temporal gyrus medial anterior RH,SalVentAttnA,SalVentAttnA,0.542585027774851,0.408834461895114,0.048575288021554
 216,Precuneus postero-inferior RH,DefaultB,ContC,0.538207460138357,0.420305447812726,0.041492176078098
-217,Parieto-occipital sulcus postero-superior ,VisCent,VisPeri,0.600722829740441,0.188189642279039,0.197963832349938
+217,Parieto-occipital sulcus postero-superior,VisCent,VisPeri,0.600722829740441,0.188189642279039,0.197963832349938
 218,Cerebellum III inferior,No network found,No network found,0.781618545697665,0.176988510568417,0.041388109216237
 219,Superior parietal lobule medial RH,DorsAttnB,DorsAttnA,0.4238261722287,0.503108215146498,0.068983569920761
 220,Anterior cingulate cortex superior,SalVentAttnA,SalVentAttnB,0.77714242701192,0.04097685727183,0.181873645547863
@@ -238,7 +238,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 237,Middle temporal gyrus mid-posterior RH,SalVentAttnA,TempPar,0.76692350781983,0.144863194795072,0.079338543849692
 238,Lateral occipital cortex superior LH,DorsAttnB,DefaultC,0.58319268445777,0.176887106184162,0.146919957490471
 239,Pars triangularis RH,ContA,DefaultB,0.597922121159357,0.153743624714654,0.108418502024702
-240,Cuneus superior ,VisCent,VisPeri,0.63390096173426,0.236501540108293,0.127770179339483
+240,Cuneus superior,VisCent,VisPeri,0.63390096173426,0.236501540108293,0.127770179339483
 241,Superior parietal lobule postero-inferior posterior,DorsAttnB,ContC,0.441589393121539,0.484346496887512,0.073319612091381
 242,Superior parietal sulcus LH,DorsAttnB,DorsAttnA,0.466008600586465,0.444014064643766,0.085146091765368
 243,Middle temporal gyrus posterior LH,DorsAttnB,DorsAttnB,0.681285924587224,0.095887092259458,0.149399748882806
@@ -291,12 +291,12 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 290,Precentral sulcus mid-inferior RH,DorsAttnB,ContA,0.668325797389246,0.216221811178481,0.10428815722251
 291,Dorsomedial prefrontal cortex anterior,DefaultB,DefaultB,0.661640033515344,0.13334417010477,0.200995710081525
 292,Inferior temporal sulcus middle RH,DefaultB,ContB,0.473455514132106,0.510722467731834,0.015263412809661
-293,Heschl’s gyrus LH,SomMotA,SomMotB,0.739166899794414,0.077014876899956,0.182796602994614
+293,Heschl's gyrus LH,SomMotA,SomMotB,0.739166899794414,0.077014876899956,0.182796602994614
 294,Middle frontal gyrus posterior RH,ContA,ContB,0.504716999903871,0.43266075399534,0.055928484666358
 295,Parietal operculum LH,SomMotA,SomMotB,0.595596719869032,0.323582961808655,0.080834291408119
 296,Calcarine cortex mid-posterior LH,VisCent,VisPeri,0.642014159192237,0.268351545800245,0.089635297863408
 297,Postcentral sulcus superior,SomMotA,SomMotA,0.425468706684774,0.450408468678988,0.114279432311517
-298,Thalamus middle ,No network found,No network found,0.728322952617048,0.248679761314684,0.022992914707487
+298,Thalamus middle,No network found,No network found,0.728322952617048,0.248679761314684,0.022992914707487
 299,Superior frontal gyrus medial middle,ContA,ContB,0.650530902452835,0.087948300646284,0.251155765322558
 300,Inferior frontal gyrus posterior LH,ContA,ContA,0.629018289461255,0.29409367068283,0.072840769425304
 301,Parieto-occipital sulcus middle inferior LH,VisCent,VisPeri,0.444641458934188,0.512286705054317,0.043035665913309
@@ -317,7 +317,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 316,Putamen postero-inferior,No network found,No network found,0.631650614169244,0.354432197722947,0.013932491380499
 317,Cerebellum horizontal fissure medial,No network found,No network found,0.794558155542287,0.103520562736538,0.082455244589247
 318,Superior parietal sulcus RH,DorsAttnB,DorsAttnB,0.504635991024855,0.328893955034851,0.15682888441517
-319,Calcarine cortex anterior ,VisCent,VisPeri,0.651357285923127,0.282331576991068,0.066325168616672
+319,Calcarine cortex anterior,VisCent,VisPeri,0.651357285923127,0.282331576991068,0.066325168616672
 320,Precentral sulcus superior,SomMotA,SomMotA,0.447512050222423,0.511155640374728,0.040223644479365
 321,Cuneus posterior,VisCent,VisPeri,0.557901368427594,0.256836616507747,0.159048135205365
 322,Precentral sulcus inferior LH,SalVentAttnA,ContA,0.689394095285795,0.19550016592622,0.106255168966281
@@ -330,23 +330,23 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 329,Orbital H-shaped sulcus,LimbicA,LimbicB,0.430101457807575,0.549735835597242,0.019159054530959
 330,Central operculum LH,SalVentAttnA,SalVentAttnA,0.724682333887251,0.17969412936724,0.095588440787713
 331,Parieto-occipital sulcus middle,DefaultB,DefaultC,0.756567460696951,0.141943076157258,0.101496304406005
-332,Putamen anterior ,No network found,No network found,0.739922193137845,0.259304117331814,0.00077910114271
+332,Putamen anterior,No network found,No network found,0.739922193137845,0.259304117331814,0.00077910114271
 333,Cerebrospinal fluid (between middle frontal gyrus and skull LH),DefaultB,DefaultB,0.556576981262182,0.031208852721233,0.132744493044416
 334,Precentral gyrus mid-superior LH,SomMotA,DorsAttnB,0.537661330073788,0.108982083349943,0.155153847364534
-335,Thalamus anterior ,No network found,No network found,0.346978506370218,0.653000735461307,3.64704923471496E-05
+335,Thalamus anterior,No network found,No network found,0.346978506370218,0.653000735461307,3.64704923471496E-05
 336,Posterior cingulate cortex anterior,DefaultB,ContC,0.762422142308813,0.141883176331074,0.095691284459526
 337,Superior temporal gyrus posterior LH,SomMotA,TempPar,0.62710845613104,0.282363027489358,0.076883693482021
 338,Central sulcus middle,SomMotA,SomMotB,0.417065086757761,0.537770248736965,0.045121355467055
-339,Cerebellum IX and cerebellar peduncle ,No network found,No network found,0.669424974935454,0.212713617755715,0.110176243839488
+339,Cerebellum IX and cerebellar peduncle,No network found,No network found,0.669424974935454,0.212713617755715,0.110176243839488
 340,Calcarine sulcus anterior RH,VisCent,VisPeri,0.646388291477757,0.288647270055125,0.064967205990903
 341,Cerebellum VI medial,No network found,No network found,0.559019827700405,0.43883263646542,0.002145806345382
 342,Cerebellum V superior,No network found,No network found,0.742354547088393,0.009807345046315,0.247845137349232
-343,Collateral sulcus anterior ,LimbicA,LimbicA,0.697767923620559,0.262812216997307,0.038991971407754
+343,Collateral sulcus anterior,LimbicA,LimbicA,0.697767923620559,0.262812216997307,0.038991971407754
 344,Cerebellar peduncles,No network found,DefaultC,0.534487121079737,0.167068862663281,0.298366888179038
 345,Cerebrospinal fluid (between middle frontal gyrus anterior and skull RH),ContA,SalVentAttnB,0.38621620848739,0.015279036170498,0.132015847934661
 346,Cerebellum secondary fissure,No network found,No network found,0.829922897716896,0.127012656855062,0.041961130405388
 347,Superior occipital gyrus inferior RH,VisCent,DorsAttnA,0.580849031411661,0.328452386647553,0.08941052855077
-348,Central sulcus superior ,SomMotA,SomMotA,0.419256135814771,0.423744529748799,0.136052831184781
+348,Central sulcus superior,SomMotA,SomMotA,0.419256135814771,0.423744529748799,0.136052831184781
 349,Inferior occipital gyrus anterior LH,DorsAttnB,ContA,0.79833741390933,0.097871395866376,0.094985094486391
 350,Superior parietal lobule posterior,DorsAttnB,DorsAttnA,0.538790144972981,0.102112892854177,0.197173149402006
 351,Superior temporal sulcus mid-posterior LH,DefaultB,TempPar,0.680886785707166,0.263919321165239,0.055195461719654
@@ -360,7 +360,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 359,Circular sulcus of the insula anterior,ContA,SalVentAttnB,0.745153516806073,0.174971311007516,0.079886765643823
 360,Middle temporal gyrus mid-anterior RH,DefaultB,DefaultA,0.784772705649861,0.108999099089181,0.101518422583824
 361,Cerebrospinal fluid (between intraparietal sulcus and skull LH),ContA,ContA,0.462381659036613,0.040588146060298,0.141427010509491
-362,Precuneus posterior ,ContA,ContC,0.615980827051768,0.058670969239074,0.284713963485082
+362,Precuneus posterior,ContA,ContC,0.615980827051768,0.058670969239074,0.284713963485082
 363,Inferior occipital gyrus posterior LH,VisCent,VisCent,0.660756390291565,0.179278278350899,0.139174252666549
 364,Lingual gyrus inferior,VisCent,VisPeri,0.597455116570975,0.051943623813315,0.349769839809854
 365,Angular gyrus postero-inferior LH,DefaultB,DefaultA,0.642689753868852,0.266688971952375,0.080936469938261
@@ -372,11 +372,11 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 371,Inferior frontal sulcus anterior RH,ContA,ContB,0.456168221043568,0.519374467757284,0.021679190723687
 372,Postcentral sulcus inferior LH,SalVentAttnA,DorsAttnB,0.427870142417146,0.543308937040815,0.028716544657739
 373,Middle temporal gyrus postero-inferior LH,ContA,ContA,0.750597494519538,0.189869613140642,0.051308147038527
-374,Superior parietal sulcus superior ,DorsAttnB,DorsAttnB,0.477290242802482,0.400377703771584,0.11421832270481
+374,Superior parietal sulcus superior,DorsAttnB,DorsAttnB,0.477290242802482,0.400377703771584,0.11421832270481
 375,Cerebellum VI lateral RH,No network found,No network found,0.827936356999839,0.029926958468864,0.13026312613119
 376,Cerebellum V RH,No network found,No network found,0.806715399687604,0.018473246156348,0.174373025350319
 377,Internal capsule middle LH,No network found,No network found,0.161609966681886,0.838081222986189,0.000324275497903
-378,Cingulate sulcus antero-inferior ,DefaultB,DefaultA,0.685083599598263,0.247569107672055,0.067349286784682
+378,Cingulate sulcus antero-inferior,DefaultB,DefaultA,0.685083599598263,0.247569107672055,0.067349286784682
 379,Middle temporal gyrus middle anterior LH,DefaultB,DefaultB,0.570880028385688,0.400135097921765,0.028414868106279
 380,Cerebrospinal fluid (between central sulcus and skull LH),SomMotA,SomMotA,0.381759094440653,0.112889783474902,0.14845100982909
 381,Cerebellum VI,No network found,No network found,0.332363009916599,0.667599608166673,5.05614823647583E-05
@@ -393,7 +393,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 392,Retrosplenial cortex inferior,No network found,DefaultC,0.252186440196325,0.002791468955469,0.745023430257075
 393,Suborbital sulcus,No network found,No network found,0.060348741225047,0.938503024618132,0.001079244645271
 394,Cingulate sulcus anterior RH,DefaultB,DefaultA,0.592935383060528,0.361656694259112,0.045422955458367
-395,Precuneus postero-superior ,DorsAttnB,ContC,0.597592143193898,0.259232537850861,0.118290577690764
+395,Precuneus postero-superior,DorsAttnB,ContC,0.597592143193898,0.259232537850861,0.118290577690764
 396,Superior longitudinal fasciculus I posterior,No network found,No network found,0.037551508309326,0.962035269511372,0.000429462998019
 397,Middle frontal gyrus anterior lateral LH,ContA,SalVentAttnB,0.617441986311061,0.226190938043064,0.078022188017461
 398,Cerebrospinal fluid (between callosomarginal sulcus and skull RH),DorsAttnB,DorsAttnB,0.46593852094418,0.091806148196909,0.197203754145849
@@ -404,7 +404,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 403,Occipitotemporal sulcus posterior LH,DorsAttnB,DorsAttnA,0.532133841769802,0.449318252062629,0.018545828356501
 404,Cerebellum Crus I posterior,No network found,No network found,0.653874449963843,0.027150725646829,0.253631860579715
 405,Lateral fissure posterior limb RH,SomMotA,SomMotB,0.717559913851677,0.094146473419759,0.168661628363398
-406,Caudate nucleus ,No network found,No network found,0.781939592705367,0.198546804497487,0.019521266199922
+406,Caudate nucleus,No network found,No network found,0.781939592705367,0.198546804497487,0.019521266199922
 407,Lateral ventricles posterior horns,No network found,No network found,0.295096276480278,0.334489048046542,0.370429541909034
 408,Callosal sulcus mid-posterior,ContA,ContC,0.239608103364081,0.756429634789414,0.003971385344881
 409,Supramarginal gyrus antero-inferior LH,SalVentAttnA,SalVentAttnA,0.734902223280704,0.148585590657554,0.113466496212718
@@ -459,8 +459,8 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 458,Cerebrospinal fluid (between superior frontal gyrus middle superior and skull),DefaultB,DefaultB,0.492972393620705,0.021097743204529,0.141287349973487
 459,Central sulcus LH,SomMotA,SomMotB,0.570922965975253,0.334189911511792,0.084858147113721
 460,Intraparietal sulcus posterior RH,DorsAttnB,DorsAttnA,0.475384986261501,0.450622762250422,0.070861131278991
-461,Precuneus inferior ,DefaultB,DefaultA,0.740305406554482,0.100671614769916,0.159028367562668
-462,Heschl’s gyrus RH,SomMotA,SomMotB,0.721826532204189,0.101101650455385,0.15189137379231
+461,Precuneus inferior,DefaultB,DefaultA,0.740305406554482,0.100671614769916,0.159028367562668
+462,Heschl's gyrus RH,SomMotA,SomMotB,0.721826532204189,0.101101650455385,0.15189137379231
 463,Intraparietal sulcus posterior LH,ContA,ContA,0.5215564810239,0.397087960066295,0.078642221739762
 464,Lateral ventricles anterior horns,No network found,No network found,0.29551908450735,0.026924289950552,0.677562317095831
 465,Cerebrospinal fluid (between postcentral sulcus and skull RH),SomMotA,SomMotA,0.471512225944388,0.190942742547145,0.140548512806151
@@ -469,17 +469,17 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 468,Putamen RH,No network found,No network found,0.501976765284233,0.497826724476481,0.000199583725553
 469,Cerebrospinal fluid (between superior parietal lobule posterior and skull RH),DorsAttnB,DorsAttnA,0.499255539246002,0.088511001814567,0.159335485769701
 470,Insula superior,SalVentAttnA,SalVentAttnA,0.80171038961201,0.11867454271766,0.074126405229007
-471,Heschl’s gyrus posterior RH,SomMotA,SomMotB,0.673933044451787,0.222210760611884,0.103847151464012
+471,Heschl's gyrus posterior RH,SomMotA,SomMotB,0.673933044451787,0.222210760611884,0.103847151464012
 472,Optic radiation RH,No network found,No network found,0.045413110591068,0.953175946894802,0.001402131838903
 473,Anterior parts of occipitotemporal and collateral sulci LH,LimbicA,LimbicA,0.548879512318621,0.413961492592672,0.036462352672553
-474,Cingulate sulcus mid-posterior ,SalVentAttnA,SalVentAttnA,0.575068576621242,0.39891189136416,0.026023867931468
+474,Cingulate sulcus mid-posterior,SalVentAttnA,SalVentAttnA,0.575068576621242,0.39891189136416,0.026023867931468
 475,Middle frontal sulcus mid-anterior LH,ContA,SalVentAttnB,0.465215083273793,0.51097773914622,0.022272308622649
 476,Ventromedial prefrontal cortex posterior,LimbicA,LimbicB,0.654061238658695,0.276824701550444,0.069125900542807
 477,Cerebrospinal fluid (between superior parietal lobule and skull LH),DorsAttnB,DorsAttnB,0.38307827597436,0.067755070465853,0.139073709938308
 478,Cerebellum VI posterior LH,VisCent,VisCent,0.870035355454034,0.041043692203695,0.088939629653879
 479,Ventromedial prefrontal cortex anterior,DefaultB,LimbicB,0.58666723944021,0.268300783134345,0.14398180612873
 480,Putamen postero-superior,No network found,No network found,0.526602683036014,0.473234967083669,0.000174242790524
-481,Cerebellum VI  LH,No network found,No network found,0.889806951141074,0.096225435636139,0.013976183871119
+481,Cerebellum VI LH,No network found,No network found,0.889806951141074,0.096225435636139,0.013976183871119
 482,Cerebellum Crus I superior RH,No network found,No network found,0.846046891825756,0.041444329559747,0.110223028061695
 483,Superior longitudinal fasciculus III anterior RH,No network found,No network found,0.011785379992688,0.987998279197402,0.000214055569158
 484,Midbrain inferior,No network found,No network found,0.57970889709305,0.381526465968247,0.038767643510331
@@ -500,7 +500,7 @@ Component,Difumo_names,Yeo_networks7,Yeo_networks17,GM,WM,CSF
 499,Callosomarginal sulcus inferior,SalVentAttnA,SalVentAttnA,0.602679428018752,0.356261624642741,0.041069822626737
 500,Superior frontal sulcus posterior RH,DorsAttnB,DorsAttnB,0.615499123957035,0.264516355334246,0.116286209370885
 501,Inferior fronto-occipital fasciculus posterior LH,No network found,No network found,0.214325733885662,0.605483006719604,0.180191494660323
-502,Central sulcus mid-superior ,SomMotA,SomMotA,0.470216357880989,0.407373206949095,0.122328575650963
+502,Central sulcus mid-superior,SomMotA,SomMotA,0.470216357880989,0.407373206949095,0.122328575650963
 503,Cerebrospinal fluid (between inferior frontal sulcus and skull LH),ContA,ContA,0.524210152157902,0.052491900512217,0.172495322022257
 504,Cerebellum Crus I anterior LH,No network found,No network found,0.681471887745292,0.304613042851525,0.013364417747608
 505,Central operculum anterior RH,SalVentAttnA,SomMotB,0.342846301600425,0.644569070658338,0.012590637491847
