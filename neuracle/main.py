@@ -169,16 +169,13 @@ def reset_task_output_dir(output_dir: str) -> None:
         shutil.rmtree(output_dir)
 
 
-DEFAULT_DIR_PATH = "m2m_ernie"
-DEFAULT_DTI_FILE_PATH = "DTI_coregT1_tensor.nii.gz"
+BUILT_IN_DIR_PATH = "m2m_ernie"
+BUILT_IN_DTI_FILE_PATH = "DTI_coregT1_tensor.nii.gz"
 
 
 def normalize_dir_path(dir_path: str) -> str:
-    """规范化相对目录路径，禁止绝对路径和父级跳转。空字符串使用默认值 m2m_ernie。"""
+    """规范化相对目录路径，禁止绝对路径和父级跳转。"""
     normalized = dir_path.replace("\\", "/").strip().strip("/")
-    if not normalized:
-        normalized = DEFAULT_DIR_PATH
-        logger.info("dir_path 为空，使用默认值: %s", normalized)
     path_obj = Path(normalized)
     if path_obj.is_absolute() or ".." in path_obj.parts:
         raise ValueError(f"非法 dir_path: {dir_path}")
@@ -201,10 +198,12 @@ def get_model_mesh_path(dir_path: str) -> Path:
 
 
 def resolve_local_dti_path(dir_path: str, dti_file_path: str | None) -> str | None:
-    if not dti_file_path:
-        dti_file_path = DEFAULT_DTI_FILE_PATH
-        logger.info("DTI_file_path 为空，使用默认值: %s", dti_file_path)
-    return str(get_subject_dir(dir_path) / dti_file_path)
+    if dir_path == BUILT_IN_DIR_PATH:
+        dti_file_path = BUILT_IN_DTI_FILE_PATH
+        logger.info("使用内置头模，DTI使用内置路径: %s", dti_file_path)
+        return str(get_subject_dir(dir_path) / dti_file_path)
+    else:
+        return None
 
 
 def build_storage_key(path: str) -> str:
