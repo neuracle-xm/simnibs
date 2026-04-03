@@ -1,14 +1,17 @@
 """
 环境变量配置读取模块
 
-提供从 .env 文件读取配置的函数。
+提供从 .env 文件读取配置的函数，包括 RabbitMQ 和阿里云 OSS 配置。
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Final
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # 项目根目录
 _PROJECT_ROOT: Final[Path] = Path(__file__).parent.parent.parent
@@ -16,26 +19,32 @@ _PROJECT_ROOT: Final[Path] = Path(__file__).parent.parent.parent
 _ENV_FILE: Final[Path] = _PROJECT_ROOT / "neuracle" / ".env"
 
 
-def load_env():
+def load_env() -> None:
     """
-    加载 .env 文件
+    加载 .env 文件。
 
-    原理：
-        使用 python-dotenv 库加载 .env 文件中的环境变量到 os.environ。
-        如果 .env 文件不存在，静默失败。
+    Notes
+    -----
+    使用 python-dotenv 库加载 .env 文件中的环境变量到 os.environ。
+    如果 .env 文件不存在，静默失败。
     """
     load_dotenv(_ENV_FILE)
 
 
 def get_rabbitmq_config() -> dict:
     """
-    获取 RabbitMQ 配置
+    获取 RabbitMQ 配置。
 
-    原理：
-        从环境变量中读取 RabbitMQ 相关配置，如果环境变量不存在则使用默认值。
+    Returns
+    -------
+    dict
+        包含 host、port、username、password、virtual_host、heartbeat、
+        blocked_connection_timeout、socket_timeout、connection_attempts、
+        retry_delay、listen_queue_name、send_queue_name 的配置字典
 
-    Returns:
-        dict: 包含 host、port、queue_name 的配置字典
+    Notes
+    -----
+    配置项从环境变量读取，如环境变量不存在则使用默认值。
     """
     return {
         "host": os.getenv("RABBITMQ_HOST", "localhost"),
@@ -57,14 +66,17 @@ def get_rabbitmq_config() -> dict:
 
 def get_aliyun_config() -> dict:
     """
-    获取阿里云 OSS 配置
+    获取阿里云 OSS 配置。
 
-    原理：
-        从环境变量中读取阿里云 OSS 相关配置，如果环境变量不存在则使用默认值。
+    Returns
+    -------
+    dict
+        包含 access_key_id、access_key_secret、sts_role_arn、sts_endpoint、
+        oss_endpoint、bucket_name、bucket_target 的配置字典
 
-    Returns:
-        dict: 包含 access_key_id、access_key_secret、sts_role_arn、sts_endpoint、
-              oss_endpoint、bucket_name、bucket_target 的配置字典
+    Notes
+    -----
+    配置项从环境变量读取，如环境变量不存在则使用默认值。
     """
     return {
         "access_key_id": os.getenv("ALI_ACCESS_KEY_ID", ""),

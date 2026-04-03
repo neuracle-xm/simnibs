@@ -92,7 +92,7 @@ def standardize_one(spec: dict, target_img: nib.Nifti1Image, force: bool) -> Pat
 
     src_img = nib.load(spec["raw_atlas"])
     _log_memory(f"开始标准化 {spec['name']}")
-    if spec["name"].startswith("DiFuMo_"):
+    if spec["name"].startswith("DiFuMo"):
         # DiFuMo 的权威输入是 4D maps，必须先重采样再在目标空间做 argmax。
         standardized = _resample_difumo_4d_to_discrete(src_img, target_img)
     else:

@@ -21,14 +21,14 @@
 ```
 neuracle/charm/
 ├── __init__.py
+├── nifti_utils.py     # NIfTI 格式工具函数
 ├── prepare_t1.py      # 步骤1: T1准备
 ├── prepare_t2.py      # 步骤2: T2准备
 ├── denoise.py         # 步骤3: 降噪
 ├── init_atlas.py      # 步骤4: atlas初始化
 ├── segment.py         # 步骤5: 分割
 ├── create_surfaces.py # 步骤6: 表面重建
-├── mesh.py            # 步骤7: 网格生成
-└── utils.py           # 公共工具函数
+└── mesh.py            # 步骤7: 网格生成
 ```
 
 ## 四、每个步骤的输入输出

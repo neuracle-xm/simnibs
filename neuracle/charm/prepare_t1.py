@@ -33,12 +33,15 @@ def prepare_t1(
     """
     准备 T1 图像
 
+    将原始 T1 加权 MRI 图像转换为 SimNIBS 所需格式，执行 qform/sform 检查、
+    去除单例维度并转换为 float32。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
     t1 : str
-        Path to input T1 NIfTI file
+        输入 T1 NIfTI 文件路径
     force_qform : bool, optional
         强制使用 qform 编码 (default: False)
     force_sform : bool, optional
@@ -47,6 +50,15 @@ def prepare_t1(
     Returns
     -------
     None
+
+    Raises
+    ------
+    ValueError
+        当 force_qform 和 force_sform 同时为 True 时抛出
+
+    See Also
+    --------
+    _check_q_and_s_form : qform/sform 检查函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     logger.info("正在准备 T1 图像: %s", t1)

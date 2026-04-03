@@ -1,10 +1,13 @@
 """
 TI 导出工具函数
+
+提供将 TI (Transcranial Induction) 仿真结果从 mesh 导出到 NIfTI 和 MZ3 格式的功能。
 """
 
 import logging
 import os
 
+from neuracle.mesh_tools import msh_to_mz3
 from simnibs import ElementTags, mesh_io
 from simnibs.utils.transformations import interpolate_to_volume
 
@@ -18,7 +21,7 @@ def export_ti_to_nifti(
     field_name: str,
 ) -> str:
     """
-    将 TI 场从 mesh 导出到 NIfTI 格式
+    将 TI 场从 mesh 导出到 NIfTI 格式。
 
     Parameters
     ----------
@@ -35,6 +38,11 @@ def export_ti_to_nifti(
     -------
     str
         NIfTI 文件路径
+
+    Notes
+    -----
+    interpolate_to_volume 会在输出文件名后加 _field_name，
+    所以传 "TI.nii.gz" 会生成 "TI_max_TI.nii.gz"
     """
     logger.info("将 TI 结果导出到 NIfTI 格式...")
     mesh = mesh_io.read_msh(msh_path)
@@ -62,7 +70,7 @@ def export_ti_to_mz3(
     surface_type: str = "central",
 ) -> str:
     """
-    导出 TI 结果到 MZ3 格式
+    导出 TI 结果到 MZ3 格式。
 
     Parameters
     ----------
@@ -70,16 +78,18 @@ def export_ti_to_mz3(
         TI 结果网格路径
     output_dir : str
         输出目录
-    surface_type : str
-        表面类型 (default: "central")
+    surface_type : str, optional
+        表面类型，默认为 "central"，可选 "white"、"pial"
 
     Returns
     -------
     str
         MZ3 文件路径
-    """
-    from neuracle.mesh_tools import msh_to_mz3
 
+    Notes
+    -----
+    MZ3 格式可供 surf-ice/BrainVisa 等软件读取。
+    """
     logger.info("导出 TI 结果到 MZ3 格式...")
     mz3_path = msh_to_mz3(
         msh_path=ti_mesh_path,

@@ -1,5 +1,5 @@
 """
-MSH to MZ3 converter.
+MSH to MZ3 converter
 
 将 SimNIBS 的带表面标签的 `.msh` 网格导出为 surf-ice/BrainVisa 可读的 `.mz3`。
 几何提取基于 SimNIBS 已有的三角表面 tag，场数据则插值到表面顶点。
@@ -30,13 +30,33 @@ SCALAR_FIELD_ALIASES = {
 
 
 def _normalize_scalar_data(cdata: np.ndarray, n_vertices: int) -> np.ndarray:
-    """Normalize scalar data to float32 with shape (Nv, Ns)."""
+    """
+    规范化标量数据为 float32 类型，形状 (Nv, Ns)。
+
+    Parameters
+    ----------
+    cdata : np.ndarray
+        输入标量数据
+    n_vertices : int
+        顶点数量
+
+    Returns
+    -------
+    np.ndarray
+        规范化后的 float32 数组，形状 (Nv, Ns)
+
+    Raises
+    ------
+    ValueError
+        当标量数据长度与顶点数不一致时
+    """
     cdata = np.asarray(cdata)
 
     if cdata.ndim == 1:
         cdata = cdata[:, np.newaxis]
 
     if cdata.shape[0] != n_vertices:
+        logger.error("标量数据长度与顶点数不一致: %s != %s", cdata.shape[0], n_vertices)
         raise ValueError(
             f"标量数据长度与顶点数不一致: {cdata.shape[0]} != {n_vertices}"
         )
@@ -45,7 +65,20 @@ def _normalize_scalar_data(cdata: np.ndarray, n_vertices: int) -> np.ndarray:
 
 
 def _mz3_bytes(array: np.ndarray, dtype: str) -> bytes:
-    """Serialize array row-by-row.
+    """
+    将数组序列化为字节串。
+
+    Parameters
+    ----------
+    array : np.ndarray
+        输入数组
+    dtype : str
+        数据类型字符串（如 "<u4", "<f4"）
+
+    Returns
+    -------
+    bytes
+        数组的连续字节表示
 
     Notes
     -----
@@ -63,7 +96,7 @@ def write_mz3(
     cdata: Optional[np.ndarray] = None,
 ) -> None:
     """
-    将三角表面网格写入 MZ3 文件 (非压缩)。
+    将三角表面网格写入 MZ3 文件（非压缩）。
 
     Parameters
     ----------
@@ -75,14 +108,21 @@ def write_mz3(
         输出路径
     cdata : np.ndarray | None, optional
         顶点标量数据, shape `(Nv,)` 或 `(Nv, Ns)`
+
+    Raises
+    ------
+    ValueError
+        当 vertices 或 faces 形状不正确时
     """
     vertices = np.ascontiguousarray(np.asarray(vertices, dtype=np.float32))
     faces = np.ascontiguousarray(np.asarray(faces, dtype=np.uint32))
 
     if vertices.ndim != 2 or vertices.shape[1] != 3:
+        logger.error("vertices 形状错误: 期望 (Nv, 3), 实际为 %s", vertices.shape)
         raise ValueError(f"vertices 形状错误: 期望 (Nv, 3), 实际为 {vertices.shape}")
 
     if faces.ndim != 2 or faces.shape[1] != 3:
+        logger.error("faces 形状错误: 期望 (Nf, 3), 实际为 %s", faces.shape)
         raise ValueError(f"faces 形状错误: 期望 (Nf, 3), 实际为 {faces.shape}")
 
     if cdata is not None:
@@ -124,16 +164,47 @@ def read_msh_surface(
     """
     从带表面标签的 MSH 中提取三角表面。
 
+    Parameters
+    ----------
+    msh_path : str
+        MSH 文件路径
+    surface_type : str
+        表面类型，可选 "white"、"central"、"pial"
+    mesh : mesh_io.Msh | None, optional
+        已加载的 mesh 对象，如为 None 则从文件读取
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, mesh_io.Msh]
+        (顶点坐标数组, 面索引数组, 表面 mesh 对象)
+
+    Raises
+    ------
+    FileNotFoundError
+        当 MSH 文件不存在时
+    ValueError
+        当 surface_type 不支持，或找不到对应的三角表面，
+        或裁剪结果包含非三角元素时
+
     Notes
     -----
     - `white` 使用 `WM_TH_SURFACE (1001)`
     - `central` 使用 `GM_TH_SURFACE (1002)`
     - `pial` 使用 `CSF_TH_SURFACE (1003)`
+
+    某些优化结果文件本身已经是纯三角表面网格，不再包含
+    central/white/pial 的体表面 tag。此时直接使用整张表面。
     """
     if not os.path.exists(msh_path):
+        logger.error("MSH 文件不存在: %s", msh_path)
         raise FileNotFoundError(f"MSH 文件不存在: {msh_path}")
 
     if surface_type not in SURFACE_TAGS:
+        logger.error(
+            "不支持的 surface_type: %s; 可选值: %s",
+            surface_type,
+            ", ".join(SURFACE_TAGS),
+        )
         raise ValueError(
             f"不支持的 surface_type: {surface_type}; 可选值: {', '.join(SURFACE_TAGS)}"
         )
@@ -159,12 +230,22 @@ def read_msh_surface(
             raise exc
 
     if surface_mesh.elm.nr == 0:
+        logger.error(
+            "未找到 surface_type=%s 对应的三角表面 tag=%d",
+            surface_type,
+            surface_tag,
+        )
         raise ValueError(
             f"未找到 surface_type={surface_type} 对应的三角表面 tag={surface_tag}"
         )
 
     if not np.all(surface_mesh.elm.elm_type == 2):
         unique_types = np.unique(surface_mesh.elm.elm_type)
+        logger.error(
+            "表面 tag=%d 裁剪结果包含非三角元素: %s",
+            surface_tag,
+            unique_types.tolist(),
+        )
         raise ValueError(
             f"表面 tag={surface_tag} 裁剪结果包含非三角元素: {unique_types.tolist()}"
         )
@@ -184,6 +265,30 @@ def read_msh_surface(
 
 
 def _resolve_scalar_field_name(mesh: mesh_io.Msh, field_name: str) -> str:
+    """
+    解析标量场名称，支持别名映射。
+
+    Parameters
+    ----------
+    mesh : mesh_io.Msh
+        mesh 对象
+    field_name : str
+        字段名称或别名
+
+    Returns
+    -------
+    str
+        解析后的实际字段名称
+
+    Raises
+    ------
+    ValueError
+        当字段不存在时
+
+    Notes
+    -----
+    支持的别名：'e' -> 'magnE'，'j' -> 'magnJ'
+    """
     if field_name in mesh.field:
         return field_name
 
@@ -193,6 +298,7 @@ def _resolve_scalar_field_name(mesh: mesh_io.Msh, field_name: str) -> str:
         return alias
 
     available_fields = ", ".join(sorted(mesh.field.keys()))
+    logger.error("场数据 '%s' 不存在。可用字段: %s", field_name, available_fields or "无")
     raise ValueError(
         f"场数据 '{field_name}' 不存在。可用字段: {available_fields or '无'}"
     )
@@ -203,10 +309,41 @@ def _extract_surface_scalar_data(
     surface_mesh: mesh_io.Msh,
     field_name: str,
 ) -> np.ndarray:
+    """
+    从 mesh 中提取表面标量数据。
+
+    Parameters
+    ----------
+    mesh : mesh_io.Msh
+        原始 mesh 对象
+    surface_mesh : mesh_io.Msh
+        表面 mesh 对象
+    field_name : str
+        字段名称
+
+    Returns
+    -------
+    np.ndarray
+        插值到表面的标量数据，形状 (Nv,) 或 (Nv, Ns)
+
+    Raises
+    ------
+    ValueError
+        当字段不是标量场时
+
+    Notes
+    -----
+    如果输入网格不包含体元素，字段将按表面网格直接转换为顶点标量。
+    """
     resolved_name = _resolve_scalar_field_name(mesh, field_name)
     field = mesh.field[resolved_name]
 
     if field.nr_comp not in (1,):
+        logger.error(
+            "字段 '%s' 不是标量场，nr_comp=%s。请改用标量字段，例如 magnE、magnJ、TImax 或 v。",
+            resolved_name,
+            field.nr_comp,
+        )
         raise ValueError(
             f"字段 '{resolved_name}' 不是标量场，nr_comp={field.nr_comp}。"
             "请改用标量字段，例如 magnE、magnJ、TImax 或 v。"
@@ -233,8 +370,40 @@ def _extract_scalar_data_from_surface_field(
     surface_mesh: mesh_io.Msh,
     field_name: str,
 ) -> np.ndarray:
+    """
+    从表面网格字段中提取标量数据。
+
+    Parameters
+    ----------
+    surface_mesh : mesh_io.Msh
+        表面 mesh 对象
+    field_name : str
+        字段名称
+
+    Returns
+    -------
+    np.ndarray
+        顶点标量数据
+
+    Raises
+    ------
+    ValueError
+        当表面网格中缺少指定字段时
+    TypeError
+        当字段类型不支持时
+
+    Notes
+    -----
+    如果字段是 NodeData 类型，直接返回值；
+    如果是 ElementData 类型，则由表面三角标量平均到顶点。
+    """
     if field_name not in surface_mesh.field:
         available_fields = ", ".join(sorted(surface_mesh.field.keys()))
+        logger.error(
+            "表面网格中缺少字段 '%s'。可用字段: %s",
+            field_name,
+            available_fields or "无",
+        )
         raise ValueError(
             f"表面网格中缺少字段 '{field_name}'。可用字段: {available_fields or '无'}"
         )
@@ -263,6 +432,7 @@ def _extract_scalar_data_from_surface_field(
         )
         return cdata
 
+    logger.error("不支持的字段类型: %s", type(field).__name__)
     raise TypeError(f"不支持的字段类型: {type(field)!r}")
 
 
@@ -281,20 +451,38 @@ def msh_to_mz3(
         输入 MSH 文件路径
     output_dir : str
         输出目录
-    surface_type : str
-        表面类型,可选: `"white"`, `"central"`, `"pial"`
-    field_name : str | None
-        要写入的标量场名称,例如 "magnE - pair 1"、"TImax" 等。
+    surface_type : str, optional
+        表面类型，可选 "white"、"central"、"pial"，默认为 "central"
+    field_name : str | None, optional
+        要写入的标量场名称，例如 "magnE - pair 1"、"TImax" 等
 
     Returns
     -------
     str
         生成的 MZ3 文件路径
+
+    Raises
+    ------
+    FileNotFoundError
+        当 MSH 文件不存在时
+    ValueError
+        当 surface_type 不支持时
+
+    Notes
+    -----
+    MZ3 格式可供 surf-ice/BrainVisa 等软件读取。
+    输出文件名格式为 {subject_id}_{surface_type}.mz3
     """
     if not os.path.exists(msh_path):
+        logger.error("MSH 文件不存在: %s", msh_path)
         raise FileNotFoundError(f"MSH 文件不存在: {msh_path}")
 
     if surface_type not in SURFACE_TAGS:
+        logger.error(
+            "不支持的 surface_type: %s; 可选值: %s",
+            surface_type,
+            ", ".join(SURFACE_TAGS),
+        )
         raise ValueError(
             f"不支持的 surface_type: {surface_type}; 可选值: {', '.join(SURFACE_TAGS)}"
         )

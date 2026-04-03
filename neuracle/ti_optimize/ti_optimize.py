@@ -33,6 +33,7 @@ import logging
 import os
 
 from simnibs import opt_struct
+from simnibs.utils.mesh_element_properties import ElementTags
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +183,7 @@ def setup_goal(
 def setup_electrodes_and_roi(
     opt: opt_struct.TesFlexOptimization,
     goal: str,
+    mesh_file_path: str | None = None,
     electrode_pair1_center: list[list[float]] | None = None,
     electrode_pair2_center: list[list[float]] | None = None,
     electrode_radius: list[float] | None = None,
@@ -262,8 +264,10 @@ def setup_electrodes_and_roi(
     # 配置 ROI
     logger.info("配置 ROI")
     roi = opt.add_roi()
-    roi.method = "surface"
-    roi.surface_type = "central"
+    roi.method = "volume"
+    roi.mesh = str(mesh_file_path)
+    roi.subpath = opt.subpath
+    roi.tissues = [ElementTags.WM, ElementTags.GM]  # 只保留白质和灰质
     if roi_mask_path:
         roi.mask_path = roi_mask_path
         roi.mask_space = roi_mask_space or "mni"
@@ -274,17 +278,19 @@ def setup_electrodes_and_roi(
         roi.roi_sphere_center = roi_center
         roi.roi_sphere_radius = roi_radius
         logger.info(
-            "使用球形 ROI: 中心=%s, 半径=%s, space=%s",
+            "使用体积球形 ROI: 中心=%s, 半径=%s, space=%s",
             roi_center,
             roi_radius,
             roi_center_space,
         )
 
-    # focality 目标的第二个 ROI 表示“除目标 ROI 外的其余 central surface”
+    # focality 目标的第二个 ROI 表示”除目标 ROI 外的其余体积”
     if goal in ["focality", "focality_inv"]:
         non_roi = opt.add_roi()
-        non_roi.method = "surface"
-        non_roi.surface_type = "central"
+        non_roi.method = "volume"
+        non_roi.mesh = str(mesh_file_path)
+        non_roi.subpath = opt.subpath
+        non_roi.tissues = [ElementTags.WM, ElementTags.GM]  # 只保留白质和灰质
         if roi_mask_path:
             non_roi.mask_path = roi_mask_path
             non_roi.mask_space = roi_mask_space or "mni"
@@ -360,6 +366,7 @@ def get_electrode_mapping(output_dir: str) -> tuple[list[str], list[str]]:
     """
     mapping_path = os.path.join(output_dir, "electrode_mapping.json")
     if not os.path.exists(mapping_path):
+        logger.error("电极映射文件不存在: %s", mapping_path)
         raise FileNotFoundError(f"电极映射文件不存在: {mapping_path}")
 
     with open(mapping_path, "r", encoding="utf-8") as f:

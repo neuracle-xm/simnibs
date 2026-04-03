@@ -1,9 +1,16 @@
 """
 neuracle.utils 模块
 
-提供通用工具函数和数据结构。
+提供通用工具函数和数据结构，包括：
+- 电导率相关工具函数
+- Atlas 标准化与 ROI 路径工具
+- 环境变量配置读取
+- 参数转换工具
+- TI 导出工具
+- EEG Montage 文件查找
 """
 
+import logging
 import os
 
 from neuracle.utils.atlas_utils import (
@@ -22,7 +29,7 @@ from neuracle.utils.atlas_utils import (
     load_atlas_registry,
     write_atlas_registry,
 )
-from neuracle.utils.cond_utils import TISSUE_ORDER, cond_dict_to_list
+from neuracle.utils.cond_utils import CONDUCTIVITY_TISSUE_NAMES, cond_dict_to_list
 from neuracle.utils.env import get_aliyun_config, get_rabbitmq_config, load_env
 from neuracle.utils.params_utils import (
     dict_to_ack_test_params,
@@ -30,6 +37,8 @@ from neuracle.utils.params_utils import (
     dict_to_inverse_params,
     dict_to_model_params,
 )
+
+logger = logging.getLogger(__name__)
 
 N_WORKERS = 8
 NON_ROI_THRESHOLD = 0.1
@@ -58,7 +67,7 @@ EEG10_20_EXTENDED_SPM12 = "EEG10-20_extended_SPM12"
 
 def find_montage_file(dir_path: str, montage: str) -> str:
     """
-    在头模目录中查找指定名称的 montage CSV 文件
+    在头模目录中查找指定名称的 montage CSV 文件。
 
     Parameters
     ----------
@@ -89,6 +98,7 @@ def find_montage_file(dir_path: str, montage: str) -> str:
         if os.path.exists(montage_path):
             return montage_path
 
+    logger.error("montage 文件不存在: %s", montage)
     raise FileNotFoundError(f"montage 文件不存在: {montage}")
 
 
@@ -96,7 +106,7 @@ __all__ = [
     "N_WORKERS",
     "NON_ROI_THRESHOLD",
     "STANDARD_COND",
-    "TISSUE_ORDER",
+    "CONDUCTIVITY_TISSUE_NAMES",
     "ATLAS_ROOT",
     "ATLAS_SOURCE_DIR",
     "ATLAS_STANDARDIZED_DIR",

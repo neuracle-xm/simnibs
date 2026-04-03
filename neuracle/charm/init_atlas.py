@@ -41,10 +41,13 @@ def init_atlas(
     """
     执行 Atlas 初始仿射配准
 
+    将 MNI Atlas 仿射配准到输入图像空间，并进行颈部校正。
+    根据 init_type 设置决定初始化方式（atlas 或 mni）。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
     use_transform : str or None, optional
         用户提供的世界到世界变换矩阵路径 (default: None)
     init_transform : str or None, optional
@@ -55,6 +58,11 @@ def init_atlas(
     Returns
     -------
     None
+
+    See Also
+    --------
+    _setup_atlas : Atlas 路径和参数设置
+    _register_atlas_to_input_affine : 仿射配准函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     settings = _read_settings()
@@ -131,6 +139,8 @@ def _read_transform(transform_file: str) -> np.ndarray:
     """
     读取变换矩阵
 
+    从文件加载 4x4 变换矩阵，并转换为 RAS 到 LPS 坐标系。
+
     Parameters
     ----------
     transform_file : str
@@ -140,10 +150,17 @@ def _read_transform(transform_file: str) -> np.ndarray:
     -------
     np.ndarray
         4x4 变换矩阵
+
+    Raises
+    ------
+    ValueError
+        当变换矩阵形状不为 (4, 4) 时抛出
     """
     transform = np.loadtxt(transform_file)
-    assert transform.shape == (4, 4), (
-        f"`transform` should have shape (4, 4), got {transform.shape}"
-    )
+    if transform.shape != (4, 4):
+        logger.error("变换矩阵形状错误: 期望 (4, 4), 实际 %s", transform.shape)
+        raise ValueError(
+            f"`transform` should have shape (4, 4), got {transform.shape}"
+        )
     RAS2LPS = np.diag([-1, -1, 1, 1])
     return RAS2LPS @ transform @ RAS2LPS

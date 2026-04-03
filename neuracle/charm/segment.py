@@ -41,16 +41,25 @@ def run_segmentation(
     """
     执行分割流程
 
+    使用 samseg 进行参数估计和分割，执行偏置场校正，生成上采样的组织标记图像。
+    包括：参数估计、分割输出、偏置场校正、MNI 变形场生成、后处理等步骤。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
     debug : bool, optional
         是否保存调试文件 (default: False)
 
     Returns
     -------
     None
+
+    See Also
+    --------
+    _setup_atlas : Atlas 路径和参数设置
+    _estimate_parameters : 参数估计
+    _post_process_segmentation : 分割后处理
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     settings = _read_settings()

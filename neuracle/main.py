@@ -5,6 +5,18 @@ SimNIBS RabbitMQ 服务主入口
 
 该服务接收来自后端的任务请求，执行 CHARM 头模生成、TI 正向仿真、
 TI 逆向仿真等任务，并通过 RabbitMQ 实时上报进度。
+
+架构说明：
+    1. RabbitMQ Listener 监听任务队列，收到消息后回调 handle_message
+    2. handle_message 在回调线程中解析消息，启动工作线程执行 execute_task
+    3. 工作线程中根据任务类型调用对应的 handle_xxx_task 函数
+    4. 任务完成后通过 schedule_ack 将 ack 请求投递回消费线程执行
+    5. SenderThread 负责将从消息队列中取出进度消息发送到 RabbitMQ
+
+进度恢复机制：
+    - Model 任务支持进度恢复：当消息 redelivered=True 时，从进度文件恢复
+    - 进度文件存储在 subject_dir / ".progress.txt"
+    - 任务正常完成后删除进度文件，异常时保留用于下次恢复
 """
 
 import json
@@ -30,20 +42,37 @@ from neuracle.charm import (
 )
 from neuracle.logger import setup_logging
 from neuracle.oss_tool import (
-    download_file_from_oss,
     download_folder_from_oss,
-    get_bucket,
-    upload_file_to_oss,
-    upload_folder_to_oss,
+    download_input_file,
+    upload_model_outputs,
+    upload_task_result,
 )
 from neuracle.rabbitmq.listener import RabbitMQListener
 from neuracle.rabbitmq.message_builder import build_progress_message
+from neuracle.rabbitmq.progress import (
+    ForwardProgress,
+    InverseProgress,
+    ModelProgress,
+    load_progress,
+    save_progress,
+)
 from neuracle.rabbitmq.schemas import (
     ForwardParams,
     InverseParams,
     ModelParams,
 )
 from neuracle.rabbitmq.sender_thread import SenderThread
+from neuracle.rabbitmq.task_handlers import (
+    DEBUG,
+    ensure_data_root,
+    get_model_mesh_path,
+    get_subject_dir,
+    get_task_output_dir,
+    mask_rabbitmq_config,
+    normalize_dir_path,
+    reset_task_output_dir,
+    schedule_ack,
+)
 from neuracle.rabbitmq.validator import (
     ValidationError,
     validate_ack_test_params,
@@ -82,216 +111,6 @@ from neuracle.utils.ti_export_utils import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
 
-# DEBUG 模式：True 时跳过 output_dir 删除
-DEBUG = False
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_ROOT = PROJECT_ROOT / "data"
-
-
-def _ack_in_consumer_thread(
-    channel: Any,
-    delivery_tag: int,
-    task_id: str,
-    msg_type: str,
-    reason: str,
-) -> None:
-    """在 RabbitMQ 消费线程中实际执行 ack。"""
-    try:
-        if channel is None or not getattr(channel, "is_open", False):
-            logger.warning(
-                "ack_sent 跳过，channel 不可用: task_id=%s type=%s delivery_tag=%s reason=%s",
-                task_id,
-                msg_type,
-                delivery_tag,
-                reason,
-            )
-            return
-        channel.basic_ack(delivery_tag=delivery_tag)
-        logger.info(
-            "ack_sent: task_id=%s type=%s delivery_tag=%s reason=%s",
-            task_id,
-            msg_type,
-            delivery_tag,
-            reason,
-        )
-    except Exception:
-        logger.exception(
-            "发送 ack 失败: task_id=%s type=%s delivery_tag=%s reason=%s",
-            task_id,
-            msg_type,
-            delivery_tag,
-            reason,
-        )
-
-
-def schedule_ack(
-    channel: Any,
-    delivery_tag: int,
-    task_id: str,
-    msg_type: str,
-    reason: str,
-) -> None:
-    """从工作线程把 ack 请求投递回消费线程执行。"""
-    connection = getattr(channel, "connection", None)
-    if connection is None or not getattr(connection, "is_open", False):
-        logger.warning(
-            "ack_scheduled 跳过，connection 不可用: task_id=%s type=%s delivery_tag=%s reason=%s",
-            task_id,
-            msg_type,
-            delivery_tag,
-            reason,
-        )
-        return
-    logger.info(
-        "ack_scheduled: task_id=%s type=%s delivery_tag=%s reason=%s",
-        task_id,
-        msg_type,
-        delivery_tag,
-        reason,
-    )
-    connection.add_callback_threadsafe(
-        partial(
-            _ack_in_consumer_thread,
-            channel,
-            delivery_tag,
-            task_id,
-            msg_type,
-            reason,
-        )
-    )
-
-
-def reset_task_output_dir(output_dir: str) -> None:
-    """删除同 task_id 的旧输出，避免重跑时被残留结果污染。"""
-    if os.path.isdir(output_dir):
-        logger.info("清理旧任务输出目录: %s", output_dir)
-        shutil.rmtree(output_dir)
-
-
-BUILT_IN_DIR_PATH = "m2m_ernie"
-BUILT_IN_DTI_FILE_PATH = "DTI_coregT1_tensor.nii.gz"
-
-
-def normalize_dir_path(dir_path: str) -> str:
-    """规范化相对目录路径，禁止绝对路径和父级跳转。"""
-    normalized = dir_path.replace("\\", "/").strip().strip("/")
-    path_obj = Path(normalized)
-    if path_obj.is_absolute() or ".." in path_obj.parts:
-        raise ValueError(f"非法 dir_path: {dir_path}")
-    return normalized
-
-
-def get_subject_dir(dir_path: str) -> Path:
-    return DATA_ROOT / Path(normalize_dir_path(dir_path))
-
-
-def get_task_output_dir(dir_path: str, suffix: str, task_id: str | None = None) -> Path:
-    normalized = normalize_dir_path(dir_path)
-    if task_id:
-        return DATA_ROOT / f"{normalized}_{suffix}_{task_id}"
-    return DATA_ROOT / f"{normalized}_{suffix}"
-
-
-def get_model_mesh_path(dir_path: str) -> Path:
-    return get_subject_dir(dir_path) / "model.msh"
-
-
-def resolve_local_dti_path(dir_path: str, dti_file_path: str | None) -> str | None:
-    if dir_path == BUILT_IN_DIR_PATH:
-        dti_file_path = BUILT_IN_DTI_FILE_PATH
-        logger.info("使用内置头模，DTI使用内置路径: %s", dti_file_path)
-        return str(get_subject_dir(dir_path) / dti_file_path)
-    else:
-        return None
-
-
-def build_storage_key(path: str) -> str:
-    """将逻辑 OSS key 映射到真实存储 key。"""
-    logical_key = path.strip("/")
-    return logical_key
-
-
-def ensure_data_root() -> None:
-    DATA_ROOT.mkdir(parents=True, exist_ok=True)
-
-
-def ensure_subject_cache(dir_path: str) -> Path:
-    """确保本地 subject 缓存存在；不存在时从 OSS 按前缀下载。"""
-    ensure_data_root()
-    normalized = normalize_dir_path(dir_path)
-    subject_dir = get_subject_dir(normalized)
-    if subject_dir.is_dir():
-        logger.info("命中本地缓存: %s", subject_dir)
-        return subject_dir
-
-    logger.info("未命中本地缓存，开始下载前缀: %s", normalized)
-    subject_dir.mkdir(parents=True, exist_ok=True)
-    download_folder_from_oss(
-        build_storage_key(normalized),
-        subject_dir,
-    )
-    return subject_dir
-
-
-def download_input_file(oss_key: str, local_path: Path) -> Path:
-    """下载单个输入文件并返回本地路径。"""
-    download_file_from_oss(build_storage_key(oss_key), local_path)
-    return local_path
-
-
-def upload_model_outputs(dir_path: str, subject_dir: Path) -> dict[str, str]:
-    """上传模型输出到 OSS
-
-    注意：每次上传前重新获取 STS Token，避免 Token 过期导致上传失败。
-    """
-    bucket = get_bucket()
-    normalized = normalize_dir_path(dir_path)
-    uploaded: dict[str, str] = {}
-    folder_mappings = {
-        f"{normalized}/eeg_positions": subject_dir / "eeg_positions",
-        f"{normalized}/label_prep": subject_dir / "label_prep",
-        f"{normalized}/surfaces": subject_dir / "surfaces",
-        f"{normalized}/toMNI": subject_dir / "toMNI",
-    }
-    for oss_prefix, local_dir in folder_mappings.items():
-        if local_dir.is_dir():
-            logger.info("上传目录到 OSS: %s -> %s", local_dir, oss_prefix)
-            upload_folder_to_oss(bucket, local_dir, build_storage_key(oss_prefix))
-            uploaded[local_dir.name] = f"{oss_prefix}/"
-
-    file_mappings = {
-        f"{normalized}/model.msh": subject_dir / "model.msh",
-        f"{normalized}/model.msh.opt": subject_dir / "model.msh.opt",
-        f"{normalized}/T2_reg.nii.gz": subject_dir / "T2_reg.nii.gz",
-    }
-    for oss_key, local_file in file_mappings.items():
-        if local_file.is_file():
-            logger.info("上传文件到 OSS: %s -> %s", local_file, oss_key)
-            upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
-            uploaded[local_file.name] = oss_key
-
-    return uploaded
-
-
-def upload_task_result(local_file: Path, oss_key: str) -> str:
-    """上传任务结果到 OSS
-
-    注意：每次上传前重新获取 STS Token，避免 Token 过期导致上传失败。
-    """
-    bucket = get_bucket()
-    logger.info("上传任务结果到 OSS: %s -> %s", local_file, oss_key)
-    upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
-    return oss_key
-
-
-def mask_rabbitmq_config(config: dict[str, Any]) -> dict[str, Any]:
-    """隐藏敏感配置，避免密码写入日志。"""
-    masked = dict(config)
-    if masked.get("password"):
-        masked["password"] = "***"
-    return masked
-
 
 def send_progress(
     message_queue: Queue,
@@ -301,24 +120,7 @@ def send_progress(
     error_message: str | None = None,
     result: dict | None = None,
 ) -> None:
-    """
-    发送进度消息到 simnibs_to_backend 队列
-
-    Parameters
-    ----------
-    message_queue : Queue
-        消息队列
-    task_id : str
-        任务 ID
-    msg_type : str
-        任务类型：model, forward, inverse
-    progress_rate : int
-        进度百分比 (0-100)
-    error_message : str, optional
-        错误消息，无错时为 None
-    result : dict, optional
-        结果数据
-    """
+    """发送进度消息到 simnibs_to_backend 队列"""
     progress_msg = build_progress_message(
         id=task_id,
         msg_type=msg_type,
@@ -326,90 +128,120 @@ def send_progress(
         message=error_message,
         result=result,
     )
-
     message_queue.put(progress_msg)
     logger.debug("发送进度消息: %s %d%%", task_id, progress_rate)
 
 
-def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -> None:
-    """
-    处理 CHARM 头模生成任务
+def handle_model_task(
+    message_queue: Queue, task_id: str, params: ModelParams, redelivered: bool = False
+) -> None:
+    """处理 CHARM 头模生成任务
 
     Parameters
     ----------
     message_queue : Queue
-        消息队列
+        消息队列，用于发送进度更新
     task_id : str
         任务 ID
     params : ModelParams
         头模生成参数
+    redelivered : bool
+        消息是否为 RabbitMQ 重发（支持进度恢复：当 redelivered=True 时从进度文件恢复）
     """
-    bucket = get_bucket()
+    # 获取 subject 目录
     subject_dir = get_subject_dir(params.dir_path)
     ensure_data_root()
     subject_dir.mkdir(parents=True, exist_ok=True)
-    t1_local_path = download_input_file(
-        params.T1_file_path,
-        subject_dir / Path(params.T1_file_path).name,
+
+    # 进度文件处理：只有 redelivered 消息才从进度文件恢复
+    progress_file = subject_dir / ".progress.txt"
+    if redelivered:
+        current_progress = load_progress(progress_file)
+        logger.info("任务 %s 为重发消息，从进度 %d 恢复", task_id, current_progress)
+    else:
+        # 新任务，清除旧进度文件（如果存在）
+        if progress_file.exists():
+            progress_file.unlink()
+        current_progress = 0
+        logger.info("任务 %s 为新消息，从头开始执行", task_id)
+        # 发送任务开始进度
+        send_progress(message_queue, task_id, "model", ModelProgress.START)
+
+    # 构建文件路径
+    t1_local_path = subject_dir / Path(params.T1_file_path).name
+    t2_local_path = (
+        subject_dir / Path(params.T2_file_path).name if params.T2_file_path else None
     )
-    t2_local_path = None
-    if params.T2_file_path:
-        t2_local_path = download_input_file(
-            params.T2_file_path,
-            subject_dir / Path(params.T2_file_path).name,
+
+    # 下载文件（只在进度 < 10 时执行）
+    if current_progress < ModelProgress.PREPARE_T1_DONE:
+        t1_local_path = download_input_file(params.T1_file_path, t1_local_path)
+        if params.T2_file_path:
+            t2_local_path = download_input_file(params.T2_file_path, t2_local_path)
+        if params.DTI_file_path:
+            download_input_file(
+                params.DTI_file_path,
+                subject_dir / Path(params.DTI_file_path).name,
+            )
+
+    # 步骤1: prepare_t1
+    if current_progress < ModelProgress.PREPARE_T1_DONE:
+        prepare_t1(str(subject_dir), str(t1_local_path))
+        save_progress(progress_file, ModelProgress.PREPARE_T1_DONE)
+        send_progress(message_queue, task_id, "model", ModelProgress.PREPARE_T1_DONE)
+
+    # 步骤2: prepare_t2
+    if current_progress < ModelProgress.PREPARE_T2_DONE:
+        if t2_local_path and t2_local_path.exists():
+            try:
+                prepare_t2(str(subject_dir), str(t2_local_path))
+            except Exception:
+                prepare_t2(str(subject_dir), str(t2_local_path), force_sform=True)
+        save_progress(progress_file, ModelProgress.PREPARE_T2_DONE)
+        send_progress(message_queue, task_id, "model", ModelProgress.PREPARE_T2_DONE)
+
+    # 步骤3: denoise
+    if current_progress < ModelProgress.DENOISE_DONE:
+        denoise_inputs(str(subject_dir))
+        save_progress(progress_file, ModelProgress.DENOISE_DONE)
+        send_progress(message_queue, task_id, "model", ModelProgress.DENOISE_DONE)
+
+    # 步骤4: init_atlas
+    if current_progress < ModelProgress.INIT_ATLAS_DONE:
+        init_atlas(str(subject_dir))
+        save_progress(progress_file, ModelProgress.INIT_ATLAS_DONE)
+        send_progress(message_queue, task_id, "model", ModelProgress.INIT_ATLAS_DONE)
+
+    # 步骤5: run_segmentation
+    if current_progress < ModelProgress.SEGMENTATION_DONE:
+        run_segmentation(str(subject_dir))
+        save_progress(progress_file, ModelProgress.SEGMENTATION_DONE)
+        send_progress(message_queue, task_id, "model", ModelProgress.SEGMENTATION_DONE)
+
+    # 步骤6: create_surfaces
+    if current_progress < ModelProgress.SURFACES_DONE:
+        create_surfaces(str(subject_dir))
+        save_progress(progress_file, ModelProgress.SURFACES_DONE)
+        send_progress(message_queue, task_id, "model", ModelProgress.SURFACES_DONE)
+
+    # 步骤7: create_mesh + 上传
+    if current_progress < ModelProgress.COMPLETED:
+        create_mesh(str(subject_dir))
+        normalized = normalize_dir_path(params.dir_path)
+        upload_model_outputs(params.dir_path, subject_dir, normalized)
+        save_progress(progress_file, ModelProgress.COMPLETED)
+        progress_file.unlink()
+        msh_path = f"{normalize_dir_path(params.dir_path)}/model.msh"
+        result = {"msh_file_path": msh_path}
+        send_progress(
+            message_queue, task_id, "model", ModelProgress.COMPLETED, result=result
         )
-    # 头模生成本身不需要DTI文件，但是要先下载下来，仿真时要用
-    if params.DTI_file_path:
-        download_input_file(
-            params.DTI_file_path,
-            subject_dir / Path(params.DTI_file_path).name,
-        )
-
-    # 0% - 任务开始
-    send_progress(message_queue, task_id, "model", 0)
-
-    # 10% - prepare_t1
-    prepare_t1(str(subject_dir), str(t1_local_path))
-    send_progress(message_queue, task_id, "model", 10)
-
-    # 20% - prepare_t2
-    if t2_local_path:
-        try:
-            prepare_t2(str(subject_dir), str(t2_local_path))
-        except Exception:
-            prepare_t2(str(subject_dir), str(t2_local_path), force_sform=True)
-        send_progress(message_queue, task_id, "model", 20)
-
-    # 35% - denoise
-    denoise_inputs(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 35)
-
-    # 50% - init_atlas
-    init_atlas(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 50)
-
-    # 70% - segment
-    run_segmentation(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 70)
-
-    # 85% - create_surfaces
-    create_surfaces(str(subject_dir))
-    send_progress(message_queue, task_id, "model", 85)
-
-    # 100% - mesh
-    create_mesh(str(subject_dir))
-    upload_model_outputs(params.dir_path, subject_dir)
-    msh_path = f"{normalize_dir_path(params.dir_path)}/model.msh"
-    result = {"msh_file_path": msh_path}
-    logger.debug("msh_file_path: %s", msh_path)
-    send_progress(message_queue, task_id, "model", 100, result=result)
 
 
 def handle_forward_task(
-    message_queue: Queue, task_id: str, params: ForwardParams
+    message_queue: Queue, task_id: str, params: ForwardParams, redelivered: bool = False
 ) -> None:
-    """
-    处理 TI 正向仿真任务
+    """处理 TI 正向仿真任务
 
     Parameters
     ----------
@@ -419,27 +251,42 @@ def handle_forward_task(
         任务 ID
     params : ForwardParams
         正向仿真参数
+    redelivered : bool
+        消息是否为 RabbitMQ 重发（当前未使用，Forward 任务暂不支持进度恢复）
     """
-    subject_dir = ensure_subject_cache(params.dir_path)
-    output_dir = get_task_output_dir(params.dir_path, "TI_simulation", task_id)
-    anisotropy_type = "vn" if params.anisotropy else "scalar"
-    reset_task_output_dir(str(output_dir))
+    # 发送任务开始进度
+    send_progress(message_queue, task_id, "forward", ForwardProgress.START)
 
-    # 获取 EEG 电极帽 CSV 文件路径
+    # 获取 subject 目录（如果不存在则从 OSS 下载）
+    subject_dir = get_subject_dir(params.dir_path)
+    if not subject_dir.is_dir():
+        ensure_data_root()
+        subject_dir.mkdir(parents=True, exist_ok=True)
+        download_folder_from_oss(normalize_dir_path(params.dir_path), subject_dir)
+
+    # 创建输出目录
+    output_dir = get_task_output_dir(params.dir_path, "TI_simulation", task_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    anisotropy_type = "vn" if params.anisotropy else "scalar"
+
+    # 清理旧输出
+    if not DEBUG:
+        reset_task_output_dir(str(output_dir))
+
+    # 准备参数
     eeg_cap = find_montage_file(str(subject_dir), params.montage)
     mesh_path = get_model_mesh_path(params.dir_path)
-    dti_path = resolve_local_dti_path(params.dir_path, params.DTI_file_path)
+    dti_path = None
+    if params.dir_path == "m2m_ernie":
+        dti_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
 
-    # 从 ElectrodeWithCurrent 对象中提取电极名称和电流
     electrode_A_names = [e.name for e in params.electrode_A]
-    electrode_A_currents = [e.current_mA for e in params.electrode_A]
+    # mA转化为A
+    electrode_A_currents = [e.current_mA / 1000 for e in params.electrode_A]
     electrode_B_names = [e.name for e in params.electrode_B]
-    electrode_B_currents = [e.current_mA for e in params.electrode_B]
+    electrode_B_currents = [e.current_mA / 1000 for e in params.electrode_B]
 
-    # 0% - 任务开始
-    send_progress(message_queue, task_id, "forward", 0)
-
-    # 10% - setup_session
+    # 步骤1: setup_session
     S = setup_session(
         subject_dir=str(subject_dir),
         msh_file_path=str(mesh_path),
@@ -449,69 +296,74 @@ def handle_forward_task(
         fname_tensor=dti_path,
         eeg_cap=eeg_cap,
     )
-    send_progress(message_queue, task_id, "forward", 10)
+    send_progress(message_queue, task_id, "forward", ForwardProgress.SESSION_SETUP)
 
-    # 20% - setup_electrode_pair1
+    # 步骤2: setup_electrode_pair1
     setup_electrode_pair1(
         session=S,
         electrode_pair1=electrode_A_names,
         current1=electrode_A_currents,
     )
-    send_progress(message_queue, task_id, "forward", 20)
+    send_progress(
+        message_queue, task_id, "forward", ForwardProgress.ELECTRODE_PAIR1_DONE
+    )
 
-    # 35% - setup_electrode_pair2
+    # 步骤3: setup_electrode_pair2
     setup_electrode_pair2(
         session=S,
         electrode_pair2=electrode_B_names,
         current2=electrode_B_currents,
     )
-    send_progress(message_queue, task_id, "forward", 35)
+    send_progress(
+        message_queue, task_id, "forward", ForwardProgress.ELECTRODE_PAIR2_DONE
+    )
 
-    # 70% - run_tdcs
+    # 步骤4: run_tdcs_simulation
     mesh1_path, mesh2_path = run_tdcs_simulation(
         session=S,
         subject_dir=str(subject_dir),
         output_dir=str(output_dir),
         n_workers=N_WORKERS,
     )
-    send_progress(message_queue, task_id, "forward", 70)
+    send_progress(
+        message_queue, task_id, "forward", ForwardProgress.TDCS_SIMULATION_DONE
+    )
 
-    # 85% - calculate_ti
+    # 步骤5: calculate_ti
     ti_mesh_path = calculate_ti(
         mesh1_path=mesh1_path,
         mesh2_path=mesh2_path,
         output_dir=str(output_dir),
     )
-    send_progress(message_queue, task_id, "forward", 85)
+    send_progress(message_queue, task_id, "forward", ForwardProgress.TI_CALCULATED)
 
-    # 95% - export_ti_to_nifti
+    # 步骤6: export_ti_to_nifti
     ti_nifti_path = export_ti_to_nifti(
         msh_path=ti_mesh_path,
         output_dir=str(output_dir),
-        reference=str(subject_dir / params.T1_file_path),
+        reference=str(subject_dir / Path(params.T1_file_path).name),
         field_name="max_TI",
     )
-    send_progress(message_queue, task_id, "forward", 95)
+    send_progress(message_queue, task_id, "forward", ForwardProgress.NIFTI_EXPORTED)
 
+    # 步骤7: 上传结果
     ti_file_key = upload_task_result(
         Path(ti_nifti_path),
         f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}/TI_max_TI.nii.gz",
     )
-    if DEBUG:
-        logger.info("DEBUG 模式，跳过删除 output_dir: %s", output_dir)
-    else:
+    if not DEBUG:
         shutil.rmtree(output_dir, ignore_errors=True)
 
     result = {"TI_file": ti_file_key}
-    logger.debug("TI_file: %s", ti_file_key)
-    send_progress(message_queue, task_id, "forward", 100, result=result)
+    send_progress(
+        message_queue, task_id, "forward", ForwardProgress.COMPLETED, result=result
+    )
 
 
 def handle_inverse_task(
-    message_queue: Queue, task_id: str, params: InverseParams
+    message_queue: Queue, task_id: str, params: InverseParams, redelivered: bool = False
 ) -> None:
-    """
-    处理 TI 逆向仿真任务
+    """处理 TI 逆向仿真任务
 
     Parameters
     ----------
@@ -521,18 +373,35 @@ def handle_inverse_task(
         任务 ID
     params : InverseParams
         逆向仿真参数
+    redelivered : bool
+        消息是否为 RabbitMQ 重发（当前未使用，Inverse 任务暂不支持进度恢复）
     """
-    subject_dir = ensure_subject_cache(params.dir_path)
-    output_dir = get_task_output_dir(params.dir_path, "TI_optimization", task_id)
-    anisotropy_type = "vn" if params.anisotropy else "scalar"
-    reset_task_output_dir(str(output_dir))
+    # 发送任务开始进度
+    send_progress(message_queue, task_id, "inverse", InverseProgress.START)
 
-    # 获取 EEG 电极帽 CSV 文件路径（用于电极映射）
+    # 获取 subject 目录
+    subject_dir = get_subject_dir(params.dir_path)
+    if not subject_dir.is_dir():
+        ensure_data_root()
+        subject_dir.mkdir(parents=True, exist_ok=True)
+        download_folder_from_oss(normalize_dir_path(params.dir_path), subject_dir)
+
+    # 创建输出目录
+    output_dir = get_task_output_dir(params.dir_path, "TI_optimization", task_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    anisotropy_type = "vn" if params.anisotropy else "scalar"
+
+    # 清理旧输出
+    if not DEBUG:
+        reset_task_output_dir(str(output_dir))
+
+    # 准备参数
     net_electrode_file = find_montage_file(str(subject_dir), params.montage)
     mesh_path = get_model_mesh_path(params.dir_path)
-    dti_path = resolve_local_dti_path(params.dir_path, params.DTI_file_path)
+    dti_path = None
+    if params.dir_path == "m2m_ernie":
+        dti_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
 
-    # 电极和 ROI 参数
     roi_center = None
     roi_radius = None
     roi_center_space = "subject"
@@ -540,6 +409,7 @@ def handle_inverse_task(
     roi_mask_space = None
     focality_threshold = params.target_threshold
 
+    # ROI 参数解析
     if params.roi_type == "atlas" and params.roi_param.atlas_param:
         roi_mask_path = str(
             get_standardized_roi_path(
@@ -557,10 +427,7 @@ def handle_inverse_task(
         roi_radius = params.roi_param.mni_param.radius
         roi_center_space = "mni"
 
-    # 0% - 任务开始
-    send_progress(message_queue, task_id, "inverse", 0)
-
-    # 10% - init_optimization
+    # 步骤1: init_optimization
     opt = init_optimization(
         subject_dir=str(subject_dir),
         msh_file_path=str(mesh_path),
@@ -569,64 +436,61 @@ def handle_inverse_task(
         cond=cond_dict_to_list(params.conductivity_config),
         fname_tensor=dti_path,
     )
-    send_progress(
-        message_queue,
-        task_id,
-        "inverse",
-        10,
-    )
+    send_progress(message_queue, task_id, "inverse", InverseProgress.OPTIMIZATION_INIT)
 
-    # 20% - setup_goal
+    # 步骤2: setup_goal
     setup_goal(
         opt=opt,
         goal="focality",
         focality_threshold=[focality_threshold, NON_ROI_THRESHOLD],
         net_electrode_file=net_electrode_file,
     )
-    send_progress(message_queue, task_id, "inverse", 20)
+    send_progress(message_queue, task_id, "inverse", InverseProgress.GOAL_SETUP)
 
-    # 35% - setup_electrodes_and_roi
+    # 步骤3: setup_electrodes_and_roi
     setup_electrodes_and_roi(
         opt=opt,
         goal="focality",
+        mesh_file_path=mesh_path,
+        electrode_current1=[c / 1000 for c in params.current_A],
+        electrode_current2=[c / 1000 for c in params.current_B],
         roi_center=roi_center,
         roi_radius=roi_radius,
         roi_center_space=roi_center_space,
         roi_mask_path=roi_mask_path,
         roi_mask_space=roi_mask_space,
-        non_roi_center=None,
-        non_roi_radius=None,
     )
-    send_progress(message_queue, task_id, "inverse", 35)
+    send_progress(
+        message_queue, task_id, "inverse", InverseProgress.ELECTRODES_ROI_SETUP
+    )
 
-    # 85% - run_optimization
+    # 步骤4: run_optimization
     run_optimization(opt=opt, n_workers=N_WORKERS)
-    send_progress(message_queue, task_id, "inverse", 85)
+    send_progress(message_queue, task_id, "inverse", InverseProgress.OPTIMIZATION_DONE)
 
-    # 90% - get_electrode_mapping
+    # 步骤5: get_electrode_mapping
     electrode_A, electrode_B = get_electrode_mapping(output_dir=str(output_dir))
-    send_progress(message_queue, task_id, "inverse", 90)
+    send_progress(
+        message_queue, task_id, "inverse", InverseProgress.ELECTRODE_MAPPING_DONE
+    )
 
-    # 95% - export_ti_to_nifti
-    # 从 dir_path 中提取 modelid，格式如 m2m_ernie -> ernie
-    modelid = params.dir_path.split("m2m_")[-1]
-    msh_name = f"{modelid}_tes_mapped_opt_surface_mesh.msh"
+    # 步骤6: export_ti_to_nifti
+    msh_name = "model_tes_mapped_opt_head_mesh.msh"
     msh_path = str(output_dir / "mapped_electrodes_simulation" / msh_name)
     ti_nifti_path = export_ti_to_nifti(
         msh_path=msh_path,
         output_dir=str(output_dir),
-        reference=str(subject_dir / params.T1_file_path),
+        reference=str(subject_dir / Path(params.T1_file_path).name),
         field_name="max_TI",
     )
-    send_progress(message_queue, task_id, "inverse", 95)
+    send_progress(message_queue, task_id, "inverse", InverseProgress.NIFTI_EXPORTED)
 
+    # 步骤7: 上传结果
     ti_file_key = upload_task_result(
         Path(ti_nifti_path),
         f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}/TI_max_TI.nii.gz",
     )
-    if DEBUG:
-        logger.info("DEBUG 模式，跳过删除 output_dir: %s", output_dir)
-    else:
+    if not DEBUG:
         shutil.rmtree(output_dir, ignore_errors=True)
 
     result = {
@@ -634,17 +498,13 @@ def handle_inverse_task(
         "electrode_A": electrode_A,
         "electrode_B": electrode_B,
     }
-    logger.debug(
-        "TI_file: %s, electrode_A: %s, electrode_B: %s",
-        ti_file_key,
-        electrode_A,
-        electrode_B,
+    send_progress(
+        message_queue, task_id, "inverse", InverseProgress.COMPLETED, result=result
     )
-    send_progress(message_queue, task_id, "inverse", 100, result=result)
 
 
 def handle_ack_test_task(message_queue: Queue, task_id: str, params: Any) -> None:
-    """处理 ack 时机验证任务。"""
+    """处理 ack 时机验证任务（用于测试 RabbitMQ ack 机制）"""
     send_progress(message_queue, task_id, "ack_test", 0)
     logger.info(
         "worker_started: task_id=%s type=ack_test sleep_seconds=%.2f",
@@ -665,11 +525,32 @@ def execute_task(
     params: Any,
     channel: Any,
     delivery_tag: int,
+    redelivered: bool = False,
 ) -> None:
-    """在线程中执行耗时任务，避免阻塞 RabbitMQ 回调线程。"""
+    """在工作线程中执行耗时任务，避免阻塞 RabbitMQ 回调线程
+
+    Parameters
+    ----------
+    message_queue : Queue
+        消息队列
+    task_id : str
+        任务 ID
+    msg_type : str
+        任务类型
+    task_handler : callable
+        任务处理函数
+    params : Any
+        任务参数
+    channel : Any
+        RabbitMQ 通道
+    delivery_tag : int
+        消息 delivery tag
+    redelivered : bool
+        消息是否为重发
+    """
     ack_reason = "task_finished"
     try:
-        task_handler(message_queue, task_id, params)
+        task_handler(message_queue, task_id, params, redelivered)
         logger.info("任务完成: %s", task_id)
     except ValidationError as e:
         ack_reason = "task_validation_error"
@@ -686,8 +567,7 @@ def execute_task(
 def handle_message(
     channel: Any, method: Any, properties: Any, body: bytes, message_queue: Queue
 ) -> None:
-    """
-    处理接收到的任务消息
+    """处理接收到的任务消息（RabbitMQ 回调函数）
 
     根据消息 type 分发到对应的处理函数。
 
@@ -696,7 +576,7 @@ def handle_message(
     channel : pika.channel.Channel
         RabbitMQ 通道
     method : pika.spec.Basic.Deliver
-        消息传递信息
+        消息传递信息（包含 delivery_tag 和 redelivered）
     properties : pika.spec.BasicProperties
         消息属性
     body : bytes
@@ -707,6 +587,7 @@ def handle_message(
     task_id = ""
     msg_type = ""
     delivery_tag = method.delivery_tag
+    redelivered = method.redelivered
 
     try:
         data = json.loads(body)
@@ -714,8 +595,11 @@ def handle_message(
         msg_type = data["type"]
         params_data = data["params"]
 
-        logger.info("收到任务: %s, 类型: %s", task_id, msg_type)
+        logger.info(
+            "收到任务: %s, 类型: %s, redelivered: %s", task_id, msg_type, redelivered
+        )
 
+        # 根据任务类型选择处理函数
         if msg_type == "model":
             validate_model_params(params_data)
             params = dict_to_model_params(params_data, task_id)
@@ -739,6 +623,7 @@ def handle_message(
         else:
             raise ValueError(f"未知任务类型: {msg_type}")
 
+        # 启动工作线程执行任务
         worker = threading.Thread(
             target=execute_task,
             args=(
@@ -749,6 +634,7 @@ def handle_message(
                 params,
                 channel,
                 delivery_tag,
+                redelivered,
             ),
             daemon=True,
             name=f"task-{msg_type}-{task_id}",
@@ -764,25 +650,16 @@ def handle_message(
     except ValidationError as e:
         logger.error("参数验证失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
-        _ack_in_consumer_thread(
-            channel,
-            delivery_tag,
-            task_id,
-            msg_type or "unknown",
-            "sync_validation_error",
-        )
+        channel.basic_ack(delivery_tag=delivery_tag)
 
     except Exception as e:
         logger.exception("任务执行失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
-        _ack_in_consumer_thread(
-            channel, delivery_tag, task_id, msg_type or "unknown", "sync_exception"
-        )
+        channel.basic_ack(delivery_tag=delivery_tag)
 
 
 def run_service(config: dict) -> None:
-    """
-    启动 RabbitMQ 服务
+    """启动 RabbitMQ 服务
 
     Parameters
     ----------
@@ -836,12 +713,14 @@ def run_service(config: dict) -> None:
 
 def main() -> None:
     """主入口函数"""
-    # 不同的worker使用不同的日志目录，防止多进程问题
+    # 不同的 worker 使用不同的日志目录，防止多进程问题
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
     log_dir = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "log", f"worker_{timestamp}"
     )
     setup_logging(log_dir)
+    global logger
+    logger = logging.getLogger("neuracle.main")  # 使用固定名称，不要用 __name__
     load_env()
     config = get_rabbitmq_config()
     logger.info("RabbitMQ 配置: %s", mask_rabbitmq_config(config))

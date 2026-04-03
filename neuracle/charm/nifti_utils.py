@@ -1,5 +1,13 @@
 """
 NIfTI 图像处理工具函数
+
+本模块提供 CHARM 分割流程中所需的 NIfTI 图像处理辅助函数，包括：
+    - qform/sform 编码检查与修正
+    - CHARM 配置文件的读取
+    - Atlas 路径和参数的设置
+
+用法：
+    from neuracle.charm.nifti_utils import _check_q_and_s_form, _read_settings
 """
 
 import logging
@@ -40,12 +48,14 @@ def _check_q_and_s_form(
         修正后的图像
     """
     if not scan.get_qform(coded=True)[1] > 0 and force_sform is False:
+        logger.error("qform_code 为 0，请检查输入图像的头部信息: %s", scan)
         raise ValueError(
             "The qform_code is 0. Please check the header of the input scan. "
             "You can use the sform instead by using --forcesform option."
         )
     if not np.allclose(scan.get_qform(), scan.get_sform(), rtol=1e-5, atol=1e-6):
         if not (force_qform or force_sform):
+            logger.error("qform 和 sform 矩阵不匹配")
             raise ValueError(
                 "The qform and sform matrices do not match. "
                 "Please use --forceqform (preferred) or --forcesform option"
@@ -55,6 +65,7 @@ def _check_q_and_s_form(
             scan.set_sform(qmat, code=qcode)
         elif force_sform:
             if not scan.get_sform(coded=True)[1] > 0:
+                logger.error("sform_code 为 0 但被强制使用")
                 raise ValueError(
                     "The sform_code is 0, but you are forcing it. "
                     "Please fix the sform_code or use the qform instead."
@@ -127,6 +138,7 @@ def _setup_atlas(
         settings_dir = os.path.dirname(use_settings)
         gmm_parameters = os.path.join(settings_dir, custom_gmm_parameters)
         if not os.path.exists(gmm_parameters):
+            logger.error("找不到 GMM 参数文件: %s", gmm_parameters)
             raise FileNotFoundError(
                 f"Could not find gmm parameter file: {gmm_parameters}"
             )

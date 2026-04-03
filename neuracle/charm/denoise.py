@@ -33,14 +33,21 @@ def denoise_inputs(subject_dir: str) -> None:
     """
     对输入图像进行降噪
 
+    使用 SANLM (Statistically Adaptive Non-Local Means) 滤波对输入图像进行降噪。
+    降噪后的图像有利于后续的分割步骤。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
 
     Returns
     -------
     None
+
+    See Also
+    --------
+    _denoise_if_needed : 条件降噪辅助函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     settings = _read_settings()

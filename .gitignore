@@ -163,3 +163,4 @@ neuracle/log
 neuracle/atlas/manifests/
 neuracle/atlas/standardized/
 neuracle/atlas/validation/
+*.log.*

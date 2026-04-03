@@ -21,6 +21,8 @@ import os
 from logging.handlers import RotatingFileHandler
 from typing import Final, Optional
 
+from simnibs.utils.simnibs_logger import Utf8StreamHandler
+
 # 日志文件配置
 _MAX_BYTES: Final[int] = 1 * 1024 * 1024  # 1MB
 _BACKUP_COUNT: Final[int] = 20
@@ -67,15 +69,42 @@ def _create_console_handler() -> logging.StreamHandler:
 
     原理：
         使用 StreamHandler 输出到标准错误流（stderr），支持彩色输出（在某些终端中）。
+        使用 Utf8StreamHandler 避免 Windows GBK 编码问题。
 
     Returns:
         logging.StreamHandler: 配置好的控制台处理器
     """
-    console_handler = logging.StreamHandler()
+    console_handler = Utf8StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(logging.Formatter(_LOG_FORMAT, _DATE_FORMAT))
-    console_handler.stream.reconfigure(encoding="utf-8")  # type: ignore
     return console_handler
+
+
+def _configure_logger(
+    logger_name: str, log_dir: str, console_level: int = logging.INFO
+) -> logging.Logger:
+    """配置指定名称的 logger
+
+    Args:
+        logger_name: logger 名称
+        log_dir: 日志目录
+        console_level: 控制台日志级别
+    Returns:
+        配置好的 logger
+    """
+    logger = logging.getLogger(logger_name)
+    # 移除已有的 handlers（避免重复配置）
+    for h in logger.handlers[:]:
+        logger.removeHandler(h)
+    logger.setLevel(logging.DEBUG)
+    # 添加控制台处理器（INFO 级别）
+    logger.addHandler(_create_console_handler())
+    # 添加各级别文件处理器
+    logger.addHandler(_create_level_handler(logging.DEBUG, "debug.log", log_dir))
+    logger.addHandler(_create_level_handler(logging.INFO, "info.log", log_dir))
+    logger.addHandler(_create_level_handler(logging.WARNING, "warning.log", log_dir))
+    logger.addHandler(_create_level_handler(logging.ERROR, "error.log", log_dir))
+    return logger
 
 
 def setup_logging(log_dir: Optional[str] = None) -> None:
@@ -83,8 +112,8 @@ def setup_logging(log_dir: Optional[str] = None) -> None:
     配置 neuracle 日志系统
 
     原理：
-        配置 'neuracle' logger 的处理器。由于 logging 模块的单例机制，
-        所有以 'neuracle' 开头的子 logger 都会继承此配置，不会创建重复的处理器。
+        配置 'neuracle' 和 'simnibs' logger 的处理器。由于 logging 模块的单例机制，
+        所有以 'neuracle' 或 'simnibs' 开头的子 logger 都会继承此配置，不会创建重复的处理器。
 
         支持同时输出到：
         - 控制台（INFO 级别及以上）
@@ -111,13 +140,7 @@ def setup_logging(log_dir: Optional[str] = None) -> None:
     # 确保日志目录存在
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    logger = logging.getLogger("neuracle")
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-    # 添加控制台处理器（INFO 级别）
-    logger.addHandler(_create_console_handler())
-    # 添加各级别文件处理器
-    logger.addHandler(_create_level_handler(logging.DEBUG, "debug.log", log_dir))
-    logger.addHandler(_create_level_handler(logging.INFO, "info.log", log_dir))
-    logger.addHandler(_create_level_handler(logging.WARNING, "warning.log", log_dir))
-    logger.addHandler(_create_level_handler(logging.ERROR, "error.log", log_dir))
+    # 配置 neuracle logger
+    _configure_logger("neuracle", log_dir)
+    # 配置 simnibs logger（使其也输出到 worker 日志目录）
+    _configure_logger("simnibs", log_dir)

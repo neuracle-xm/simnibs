@@ -72,9 +72,11 @@ def main():
 
     # 3. 配置电极对和 ROI
     print("[3/5] 配置电极对和 ROI...")
+    mesh_file_path = os.path.join(subject_dir, "model.msh")
     setup_electrodes_and_roi(
         opt=opt,
         goal="mean",
+        mesh_file_path=mesh_file_path,
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
         electrode_radius=[10],
@@ -96,7 +98,7 @@ def main():
     msh_path = os.path.join(
         output_folder,
         "mapped_electrodes_simulation",
-        "model_tes_mapped_opt_surface_mesh.msh",
+        "model_tes_mapped_opt_head_mesh.msh",
     )
     ti_nifti_path = export_ti_to_nifti(
         msh_path=msh_path,

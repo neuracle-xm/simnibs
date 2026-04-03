@@ -23,28 +23,43 @@ TI (Temporal Interference) 优化模块基于 SimNIBS 的 TesFlexOptimization �
 ## 使用方法
 
 ```python
-from neuracle.ti_optimize import run_ti_optimization
-
-# Mean 优化
-run_ti_optimization(
-    subject_dir="path/to/m2m_subid",
-    output_dir="path/to/output",
-    goal="mean",
-    roi_center=[-41.0, -13.0, 66.0],
-    roi_radius=20.0,
-    n_workers=24,
+from neuracle.ti_optimize import (
+    init_optimization,
+    setup_goal,
+    setup_electrodes_and_roi,
+    run_optimization,
 )
 
-# Focality 优化
-run_ti_optimization(
-    subject_dir="path/to/m2m_subid",
-    output_dir="path/to/output",
+# 1. 初始化优化结构
+opt = init_optimization(subject_dir, output_dir)
+
+# 2. 配置目标函数
+setup_goal(opt, goal="focality", focality_threshold=[0.1, 0.2])
+
+# 3. 配置电极和 ROI
+setup_electrodes_and_roi(
+    opt,
     goal="focality",
     roi_center=[-41.0, -13.0, 66.0],
     roi_radius=20.0,
-    non_roi_center=[-41.0, -13.0, 66.0],
-    non_roi_radius=25.0,
-    focality_threshold=[0.1, 0.2],
+    electrode_pair1_center=[[0, 0]],
+    electrode_pair2_center=[[0, 0]],
+    electrode_radius=[10],
+)
+
+# 4. 运行优化
+output_dir = run_optimization(opt, n_workers=24)
+```
+
+## 导出 API
+
+```python
+from neuracle.ti_optimize import (
+    init_optimization,       # 初始化优化结构
+    setup_goal,             # 配置目标函数
+    setup_electrodes_and_roi, # 配置电极和 ROI
+    run_optimization,        # 运行优化
+    get_electrode_mapping,   # 获取电极映射结果
 )
 ```
 

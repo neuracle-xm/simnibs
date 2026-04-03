@@ -35,12 +35,15 @@ def prepare_t2(
     """
     准备 T2 图像
 
+    将 T2 加权图像配准到 T1 空间，或仅进行格式转换和 qform/sform 检查。
+    如果指定 register_t2=True，执行 T2-to-T1 刚性配准。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
     t2 : str
-        Path to input T2 NIfTI file
+        输入 T2 NIfTI 文件路径
     register_t2 : bool, optional
         是否执行 T2-to-T1 配准 (default: False)
     force_qform : bool, optional
@@ -51,6 +54,16 @@ def prepare_t2(
     Returns
     -------
     None
+
+    Raises
+    ------
+    FileNotFoundError
+        当输入 T2 文件不存在时抛出
+
+    See Also
+    --------
+    _check_q_and_s_form : qform/sform 检查函数
+    _registerT1T2 : T1-T2 配准函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     logger.info("正在准备 T2 图像: %s", t2)

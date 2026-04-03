@@ -46,16 +46,25 @@ def create_mesh_step(
     """
     创建四面体网格
 
+    从组织标签图像生成 tetrahedral 头模型网格。
+    包括：加载组织标签图像、裁剪感兴趣区域、CGAL 四面体网格生成、
+    EEG 电极位置变换、输出最终 msh 文件。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
     debug : bool, optional
         是否保存调试文件 (default: False)
 
     Returns
     -------
     None
+
+    See Also
+    --------
+    create_mesh : CGAL 网格生成核心函数
+    warp_coordinates : 坐标变换函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     output_msh_path = os.path.join(subject_dir, "model.msh")

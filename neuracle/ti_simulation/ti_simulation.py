@@ -312,9 +312,10 @@ def _setup_electrode_pair(
     session : sim_struct.SESSION
         SimNIBS 会话对象
     electrode_pair : list
-        电极对 [elec1_name, elec2_name]
+        电极列表，支持多电极配置 [elec1_name, elec2_name, ...]
     currents : list
-        电流配置 [current1, current2]
+        电流配置，长度应与 electrode_pair 一致
+        同一通道的多个电极电流会合并
     electrode_shape : str
         电极形状
     electrode_dimensions : list
@@ -328,20 +329,16 @@ def _setup_electrode_pair(
         配置好的 TDCS 列表对象
     """
     tdcs = session.add_tdcslist()
+
+    # 添加所有电极，channelnr 从 1 开始连续分配
+    for i, elec_name in enumerate(electrode_pair):
+        electrode = tdcs.add_electrode()
+        electrode.channelnr = i + 1
+        electrode.centre = elec_name
+        electrode.shape = electrode_shape
+        electrode.dimensions = electrode_dimensions
+        electrode.thickness = electrode_thickness
+
     tdcs.currents = currents
-
-    electrode = tdcs.add_electrode()
-    electrode.channelnr = 1
-    electrode.centre = electrode_pair[0]
-    electrode.shape = electrode_shape
-    electrode.dimensions = electrode_dimensions
-    electrode.thickness = electrode_thickness
-
-    electrode = tdcs.add_electrode()
-    electrode.channelnr = 2
-    electrode.centre = electrode_pair[1]
-    electrode.shape = electrode_shape
-    electrode.dimensions = electrode_dimensions
-    electrode.thickness = electrode_thickness
 
     return tdcs

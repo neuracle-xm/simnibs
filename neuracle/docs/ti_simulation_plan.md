@@ -18,7 +18,7 @@
 neuracle/
 ├── ti_simulation/
 │   ├── __init__.py              # 包初始化，导出公共 API
-│   └── ti_simulation.py          # 主函数：run_ti_simulation, run_ti_forward_simulation, calculate_ti_envelope
+│   └── ti_simulation.py          # 主函数：setup_session, setup_electrode_pair1, setup_electrode_pair2, run_tdcs_simulation, calculate_ti
 └── demo/
     └── ti_simulation_demo.py     # 示例代码
 ```
@@ -27,50 +27,68 @@ neuracle/
 
 ## 3. 函数设计
 
-### 3.1 `run_ti_simulation()`
+### 3.1 `setup_session()`
 
-**功能**：执行 TI 正向仿真（完整流程：仿真 + TI 计算）。
+**功能**：配置 SimNIBS 会话参数。
 
 **参数**：
 | 参数名 | 类型 | 说明 |
 |--------|------|------|
 | `subject_dir` | str | Subject 目录（m2m_{subid}） |
 | `output_dir` | str | 仿真输出目录 |
-| `electrode_pair1` | list[str] | 第一个电极对 [elec1_name, elec2_name]，如 ['F5', 'P5'] |
-| `electrode_pair2` | list[str] | 第二个电极对 [elec1_name, elec2_name]，如 ['F6', 'P6'] |
-| `current1` | float | 第一组电极对电流强度，单位 A（default: 0.001，即 1mA） |
-| `current2` | float | 第二组电极对电流强度，单位 A（default: 0.001，即 1mA） |
-| `electrode_shape` | str | 电极形状，可选 'ellipse', 'rect', 'custom'（default: 'ellipse'） |
-| `electrode_dimensions` | list[float] \| None | 电极尺寸 [width, height]，单位 mm（default: [40, 40]） |
-| `electrode_thickness` | float | 电极厚度，单位 mm（default: 2.0） |
-| `n_workers` | int | 并行工作进程数（default: 1） |
+| `msh_file_path` | str, optional | 头模网格文件路径 |
+| `anisotropy_type` | str | 电导率各向异性类型 (default: "scalar") |
+| `cond` | list, optional | 电导率列表 |
+| `fname_tensor` | str, optional | DTI 张量文件路径 |
+| `eeg_cap` | str, optional | EEG 电极帽 CSV 文件路径 |
 
-**返回值**：
-| 返回值 | 类型 | 说明 |
+**返回值**：`sim_struct.SESSION` - 配置好的会话对象
+
+### 3.2 `setup_electrode_pair1()`
+
+**功能**：配置第一个电极对。
+
+**参数**：
+| 参数名 | 类型 | 说明 |
 |--------|------|------|
-| `ti_mesh_path` | str | TI 结果网格文件路径 |
-| `ti_max` | np.ndarray | TI 最大调制振幅数组 |
+| `session` | sim_struct.SESSION | SimNIBS 会话对象 |
+| `electrode_pair1` | list[str] | 第一个电极对 [elec1_name, elec2_name]，如 ['F5', 'P5'] |
+| `current1` | list[float] | 第一组电极对电流列表 [anode_current, cathode_current]，单位 A |
+| `electrode_shape` | str | 电极形状 (default: "ellipse") |
+| `electrode_dimensions` | list[float] | 电极尺寸 [width, height] (default: [40, 40]) |
+| `electrode_thickness` | float | 电极厚度 (default: 2.0) |
+
+**返回值**：`sim_struct.TDCSLIST` - 配置好的 TDCS 列表对象
+
+### 3.3 `setup_electrode_pair2()`
+
+**功能**：配置第二个电极对。
+
+**参数**：与 `setup_electrode_pair1()` 相同，用于配置第二组电极对。
+
+**返回值**：`sim_struct.TDCSLIST` - 配置好的 TDCS 列表对象
+
+### 3.4 `run_tdcs_simulation()`
+
+**功能**：执行两组电极的 TDCS 正向仿真。
+
+**参数**：
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| `session` | sim_struct.SESSION | SimNIBS 会话对象 |
+| `subject_dir` | str | Subject 目录（用于提取 subid） |
+| `output_dir` | str | 仿真输出目录 |
+| `n_workers` | int | 并行工作进程数 (default: 1) |
+
+**返回值**：`tuple[str, str]` - (mesh1_path, mesh2_path) 两组电极仿真结果网格路径
 
 **输出文件**：
 - `{output_dir}/{subid}_TDCS_1_scalar.msh` - 第一对电极仿真结果
 - `{output_dir}/{subid}_TDCS_2_scalar.msh` - 第二对电极仿真结果
-- `{output_dir}/TI.msh` - TI 场可视化结果
 
-### 3.2 `run_ti_forward_simulation()`
+### 3.5 `calculate_ti()`
 
-**功能**：执行两组电极的 TDCS 正向仿真。
-
-**参数**：与 `run_ti_simulation()` 相同，但不需要 `n_workers`（直接传给 `run_simnibs`）。
-
-**返回值**：
-| 返回值 | 类型 | 说明 |
-|--------|------|------|
-| `mesh1_path` | str | 第一组电极仿真结果网格路径 |
-| `mesh2_path` | str | 第二组电极仿真结果网格路径 |
-
-### 3.3 `calculate_ti_envelope()`
-
-**功能**：从两个仿真结果计算 TI 包络。
+**功能**：从两个仿真结果计算 TI 场。
 
 **参数**：
 | 参数名 | 类型 | 说明 |
@@ -79,27 +97,10 @@ neuracle/
 | `mesh2_path` | str | 第二组电极仿真结果网格路径 |
 | `output_dir` | str | 输出目录 |
 
-**返回值**：
-| 返回值 | 类型 | 说明 |
-|--------|------|------|
-| `ti_mesh_path` | str | TI 结果网格文件路径 |
-| `ti_max` | np.ndarray | TI 最大调制振幅数组 |
+**返回值**：`str` - TI 结果网格路径
 
-### 3.4 `_setup_electrode_pair()`
-
-**功能**：配置单个电极对。
-
-**参数**：
-| 参数名 | 类型 | 说明 |
-|--------|------|------|
-| `session` | sim_struct.SESSION | SimNIBS 会话对象 |
-| `electrode_pair` | list[str] | 电极对 [elec1_name, elec2_name] |
-| `currents` | list[float] | 电流配置 [current1, current2] |
-| `electrode_shape` | str | 电极形状 |
-| `electrode_dimensions` | list[float] | 电极尺寸 [width, height] |
-| `electrode_thickness` | float | 电极厚度 |
-
-**返回值**：`sim_struct.TDCSLIST` - 配置好的 TDCS 列表对象
+**输出文件**：
+- `{output_dir}/TI.msh` - TI 场可视化结果
 
 ---
 

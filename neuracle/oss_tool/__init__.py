@@ -18,7 +18,7 @@ from neuracle.utils.env import get_aliyun_config
 logger = logging.getLogger(__name__)
 
 DEFAULT_STS_TOKEN_DURATION_SECONDES = 3600
-DEFAULT_STS_ROLE_SESSION_NAME = "gecko_check"
+DEFAULT_STS_ROLE_SESSION_NAME = "simnibs_session"
 
 
 def get_assume_role(
@@ -37,7 +37,7 @@ def get_assume_role(
     duration_seconds : int, optional
         授权有效时间, by default 3600
     role_session_name : str, optional
-        授权名称，用于阿里云日志统计, by default "gecko_check"
+        授权名称，用于阿里云日志统计, by default ""
     show_progress : bool, optional
         是否打印凭证信息, by default False
 
@@ -155,6 +155,13 @@ def download_folder_from_oss(oss_prefix: str, local_dir: Path) -> None:
         需要下载的 OSS 前缀
     local_dir : Path
         保存的本地路径
+
+    Raises
+    ------
+    oss2.exceptions.OssError
+        OSS 操作失败时抛出
+    Exception
+        其他下载错误时抛出
     """
     bucket = get_bucket()
     target_file_keys = get_file_keys_from_oss(bucket, oss_prefix)
@@ -168,8 +175,10 @@ def download_folder_from_oss(oss_prefix: str, local_dir: Path) -> None:
             logger.info("文件下载成功: %s", file_key)
         except oss2.exceptions.OssError as e:
             logger.error("OSS错误: %s [%s]", e.message, oss_rel_path)
+            raise
         except Exception as e:
             logger.error("下载文件失败: %s [%s]", e, oss_rel_path)
+            raise
 
 
 def download_file_from_oss(
@@ -201,6 +210,7 @@ def upload_file_to_oss(
 ) -> None:
     """上传单个本地文件到 OSS。"""
     if not local_path.is_file():
+        logger.error("本地文件不存在: %s", local_path)
         raise FileNotFoundError(f"本地文件不存在: {local_path}")
     try:
         logger.info("正在上传文件: %s -> %s", local_path, oss_key)
@@ -221,6 +231,7 @@ def upload_folder_to_oss(
 ) -> list[str]:
     """递归上传本地目录到 OSS 前缀。"""
     if not local_dir.is_dir():
+        logger.error("本地目录不存在: %s", local_dir)
         raise FileNotFoundError(f"本地目录不存在: {local_dir}")
 
     uploaded_keys: list[str] = []
@@ -257,8 +268,10 @@ def upload_bytes_to_oss(bucket: oss2.Bucket, data: bytes, oss_key: str) -> None:
         logger.info("文件上传成功: %s", oss_key)
     except oss2.exceptions.OssError as e:
         logger.error("OSS错误: %s [%s]", e.message, oss_key)
+        raise
     except Exception as e:
         logger.error("上传文件失败: %s [%s]", e, oss_key)
+        raise
 
 
 def download_bytes_from_oss(
@@ -296,6 +309,99 @@ def download_bytes_from_oss(
         raise
 
 
+def build_storage_key(path: str) -> str:
+    """将逻辑 OSS key 映射到真实存储 key
+
+    原理：
+        统一处理 OSS 路径格式，去除多余的前导斜杠，保持存储键一致性。
+
+    Parameters
+    ----------
+    path : str
+        原始 OSS 路径
+
+    Returns
+    -------
+    str
+        标准化后的 OSS 存储 key
+    """
+    logical_key = path.strip("/")
+    return logical_key
+
+
+def download_input_file(oss_key: str, local_path: Path) -> Path:
+    """下载单个输入文件并返回本地路径
+
+    原理：
+        将 OSS 中的输入文件下载到本地指定路径，返回本地文件路径。
+
+    Parameters
+    ----------
+    oss_key : str
+        OSS 中的文件路径
+    local_path : Path
+        本地保存路径
+
+    Returns
+    -------
+    Path
+        本地文件路径
+
+    Raises
+    ------
+    FileNotFoundError
+        下载失败时抛出
+    """
+    download_file_from_oss(build_storage_key(oss_key), local_path)
+    return local_path
+
+
+def upload_model_outputs(
+    dir_path: str, subject_dir: Path, normalized: str
+) -> dict[str, str]:
+    """上传模型输出到 OSS
+
+    注意：每次上传前重新获取 STS Token，避免 Token 过期导致上传失败。
+    """
+    bucket = get_bucket()
+    uploaded: dict[str, str] = {}
+    folder_mappings = {
+        f"{normalized}/eeg_positions": subject_dir / "eeg_positions",
+        f"{normalized}/label_prep": subject_dir / "label_prep",
+        f"{normalized}/surfaces": subject_dir / "surfaces",
+        f"{normalized}/toMNI": subject_dir / "toMNI",
+    }
+    for oss_prefix, local_dir in folder_mappings.items():
+        if local_dir.is_dir():
+            logger.info("上传目录到 OSS: %s -> %s", local_dir, oss_prefix)
+            upload_folder_to_oss(bucket, local_dir, build_storage_key(oss_prefix))
+            uploaded[local_dir.name] = f"{oss_prefix}/"
+
+    file_mappings = {
+        f"{normalized}/model.msh": subject_dir / "model.msh",
+        f"{normalized}/model.msh.opt": subject_dir / "model.msh.opt",
+        f"{normalized}/T2_reg.nii.gz": subject_dir / "T2_reg.nii.gz",
+    }
+    for oss_key, local_file in file_mappings.items():
+        if local_file.is_file():
+            logger.info("上传文件到 OSS: %s -> %s", local_file, oss_key)
+            upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
+            uploaded[local_file.name] = oss_key
+
+    return uploaded
+
+
+def upload_task_result(local_file: Path, oss_key: str) -> str:
+    """上传任务结果到 OSS
+
+    注意：每次上传前重新获取 STS Token，避免 Token 过期导致上传失败。
+    """
+    bucket = get_bucket()
+    logger.info("上传任务结果到 OSS: %s -> %s", local_file, oss_key)
+    upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
+    return oss_key
+
+
 __all__ = [
     "get_assume_role",
     "get_bucket",
@@ -306,4 +412,8 @@ __all__ = [
     "upload_folder_to_oss",
     "upload_bytes_to_oss",
     "download_bytes_from_oss",
+    "download_input_file",
+    "build_storage_key",
+    "upload_model_outputs",
+    "upload_task_result",
 ]

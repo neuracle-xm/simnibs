@@ -59,16 +59,24 @@ def create_surfaces(
     """
     创建皮层表面
 
+    从分割结果重建皮层表面（white、pial、central surface）。
+    支持 FreeSurfer 方法和 CAT12 方法两种重建方式。
+
     Parameters
     ----------
     subject_dir : str
-        Subject directory (m2m_{subid})
+        受试者目录路径 (m2m_{subid})
     fs_dir : str or None, optional
         FreeSurfer subject directory (default: None)
 
     Returns
     -------
     None
+
+    See Also
+    --------
+    _create_surfaces_from_freesurfer : FreeSurfer 表面重建
+    _create_surfaces_from_cat12 : CAT12 表面重建
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     settings = _read_settings()
@@ -236,6 +244,9 @@ def _create_surfaces_from_cat12(
     if proc.returncode != 0:
         logger.error("CAT12 子进程执行失败，返回码: %d", proc.returncode)
         logger.error("错误信息: %s", proc.stderr.decode("ASCII", errors="ignore"))
+        raise RuntimeError(
+            f"CAT12 subprocess failed with return code {proc.returncode}"
+        )
     proc.check_returncode()
     elapsed = time.time() - starttime
     logger.info("表面创建总耗时 (HH:MM:SS):")
