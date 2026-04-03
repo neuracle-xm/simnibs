@@ -82,7 +82,9 @@ def find_montage_file(dir_path: str, montage: str) -> str:
         candidate_paths.append(montage)
     else:
         candidate_paths.append(os.path.join(dir_path, "eeg_positions", montage))
-        candidate_paths.append(os.path.join(dir_path, "eeg_positions", f"{montage}.csv"))
+        candidate_paths.append(
+            os.path.join(dir_path, "eeg_positions", f"{montage}.csv")
+        )
     for montage_path in candidate_paths:
         if os.path.exists(montage_path):
             return montage_path

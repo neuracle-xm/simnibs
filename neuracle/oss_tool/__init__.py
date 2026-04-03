@@ -17,7 +17,7 @@ from neuracle.utils.env import get_aliyun_config
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_STS_TOKEN_DURATION_SECONDES = 20 * 60
+DEFAULT_STS_TOKEN_DURATION_SECONDES = 3600
 DEFAULT_STS_ROLE_SESSION_NAME = "gecko_check"
 
 
@@ -35,7 +35,7 @@ def get_assume_role(
     Parameters
     ----------
     duration_seconds : int, optional
-        授权有效时间, by default 20 * 60
+        授权有效时间, by default 3600
     role_session_name : str, optional
         授权名称，用于阿里云日志统计, by default "gecko_check"
     show_progress : bool, optional
@@ -142,23 +142,21 @@ def get_file_keys_from_oss(
     return all_file_keys
 
 
-def download_folder_from_oss(
-    bucket: oss2.Bucket, oss_prefix: str, local_dir: Path
-) -> None:
+def download_folder_from_oss(oss_prefix: str, local_dir: Path) -> None:
     """下载 OSS 中某个前缀下的所有文件到本地
 
     原理：
         根据 OSS 前缀获取所有文件列表，逐一下载并保留原有目录结构。
+        每次下载前重新获取 STS Token，避免 Token 过期。
 
     Parameters
     ----------
-    bucket : oss2.Bucket
-        OSS Bucket 实例
     oss_prefix : str
         需要下载的 OSS 前缀
     local_dir : Path
         保存的本地路径
     """
+    bucket = get_bucket()
     target_file_keys = get_file_keys_from_oss(bucket, oss_prefix)
     for file_key in target_file_keys:
         oss_rel_path = Path(file_key).relative_to(oss_prefix)
@@ -175,11 +173,14 @@ def download_folder_from_oss(
 
 
 def download_file_from_oss(
-    bucket: oss2.Bucket,
     oss_key: str,
     local_path: Path,
 ) -> None:
-    """下载单个 OSS 文件到本地。"""
+    """下载单个 OSS 文件到本地
+
+    注意：每次下载前重新获取 STS Token，避免 Token 过期。
+    """
+    bucket = get_bucket()
     local_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         logger.info("正在下载文件: %s -> %s", oss_key, local_path)

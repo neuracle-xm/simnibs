@@ -91,7 +91,10 @@ class RabbitMQSender:
                 self.channel.queue_declare(
                     queue=self.queue_name,
                     durable=True,
-                    arguments={"x-queue-type": "quorum"},
+                    arguments={
+                        "x-queue-type": "quorum",
+                        "x-consumer-timeout": 86400000,
+                    },
                 )
             logger.info(
                 "发送器成功连接到 RabbitMQ 服务器: host=%s port=%s vhost=%s user=%s queue=%s",

@@ -77,7 +77,7 @@ from neuracle.utils import (
     get_standardized_roi_path,
     load_env,
 )
-from neuracle.utils.env import get_aliyun_config, get_rabbitmq_config
+from neuracle.utils.env import get_rabbitmq_config
 from neuracle.utils.ti_export_utils import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
@@ -208,10 +208,7 @@ def resolve_local_dti_path(dir_path: str, dti_file_path: str | None) -> str | No
 
 def build_storage_key(path: str) -> str:
     """将逻辑 OSS key 映射到真实存储 key。"""
-    bucket_target = get_aliyun_config().get("bucket_target", "").strip("/")
     logical_key = path.strip("/")
-    if bucket_target:
-        return f"{bucket_target}/{logical_key}"
     return logical_key
 
 
@@ -219,7 +216,7 @@ def ensure_data_root() -> None:
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
 
-def ensure_subject_cache(bucket: Any, dir_path: str) -> Path:
+def ensure_subject_cache(dir_path: str) -> Path:
     """确保本地 subject 缓存存在；不存在时从 OSS 按前缀下载。"""
     ensure_data_root()
     normalized = normalize_dir_path(dir_path)
@@ -231,22 +228,24 @@ def ensure_subject_cache(bucket: Any, dir_path: str) -> Path:
     logger.info("未命中本地缓存，开始下载前缀: %s", normalized)
     subject_dir.mkdir(parents=True, exist_ok=True)
     download_folder_from_oss(
-        bucket,
         build_storage_key(normalized),
         subject_dir,
     )
     return subject_dir
 
 
-def download_input_file(bucket: Any, oss_key: str, local_path: Path) -> Path:
+def download_input_file(oss_key: str, local_path: Path) -> Path:
     """下载单个输入文件并返回本地路径。"""
-    download_file_from_oss(bucket, build_storage_key(oss_key), local_path)
+    download_file_from_oss(build_storage_key(oss_key), local_path)
     return local_path
 
 
-def upload_model_outputs(
-    bucket: Any, dir_path: str, subject_dir: Path
-) -> dict[str, str]:
+def upload_model_outputs(dir_path: str, subject_dir: Path) -> dict[str, str]:
+    """上传模型输出到 OSS
+
+    注意：每次上传前重新获取 STS Token，避免 Token 过期导致上传失败。
+    """
+    bucket = get_bucket()
     normalized = normalize_dir_path(dir_path)
     uploaded: dict[str, str] = {}
     folder_mappings = {
@@ -264,6 +263,7 @@ def upload_model_outputs(
     file_mappings = {
         f"{normalized}/model.msh": subject_dir / "model.msh",
         f"{normalized}/model.msh.opt": subject_dir / "model.msh.opt",
+        f"{normalized}/T2_reg.nii.gz": subject_dir / "T2_reg.nii.gz",
     }
     for oss_key, local_file in file_mappings.items():
         if local_file.is_file():
@@ -274,7 +274,12 @@ def upload_model_outputs(
     return uploaded
 
 
-def upload_task_result(bucket: Any, local_file: Path, oss_key: str) -> str:
+def upload_task_result(local_file: Path, oss_key: str) -> str:
+    """上传任务结果到 OSS
+
+    注意：每次上传前重新获取 STS Token，避免 Token 过期导致上传失败。
+    """
+    bucket = get_bucket()
     logger.info("上传任务结果到 OSS: %s -> %s", local_file, oss_key)
     upload_file_to_oss(bucket, local_file, build_storage_key(oss_key))
     return oss_key
@@ -344,21 +349,18 @@ def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -
     ensure_data_root()
     subject_dir.mkdir(parents=True, exist_ok=True)
     t1_local_path = download_input_file(
-        bucket,
         params.T1_file_path,
         subject_dir / Path(params.T1_file_path).name,
     )
     t2_local_path = None
     if params.T2_file_path:
         t2_local_path = download_input_file(
-            bucket,
             params.T2_file_path,
             subject_dir / Path(params.T2_file_path).name,
         )
     # 头模生成本身不需要DTI文件，但是要先下载下来，仿真时要用
     if params.DTI_file_path:
         download_input_file(
-            bucket,
             params.DTI_file_path,
             subject_dir / Path(params.DTI_file_path).name,
         )
@@ -396,7 +398,7 @@ def handle_model_task(message_queue: Queue, task_id: str, params: ModelParams) -
 
     # 100% - mesh
     create_mesh(str(subject_dir))
-    upload_model_outputs(bucket, params.dir_path, subject_dir)
+    upload_model_outputs(params.dir_path, subject_dir)
     msh_path = f"{normalize_dir_path(params.dir_path)}/model.msh"
     result = {"msh_file_path": msh_path}
     logger.debug("msh_file_path: %s", msh_path)
@@ -418,8 +420,7 @@ def handle_forward_task(
     params : ForwardParams
         正向仿真参数
     """
-    bucket = get_bucket()
-    subject_dir = ensure_subject_cache(bucket, params.dir_path)
+    subject_dir = ensure_subject_cache(params.dir_path)
     output_dir = get_task_output_dir(params.dir_path, "TI_simulation", task_id)
     anisotropy_type = "vn" if params.anisotropy else "scalar"
     reset_task_output_dir(str(output_dir))
@@ -493,7 +494,6 @@ def handle_forward_task(
     send_progress(message_queue, task_id, "forward", 95)
 
     ti_file_key = upload_task_result(
-        bucket,
         Path(ti_nifti_path),
         f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}/TI_max_TI.nii.gz",
     )
@@ -522,8 +522,7 @@ def handle_inverse_task(
     params : InverseParams
         逆向仿真参数
     """
-    bucket = get_bucket()
-    subject_dir = ensure_subject_cache(bucket, params.dir_path)
+    subject_dir = ensure_subject_cache(params.dir_path)
     output_dir = get_task_output_dir(params.dir_path, "TI_optimization", task_id)
     anisotropy_type = "vn" if params.anisotropy else "scalar"
     reset_task_output_dir(str(output_dir))
@@ -622,7 +621,6 @@ def handle_inverse_task(
     send_progress(message_queue, task_id, "inverse", 95)
 
     ti_file_key = upload_task_result(
-        bucket,
         Path(ti_nifti_path),
         f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}/TI_max_TI.nii.gz",
     )
