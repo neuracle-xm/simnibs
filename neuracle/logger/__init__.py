@@ -112,12 +112,15 @@ def setup_logging(log_dir: Optional[str] = None) -> None:
     配置 neuracle 日志系统
 
     原理：
-        配置 'neuracle' 和 'simnibs' logger 的处理器。由于 logging 模块的单例机制，
-        所有以 'neuracle' 或 'simnibs' 开头的子 logger 都会继承此配置，不会创建重复的处理器。
+        配置 'neuracle' logger 的处理器。由于 logging 模块的单例机制，
+        所有以 'neuracle' 开头的子 logger 都会继承此配置，不会创建重复的处理器。
 
-        支持同时输出到：
-        - 控制台（INFO 级别及以上）
-        - 文件（debug.log, info.log, warning.log, error.log）
+        simnibs 的 logger 在 simnibs_logger.py 中已有配置（仅控制台），
+        此处不再配置，避免多进程文件日志竞争问题。
+
+        日志输出：
+        - neuracle: 控制台（INFO）+ 文件（debug/info/warning/error.log）
+        - simnibs: 仅控制台
 
     Args:
         log_dir: 日志目录路径，默认为 neuracle/log/
@@ -142,5 +145,3 @@ def setup_logging(log_dir: Optional[str] = None) -> None:
         os.makedirs(log_dir)
     # 配置 neuracle logger
     _configure_logger("neuracle", log_dir)
-    # 配置 simnibs logger（使其也输出到 worker 日志目录）
-    _configure_logger("simnibs", log_dir)

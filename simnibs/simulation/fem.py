@@ -1495,44 +1495,27 @@ def tdcs(
                 mesh, cond, ref_electrode, el_surf, el_c, units, solver_options
             )
     else:
-        # 禁用子进程日志文件输出，避免多进程写同一日志文件的文件锁冲突
-        import logging.handlers
-
-        _saved_handlers = []
-        for _logger_name in ["simnibs", "neuracle"]:
-            _l = logging.getLogger(_logger_name)
-            for _h in _l.handlers[:]:
-                if isinstance(
-                    _h, (logging.FileHandler, logging.handlers.RotatingFileHandler)
-                ):
-                    _l.removeHandler(_h)
-                    _saved_handlers.append((_l, _h))
-        try:
-            with multiprocessing.Pool(processes=n_workers) as pool:
-                sims = []
-                for el_surf, el_c in zip(electrode_surface_tags[1:], currents[1:]):
-                    sims.append(
-                        pool.apply_async(
-                            _sim_tdcs_pair,
-                            (
-                                mesh,
-                                cond,
-                                ref_electrode,
-                                el_surf,
-                                el_c,
-                                units,
-                                solver_options,
-                            ),
-                        )
+        with multiprocessing.Pool(processes=n_workers) as pool:
+            sims = []
+            for el_surf, el_c in zip(electrode_surface_tags[1:], currents[1:]):
+                sims.append(
+                    pool.apply_async(
+                        _sim_tdcs_pair,
+                        (
+                            mesh,
+                            cond,
+                            ref_electrode,
+                            el_surf,
+                            el_c,
+                            units,
+                            solver_options,
+                        ),
                     )
-                for s in sims:
-                    total_p += s.get()
-                pool.close()
-                pool.join()
-        finally:
-            # 恢复文件 handlers
-            for _l, _h in _saved_handlers:
-                _l.addHandler(_h)
+                )
+            for s in sims:
+                total_p += s.get()
+            pool.close()
+            pool.join()
 
     return mesh_io.NodeData(total_p, "v", mesh=mesh)
 
