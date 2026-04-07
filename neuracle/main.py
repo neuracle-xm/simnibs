@@ -148,6 +148,10 @@ def handle_model_task(
     redelivered : bool
         消息是否为 RabbitMQ 重发（支持进度恢复：当 redelivered=True 时从进度文件恢复）
     """
+    logger.info(
+        "收到 Model 任务: task_id=%s, dir_path=%s, T1_file=%s, T2_file=%s, DTI_file=%s",
+        task_id, params.dir_path, params.T1_file_path, params.T2_file_path, params.DTI_file_path
+    )
     # 获取 subject 目录
     subject_dir = get_subject_dir(params.dir_path)
     ensure_data_root()
@@ -254,6 +258,12 @@ def handle_forward_task(
     redelivered : bool
         消息是否为 RabbitMQ 重发（当前未使用，Forward 任务暂不支持进度恢复）
     """
+    logger.info(
+        "收到 Forward 任务: task_id=%s, dir_path=%s, montage=%s, anisotropy=%s, "
+        "electrode_A=%s, electrode_B=%s, conductivity=%s",
+        task_id, params.dir_path, params.montage, params.anisotropy,
+        params.electrode_A, params.electrode_B, params.conductivity_config
+    )
     # 发送任务开始进度
     send_progress(message_queue, task_id, "forward", ForwardProgress.START)
 
@@ -376,6 +386,15 @@ def handle_inverse_task(
     redelivered : bool
         消息是否为 RabbitMQ 重发（当前未使用，Inverse 任务暂不支持进度恢复）
     """
+    roi_info = f"atlas={params.roi_param.atlas_param}" if params.roi_param.atlas_param \
+        else f"mni={params.roi_param.mni_param}" if params.roi_param.mni_param else "None"
+    logger.info(
+        "收到 Inverse 任务: task_id=%s, dir_path=%s, montage=%s, anisotropy=%s, "
+        "current_A=%s, current_B=%s, roi_type=%s, roi=%s, target_threshold=%s, conductivity=%s",
+        task_id, params.dir_path, params.montage, params.anisotropy,
+        params.current_A, params.current_B, params.roi_type, roi_info,
+        params.target_threshold, params.conductivity_config
+    )
     # 发送任务开始进度
     send_progress(message_queue, task_id, "inverse", InverseProgress.START)
 
