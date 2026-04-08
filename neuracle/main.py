@@ -194,7 +194,11 @@ def handle_model_task(
 
     # 步骤1: prepare_t1
     if current_progress < ModelProgress.PREPARE_T1_DONE:
-        prepare_t1(str(subject_dir), str(t1_local_path))
+        if t1_local_path and t1_local_path.exists():
+            try:
+                prepare_t1(str(subject_dir), str(t1_local_path))
+            except Exception:
+                prepare_t1(str(subject_dir), str(t1_local_path), force_qform=True)
         save_progress(progress_file, ModelProgress.PREPARE_T1_DONE)
         send_progress(message_queue, task_id, "model", ModelProgress.PREPARE_T1_DONE)
 
