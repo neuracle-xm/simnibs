@@ -16,8 +16,22 @@ from neuracle.rabbitmq.schemas import (
     ModelParams,
     ROIParam,
 )
+from neuracle.rabbitmq.task_handlers import get_subject_dir
 
 logger = logging.getLogger(__name__)
+
+
+def get_t1_and_dti_path(data: dict):
+    subject_dir = get_subject_dir(data["dir_path"])
+    # 内置模型用固定的路径
+    if data["dir_path"] == "m2m_ernie":
+        T1_file_path = str(subject_dir / "T1.nii.gz")
+        DTI_file_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
+    else:
+        T1_file_path = data["T1_file_path"]
+        DTI_file_path = data.get("DTI_file_path")
+
+    return T1_file_path, DTI_file_path
 
 
 def dict_to_model_params(data: dict, task_id: str) -> ModelParams:
@@ -70,16 +84,19 @@ def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
         ElectrodeWithCurrent(name=e["name"], current_mA=e["current_mA"])
         for e in data["electrode_B"]
     ]
+
+    T1_file_path, DTI_file_path = get_t1_and_dti_path(data)
+
     return ForwardParams(
         id=task_id,
         dir_path=data["dir_path"],
-        T1_file_path=data["T1_file_path"],
+        T1_file_path=T1_file_path,
         montage=data["montage"],
         electrode_A=electrode_A,
         electrode_B=electrode_B,
         conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
-        DTI_file_path=data.get("DTI_file_path"),
+        DTI_file_path=DTI_file_path,
     )
 
 
@@ -114,10 +131,12 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
             area=roi_param_data["atlas_param"]["area"],
         )
 
+    T1_file_path, DTI_file_path = get_t1_and_dti_path(data)
+
     return InverseParams(
         id=task_id,
         dir_path=data["dir_path"],
-        T1_file_path=data["T1_file_path"],
+        T1_file_path=T1_file_path,
         montage=data["montage"],
         current_A=data["current_A"],
         current_B=data["current_B"],
@@ -126,7 +145,7 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
         target_threshold=data["target_threshold"],
         conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
-        DTI_file_path=data.get("DTI_file_path"),
+        DTI_file_path=DTI_file_path,
     )
 
 

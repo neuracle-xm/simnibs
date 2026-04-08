@@ -150,7 +150,11 @@ def handle_model_task(
     """
     logger.info(
         "收到 Model 任务: task_id=%s, dir_path=%s, T1_file=%s, T2_file=%s, DTI_file=%s",
-        task_id, params.dir_path, params.T1_file_path, params.T2_file_path, params.DTI_file_path
+        task_id,
+        params.dir_path,
+        params.T1_file_path,
+        params.T2_file_path,
+        params.DTI_file_path,
     )
     # 获取 subject 目录
     subject_dir = get_subject_dir(params.dir_path)
@@ -261,8 +265,13 @@ def handle_forward_task(
     logger.info(
         "收到 Forward 任务: task_id=%s, dir_path=%s, montage=%s, anisotropy=%s, "
         "electrode_A=%s, electrode_B=%s, conductivity=%s",
-        task_id, params.dir_path, params.montage, params.anisotropy,
-        params.electrode_A, params.electrode_B, params.conductivity_config
+        task_id,
+        params.dir_path,
+        params.montage,
+        params.anisotropy,
+        params.electrode_A,
+        params.electrode_B,
+        params.conductivity_config,
     )
     # 发送任务开始进度
     send_progress(message_queue, task_id, "forward", ForwardProgress.START)
@@ -286,10 +295,6 @@ def handle_forward_task(
     # 准备参数
     eeg_cap = find_montage_file(str(subject_dir), params.montage)
     mesh_path = get_model_mesh_path(params.dir_path)
-    dti_path = None
-    if params.dir_path == "m2m_ernie":
-        dti_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
-
     electrode_A_names = [e.name for e in params.electrode_A]
     # mA转化为A
     electrode_A_currents = [e.current_mA / 1000 for e in params.electrode_A]
@@ -303,7 +308,7 @@ def handle_forward_task(
         output_dir=str(output_dir),
         anisotropy_type=anisotropy_type,
         cond=cond_dict_to_list(params.conductivity_config),
-        fname_tensor=dti_path,
+        fname_tensor=params.DTI_file_path,
         eeg_cap=eeg_cap,
     )
     send_progress(message_queue, task_id, "forward", ForwardProgress.SESSION_SETUP)
@@ -386,14 +391,26 @@ def handle_inverse_task(
     redelivered : bool
         消息是否为 RabbitMQ 重发（当前未使用，Inverse 任务暂不支持进度恢复）
     """
-    roi_info = f"atlas={params.roi_param.atlas_param}" if params.roi_param.atlas_param \
-        else f"mni={params.roi_param.mni_param}" if params.roi_param.mni_param else "None"
+    roi_info = (
+        f"atlas={params.roi_param.atlas_param}"
+        if params.roi_param.atlas_param
+        else f"mni={params.roi_param.mni_param}"
+        if params.roi_param.mni_param
+        else "None"
+    )
     logger.info(
         "收到 Inverse 任务: task_id=%s, dir_path=%s, montage=%s, anisotropy=%s, "
         "current_A=%s, current_B=%s, roi_type=%s, roi=%s, target_threshold=%s, conductivity=%s",
-        task_id, params.dir_path, params.montage, params.anisotropy,
-        params.current_A, params.current_B, params.roi_type, roi_info,
-        params.target_threshold, params.conductivity_config
+        task_id,
+        params.dir_path,
+        params.montage,
+        params.anisotropy,
+        params.current_A,
+        params.current_B,
+        params.roi_type,
+        roi_info,
+        params.target_threshold,
+        params.conductivity_config,
     )
     # 发送任务开始进度
     send_progress(message_queue, task_id, "inverse", InverseProgress.START)
@@ -417,10 +434,6 @@ def handle_inverse_task(
     # 准备参数
     net_electrode_file = find_montage_file(str(subject_dir), params.montage)
     mesh_path = get_model_mesh_path(params.dir_path)
-    dti_path = None
-    if params.dir_path == "m2m_ernie":
-        dti_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
-
     roi_center = None
     roi_radius = None
     roi_center_space = "subject"
@@ -453,7 +466,7 @@ def handle_inverse_task(
         output_dir=str(output_dir),
         anisotropy_type=anisotropy_type,
         cond=cond_dict_to_list(params.conductivity_config),
-        fname_tensor=dti_path,
+        fname_tensor=params.DTI_file_path,
     )
     send_progress(message_queue, task_id, "inverse", InverseProgress.OPTIMIZATION_INIT)
 
