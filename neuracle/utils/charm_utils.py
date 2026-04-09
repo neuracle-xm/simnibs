@@ -7,7 +7,7 @@ CHARM 流程辅助工具函数
     - Atlas 路径和参数的设置
 
 用法：
-    from neuracle.utils.charm_utils import _check_q_and_s_form, _read_settings
+    from neuracle.utils.charm_utils import check_q_and_s_form, read_settings
 """
 
 import logging
@@ -16,14 +16,13 @@ import os
 import nibabel as nib
 import numpy as np
 
-from neuracle.utils.constants import MAX_THREADS
 from simnibs import SIMNIBSDIR
 from simnibs.utils import file_finder, settings_reader
 
 logger = logging.getLogger(__name__)
 
 
-def _check_q_and_s_form(
+def check_q_and_s_form(
     scan: nib.Nifti1Image,
     force_qform: bool = False,
     force_sform: bool = False,
@@ -74,7 +73,7 @@ def _check_q_and_s_form(
     return scan
 
 
-def _read_settings() -> dict:
+def read_settings() -> dict:
     """
     读取 CHARM 设置文件。
 
@@ -87,7 +86,7 @@ def _read_settings() -> dict:
     return settings_reader.read_ini(src_settings)
 
 
-def _setup_atlas(
+def setup_atlas(
     samseg_settings: dict,
     t2_reg: str,
     use_settings: str | None,
