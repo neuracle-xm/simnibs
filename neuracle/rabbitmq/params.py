@@ -1,13 +1,23 @@
 """
-参数转换工具模块
+参数转换模块
 
 将字典转换为对应的 dataclass 参数类型，用于 RabbitMQ 消息解析和参数校验。
+
+该模块是消息处理的中间层：
+1. validator.py 验证字典格式正确（字段存在、类型正确、值范围合法）
+2. params.py 将验证通过的字典转换为强类型的 dataclass
+3. scheduler.py 使用这些 dataclass 进行任务处理
+
+这样做的好处：
+- validator 不关心业务逻辑，只关心数据格式
+- params 转换后的 dataclass 有类型提示，方便 IDE 和静态检查
+- scheduler 直接使用 dataclass，不用处理原始字典
 """
 
 import logging
 from pathlib import Path
 
-from neuracle.utils.schemas import (
+from neuracle.rabbitmq.schemas import (
     AckTestParams,
     AtlasParam,
     ElectrodeWithCurrent,
@@ -17,81 +27,29 @@ from neuracle.utils.schemas import (
     ModelParams,
     ROIParam,
 )
+from neuracle.storage.paths import DATA_ROOT
 
 logger = logging.getLogger(__name__)
 
-# 项目数据根目录
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_ROOT = PROJECT_ROOT / "data"
 
-
-def normalize_dir_path(dir_path: str) -> str:
-    """
-    规范化相对目录路径，禁止绝对路径和父级跳转。
-
-    Parameters
-    ----------
-    dir_path : str
-        原始目录路径
-
-    Returns
-    -------
-    str
-        规范化后的目录路径
-
-    Raises
-    ------
-    ValueError
-        当路径为绝对路径或包含父级跳转 (..) 时抛出
-    """
+def _get_subject_dir(dir_path: str) -> Path:
+    """获取 subject 目录的完整路径。"""
     normalized = dir_path.replace("\\", "/").strip().strip("/")
     path_obj = Path(normalized)
     if path_obj.is_absolute() or ".." in path_obj.parts:
-        logger.error("非法路径访问: %s", dir_path)
         raise ValueError(f"非法 dir_path: {dir_path}")
-    return normalized
+    return DATA_ROOT / normalized
 
 
-def get_subject_dir(dir_path: str) -> Path:
-    """
-    获取 subject 目录的完整路径。
-
-    Parameters
-    ----------
-    dir_path : str
-        subject 目录名（如 m2m_ernie）
-
-    Returns
-    -------
-    Path
-        完整的 subject 目录路径
-    """
-    return DATA_ROOT / Path(normalize_dir_path(dir_path))
-
-
-def get_t1_and_dti_path(data: dict) -> tuple[str, str | None]:
-    """
-    获取 T1 和 DTI 文件路径。
-
-    Parameters
-    ----------
-    data : dict
-        包含 dir_path 的字典
-
-    Returns
-    -------
-    tuple[str, str | None]
-        (T1_file_path, DTI_file_path)
-    """
-    subject_dir = get_subject_dir(data["dir_path"])
-    # 内置模型用固定的路径
+def _get_t1_and_dti_path(data: dict) -> tuple[str, str | None]:
+    """获取 T1 和 DTI 文件路径。"""
+    subject_dir = _get_subject_dir(data["dir_path"])
     if data["dir_path"] == "m2m_ernie":
         t1_file_path = str(subject_dir / "T1.nii.gz")
         dti_file_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
     else:
         t1_file_path = data["T1_file_path"]
         dti_file_path = data.get("DTI_file_path")
-
     return t1_file_path, dti_file_path
 
 
@@ -146,7 +104,7 @@ def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
         for e in data["electrode_B"]
     ]
 
-    t1_file_path, dti_file_path = get_t1_and_dti_path(data)
+    t1_file_path, dti_file_path = _get_t1_and_dti_path(data)
 
     return ForwardParams(
         id=task_id,
@@ -192,7 +150,7 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
             area=roi_param_data["atlas_param"]["area"],
         )
 
-    t1_file_path, dti_file_path = get_t1_and_dti_path(data)
+    t1_file_path, dti_file_path = _get_t1_and_dti_path(data)
 
     return InverseParams(
         id=task_id,

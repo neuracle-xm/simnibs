@@ -7,7 +7,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 from dotenv import load_dotenv
 
@@ -89,3 +89,23 @@ def get_aliyun_config() -> dict:
         "bucket_name": os.getenv("ALI_BUCKET_NAME", ""),
         "bucket_target": os.getenv("ALI_BUCKET_TARGET", ""),
     }
+
+
+def mask_rabbitmq_config(config: dict[str, Any]) -> dict[str, Any]:
+    """
+    隐藏 RabbitMQ 配置中的敏感信息，避免密码写入日志
+
+    Parameters
+    ----------
+    config : dict[str, Any]
+        原始配置字典
+
+    Returns
+    -------
+    dict[str, Any]
+        密码被掩码处理后的配置字典
+    """
+    masked = dict(config)
+    if masked.get("password"):
+        masked["password"] = "***"
+    return masked
