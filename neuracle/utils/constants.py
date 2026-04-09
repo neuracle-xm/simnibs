@@ -61,6 +61,3 @@ BUILT_IN_DTI_FILE_PATH = "DTI_coregT1_tensor.nii.gz"
 
 # 调试模式：True 时跳过 output_dir 删除
 DEBUG = False
-
-# CHARM 最大线程数常量
-MAX_THREADS = 8
