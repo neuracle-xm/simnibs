@@ -12,8 +12,6 @@ TI Max Optimization Demo - 最小化 ROI 内最大电场
 - ROI 半径: 20mm
 """
 
-import os
-
 from neuracle.logger import setup_logging
 from neuracle.ti_optimization import (
     init_optimization,
@@ -21,29 +19,19 @@ from neuracle.ti_optimization import (
     setup_electrodes_and_roi,
     setup_goal,
 )
+from neuracle.utils.constants import DATA_ROOT, NEURACLE_DIR
 from neuracle.utils.ti_export import export_ti_to_nifti
-
-# 获取当前脚本所在目录的绝对路径
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# ti_optimization 目录
-TI_OPT_DIR = os.path.dirname(SCRIPT_DIR)
-# neuracle 目录
-NEURACLE_DIR = os.path.dirname(TI_OPT_DIR)
-# 项目根目录 (simnibs)
-PROJECT_ROOT = os.path.dirname(NEURACLE_DIR)
-# 数据目录
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(os.path.join(NEURACLE_DIR, "log"))
+    setup_logging(str(NEURACLE_DIR / "log"))
 
     # 设置路径
-    subject_dir = os.path.join(DATA_DIR, "m2m_ernie")
-    output_dir = os.path.join(DATA_DIR, "TI_max_optimize_ernie")
-    mesh_file_path = os.path.join(subject_dir, "model.msh")
+    subject_dir = DATA_ROOT / "m2m_ernie"
+    output_dir = DATA_ROOT / "TI_max_optimize_ernie"
+    mesh_file_path = subject_dir / "model.msh"
 
     print("=" * 60)
     print("TI Max Optimization: 最小化 ROI 内最大电场")
@@ -54,9 +42,9 @@ def main():
     # 1. 初始化优化结构
     print("\n[1/5] 初始化优化结构...")
     opt = init_optimization(
-        subject_dir=subject_dir,
-        output_dir=output_dir,
-        msh_file_path=mesh_file_path,
+        subject_dir=str(subject_dir),
+        output_dir=str(output_dir),
+        msh_file_path=str(mesh_file_path),
     )
 
     # 2. 配置目标函数
@@ -90,15 +78,15 @@ def main():
 
     # 5. 导出 NIfTI 格式
     print("[5/5] 导出 NIfTI 格式...")
-    msh_path = os.path.join(
-        output_folder,
-        "mapped_electrodes_simulation",
-        "model_tes_mapped_opt_head_mesh.msh",
+    msh_path = (
+        output_folder
+        / "mapped_electrodes_simulation"
+        / "model_tes_mapped_opt_head_mesh.msh"
     )
     ti_nifti_path = export_ti_to_nifti(
-        msh_path=msh_path,
-        output_dir=output_dir,
-        reference=os.path.join(subject_dir, "T1.nii.gz"),
+        msh_path=str(msh_path),
+        output_dir=str(output_dir),
+        reference=str(subject_dir / "T1.nii.gz"),
         field_name="max_TI",
     )
 

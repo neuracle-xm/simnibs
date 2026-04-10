@@ -16,11 +16,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+from neuracle.utils.constants import NEURACLE_DIR, PROJECT_ROOT
+
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-NEURACLE_ROOT = REPO_ROOT / "neuracle"
-ATLAS_ROOT = NEURACLE_ROOT / "atlas"
+
+ATLAS_ROOT = NEURACLE_DIR / "atlas"
 ATLAS_SOURCE_DIR = ATLAS_ROOT / "atlas"
 ATLAS_STANDARDIZED_DIR = ATLAS_ROOT / "standardized"
 ATLAS_MANIFESTS_DIR = ATLAS_ROOT / "manifests"
@@ -29,7 +30,7 @@ ATLAS_SCRIPTS_DIR = ATLAS_ROOT / "scripts"
 ATLAS_COLOR_TABLE_DIR = ATLAS_SOURCE_DIR / "颜色查找表"
 ATLAS_REGISTRY_PATH = ATLAS_MANIFESTS_DIR / "atlas_registry.json"
 SIMNIBS_MNI_TEMPLATE = (
-    REPO_ROOT / "simnibs" / "resources" / "templates" / "MNI152_T1_1mm.nii.gz"
+    PROJECT_ROOT / "simnibs" / "resources" / "templates" / "MNI152_T1_1mm.nii.gz"
 )
 
 
@@ -93,7 +94,7 @@ def _to_repo_relative(path: Path) -> str:
     -----
     registry 内统一保存仓库相对路径，避免把本机绝对路径写死进去。
     """
-    return path.resolve().relative_to(REPO_ROOT).as_posix()
+    return path.resolve().relative_to(PROJECT_ROOT).as_posix()
 
 
 def _build_area_entries(label_table: Path, roi_dir: Path) -> list[dict[str, Any]]:

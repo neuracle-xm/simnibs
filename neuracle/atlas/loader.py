@@ -13,10 +13,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from neuracle.atlas.registry import (
-    REPO_ROOT,
-    load_atlas_registry,
-)
+from neuracle.atlas.registry import load_atlas_registry
+from neuracle.utils.constants import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +41,7 @@ def _resolve_repo_path(path_str: str | Path) -> Path:
     path = Path(path_str)
     if path.is_absolute():
         return path
-    return REPO_ROOT / path
+    return PROJECT_ROOT / path
 
 
 def _resolve_area_entry(area: dict[str, Any]) -> dict[str, Any]:

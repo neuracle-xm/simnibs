@@ -2,6 +2,7 @@
 常量定义模块
 
 汇总全局常量，包括：
+- 路径常量
 - 并行计算相关常量
 - ROI 处理相关常量
 - 标准电导率值
@@ -9,6 +10,17 @@
 - EEG Montage 文件名常量
 - OSS 相关常量
 """
+
+from pathlib import Path
+
+# 项目根目录
+PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
+
+# neuracle 包目录
+NEURACLE_DIR: Path = PROJECT_ROOT / "neuracle"
+
+# 数据根目录
+DATA_ROOT: Path = PROJECT_ROOT / "data"
 
 # 并行计算相关常量
 N_WORKERS = 8
@@ -32,14 +44,14 @@ CONDUCTIVITY_TISSUE_NAMES = [
 
 # 标准电导率值 (S/m)
 STANDARD_COND = {
-    "White Matter": 0.126,
-    "Gray Matter": 0.275,
+    "WM": 0.126,
+    "GM": 0.275,
     "CSF": 1.654,
     "Bone": 0.01,
     "Scalp": 0.465,
-    "Eye balls": 0.5,
-    "Compact Bone": 0.008,
-    "Spongy Bone": 0.025,
+    "Eyes": 0.5,
+    "CompactBone": 0.008,
+    "SpongyBone": 0.025,
     "Blood": 0.6,
     "Muscle": 0.16,
 }

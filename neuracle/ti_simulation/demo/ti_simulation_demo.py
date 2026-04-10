@@ -13,8 +13,6 @@ TI Simulation Demo - Temporal Interference 正向仿真示例
 - n_workers: 24
 """
 
-import os
-
 from neuracle.logger import setup_logging
 from neuracle.ti_simulation import (
     calculate_ti,
@@ -23,25 +21,18 @@ from neuracle.ti_simulation import (
     setup_electrode_pair2,
     setup_session,
 )
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 from neuracle.utils.ti_export import export_ti_to_nifti
-
-# 获取当前脚本所在目录的绝对路径
-# demo -> ti_simulation -> neuracle -> simnibs (项目根目录)
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# 项目根目录 (simnibs)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
-# 数据目录
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(os.path.join(PROJECT_ROOT, "neuracle", "log"))
+    setup_logging(str(PROJECT_ROOT / "neuracle" / "log"))
 
     # 设置路径
-    subject_dir = os.path.join(DATA_DIR, "m2m_ernie")
-    output_dir = os.path.join(DATA_DIR, "TI_ernie")
+    subject_dir = str(DATA_ROOT / "m2m_ernie")
+    output_dir = str(DATA_ROOT / "TI_ernie")
 
     print("=" * 60)
     print("TI Simulation: Temporal Interference 正向仿真")
@@ -54,7 +45,7 @@ def main():
     S = setup_session(
         subject_dir=subject_dir,
         output_dir=output_dir,
-        msh_file_path=os.path.join(subject_dir, "model.msh"),
+        msh_file_path=str(DATA_ROOT / "m2m_ernie" / "model.msh"),
     )
 
     # 2. 配置第一个电极对
@@ -95,7 +86,7 @@ def main():
     ti_nifti_path = export_ti_to_nifti(
         msh_path=ti_mesh_path,
         output_dir=output_dir,
-        reference=os.path.join(subject_dir, "T1.nii.gz"),
+        reference=str(DATA_ROOT / "m2m_ernie" / "T1.nii.gz"),
         field_name="max_TI",
     )
 

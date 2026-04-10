@@ -12,21 +12,17 @@ from pathlib import Path
 
 from neuracle.atlas import get_standardized_roi_path, load_atlas_registry
 from neuracle.logger import setup_logging
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 from simnibs import RegionOfInterest
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = Path(__file__).resolve().parents[3]
-NEURACLE_ROOT = SCRIPT_DIR.parent
-PROJECT_ROOT = REPO_ROOT
-DATA_DIR = PROJECT_ROOT / "data"
-DEMO_OUTPUT_DIR = DATA_DIR / "roi_demo_outputs"
-SUBJECT_DIR = DATA_DIR / "m2m_ernie"
+DEMO_OUTPUT_DIR = DATA_ROOT / "roi_demo_outputs"
+SUBJECT_DIR = DATA_ROOT / "m2m_ernie"
 T1_PATH = SUBJECT_DIR / "T1.nii.gz"
 
 
 def setup_demo_environment() -> None:
     # demo 统一把可视化结果写到固定目录，便于多次运行后集中查看。
-    setup_logging(str(NEURACLE_ROOT / "log"))
+    setup_logging(str(PROJECT_ROOT / "log"))
     DEMO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if not T1_PATH.exists():
         raise FileNotFoundError(f"demo T1 文件不存在: {T1_PATH}")

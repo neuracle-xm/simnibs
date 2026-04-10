@@ -33,10 +33,7 @@ from neuracle.storage.oss import (
     upload_task_result,
 )
 from neuracle.storage.paths import (
-    BUILT_IN_DIR_PATH,
-    BUILT_IN_DTI_FILE_PATH,
     DATA_ROOT,
-    PROJECT_ROOT,
     ensure_data_root,
     get_model_mesh_path,
     get_subject_dir,
@@ -44,6 +41,11 @@ from neuracle.storage.paths import (
     normalize_dir_path,
     reset_task_output_dir,
     resolve_local_dti_path,
+)
+from neuracle.utils.constants import (
+    BUILT_IN_DIR_PATH,
+    BUILT_IN_DTI_FILE_PATH,
+    PROJECT_ROOT,
 )
 
 __all__ = [

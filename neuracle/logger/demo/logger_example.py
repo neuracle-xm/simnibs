@@ -7,8 +7,8 @@ Logger 使用示例
 import logging
 
 from neuracle.logger import setup_logging
+from neuracle.utils.constants import PROJECT_ROOT
 
-# 获取 logger
 logger = logging.getLogger("neuracle.demo")
 
 
@@ -45,7 +45,7 @@ def demo_logging_in_loop():
 
 def main():
     """主函数"""
-    setup_logging(r"./log/")
+    setup_logging(str(PROJECT_ROOT / "log"))
     separator = "=" * 50
     logger.info(separator)
     logger.info("Logger 示例程序启动")

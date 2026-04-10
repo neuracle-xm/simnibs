@@ -7,28 +7,18 @@ CHARM 步骤7: 四面体网格生成示例
 - segmentation/tissue_labeling_upsampled.nii.gz
 """
 
-import os
-
 from neuracle.charm.mesh import create_mesh_step
 from neuracle.logger import setup_logging
-
-# 获取当前脚本所在目录的绝对路径
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# neuracle 目录
-NEURACLE_DIR = os.path.dirname(SCRIPT_DIR)
-# 项目根目录 (simnibs)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(NEURACLE_DIR))
-# 数据目录
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(os.path.join(PROJECT_ROOT, "neuracle", "log", "charm_mesh"))
+    setup_logging(str(PROJECT_ROOT / "log" / "charm_mesh"))
 
     # 设置路径
-    subject_dir = os.path.join(DATA_DIR, "m2m_ernie")
+    subject_dir = DATA_ROOT / "m2m_ernie"
 
     print("=" * 60)
     print("CHARM 步骤7: 四面体网格生成")
@@ -47,7 +37,7 @@ def main():
     # - eeg_positions/*.csv, *.geo (EEG 电极位置)
     # - mni_transf/final_labels.nii.gz, final_labels_MNI.nii.gz
     create_mesh_step(
-        subject_dir=subject_dir,
+        subject_dir=str(subject_dir),
         debug=False,  # 设置为 True 会保留中间结果
     )
 

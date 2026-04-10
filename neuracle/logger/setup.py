@@ -10,6 +10,7 @@ from typing import Optional
 
 from neuracle.logger.formatters import get_formatter
 from neuracle.logger.handlers import create_console_handler, create_level_handler
+from neuracle.utils.constants import PROJECT_ROOT
 
 
 def _configure_logger(
@@ -96,7 +97,7 @@ def setup_logging(log_dir: Optional[str] = None) -> None:
     """
     # 默认日志目录
     if log_dir is None:
-        log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "log")
+        log_dir = os.path.join(PROJECT_ROOT, "log")
     # 确保日志目录存在
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)

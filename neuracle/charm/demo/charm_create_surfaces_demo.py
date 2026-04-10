@@ -8,28 +8,18 @@ CHARM 步骤6: 皮层表面重建示例
 - segmentation/norm_image.nii.gz
 """
 
-import os
-
 from neuracle.charm.create_surfaces import create_surfaces
 from neuracle.logger import setup_logging
-
-# 获取当前脚本所在目录的绝对路径
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# neuracle 目录
-NEURACLE_DIR = os.path.dirname(SCRIPT_DIR)
-# 项目根目录 (simnibs)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(NEURACLE_DIR))
-# 数据目录
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(os.path.join(PROJECT_ROOT, "neuracle", "log", "create_surfaces"))
+    setup_logging(str(PROJECT_ROOT / "log" / "create_surfaces"))
 
     # 设置路径
-    subject_dir = os.path.join(DATA_DIR, "m2m_ernie")
+    subject_dir = DATA_ROOT / "m2m_ernie"
 
     print("=" * 60)
     print("CHARM 步骤6: 皮层表面重建")
@@ -49,7 +39,7 @@ def main():
     # - surfaces/lh.central
     # - surfaces/rh.central
     create_surfaces(
-        subject_dir=subject_dir,
+        subject_dir=str(subject_dir),
         fs_dir=None,  # 可选：FreeSurfer subjects 目录
     )
 
