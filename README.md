@@ -22,8 +22,7 @@ After cloning the repository:
 python tools/environment.py create dev
 conda env create -f environment.yml
 conda activate simnibs_env
-python -m pip install --no-deps --no-build-isolation -e .
-python simnibs/cli/link_external_progs.py
+python -m pip install --no-build-isolation -e .
 ```
 
 ## 3rd Party Files

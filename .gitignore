@@ -151,3 +151,10 @@ miniconda3/
 *.vrb
 *.xdy
 *.tdo
+.claude/*
+data/*
+neuracle_backup/*
+*.env
+neuracle/atlas/manifests/*
+neuracle/atlas/standardized/*
+neuracle/atlas/validation/*

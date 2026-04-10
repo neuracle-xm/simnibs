@@ -18,25 +18,11 @@ requires-python = ">=3.11"
 # python-mumps - only works automatically via conda
 # mpfr, gmp - from conda
 dependencies = [
-  "brainnet>=0.2",
-  "cortech",
-  "fmm3dpy==1.0.4",
-  "h5py",
-  "jsonschema",
-  # "matplotlib",
-  "mkl ; sys_platform != 'darwin'",
-  "nibabel",
-  "numba",
-  "numpy>=2",
-  "petsc4py",
-  "pillow",
-  "pygpc>=0.4.1",
-  "PyQt5",
-  "requests",
-  "samseg",
-  "scipy",
-  "tbb ; sys_platform != 'darwin'",
-  "gmsh",
+  "python-dotenv",
+  "pika",
+  "oss2",
+  "alibabacloud_sts20150401",
+  "nilearn"
 ]
 
 [project.urls] # Optional
