@@ -2,9 +2,6 @@
 本地路径管理模块
 
 提供任务目录路径的规范化和解析功能。
-
-注意：部分函数（normalize_dir_path, get_subject_dir）已迁移至 utils.params 模块，
-此模块保留其他路径相关功能。
 """
 
 import logging
@@ -14,13 +11,56 @@ from pathlib import Path
 from typing import Final
 
 from neuracle.utils.constants import BUILT_IN_DIR_PATH, BUILT_IN_DTI_FILE_PATH
-from neuracle.utils.params import get_subject_dir, normalize_dir_path
 
 logger = logging.getLogger(__name__)
 
 # 项目根目录
 PROJECT_ROOT: Final[Path] = Path(__file__).parent.parent
 DATA_ROOT: Final[Path] = PROJECT_ROOT / "data"
+
+
+def normalize_dir_path(dir_path: str) -> str:
+    """
+    规范化相对目录路径，禁止绝对路径和父级跳转。
+
+    Parameters
+    ----------
+    dir_path : str
+        原始目录路径
+
+    Returns
+    -------
+    str
+        规范化后的目录路径
+
+    Raises
+    ------
+    ValueError
+        当路径为绝对路径或包含父级跳转 (..) 时抛出
+    """
+    normalized = dir_path.replace("\\", "/").strip().strip("/")
+    path_obj = Path(normalized)
+    if path_obj.is_absolute() or ".." in path_obj.parts:
+        logger.error("非法路径访问: %s", dir_path)
+        raise ValueError(f"非法 dir_path: {dir_path}")
+    return normalized
+
+
+def get_subject_dir(dir_path: str) -> Path:
+    """
+    获取 subject 目录的完整路径。
+
+    Parameters
+    ----------
+    dir_path : str
+        subject 目录名（如 m2m_ernie）
+
+    Returns
+    -------
+    Path
+        完整的 subject 目录路径
+    """
+    return DATA_ROOT / Path(normalize_dir_path(dir_path))
 
 
 def get_task_output_dir(

@@ -29,13 +29,6 @@ from neuracle.utils.constants import (
     NON_ROI_THRESHOLD,
     STANDARD_COND,
 )
-from neuracle.utils.params import (
-    dict_to_ack_test_params,
-    dict_to_forward_params,
-    dict_to_inverse_params,
-    dict_to_model_params,
-    get_t1_and_dti_path,
-)
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
@@ -94,11 +87,6 @@ __all__ = [
     "EEG10_20_OKAMOTO_2004",
     "EEG10_20_EXTENDED_SPM12",
     "cond_dict_to_list",
-    "dict_to_ack_test_params",
-    "dict_to_forward_params",
-    "dict_to_inverse_params",
-    "dict_to_model_params",
     "export_ti_to_nifti",
     "find_montage_file",
-    "get_t1_and_dti_path",
 ]
