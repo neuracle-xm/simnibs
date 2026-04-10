@@ -25,7 +25,6 @@ from neuracle.utils.constants import (
     EEG10_10_UI_JURAK_2007,
     EEG10_20_EXTENDED_SPM12,
     EEG10_20_OKAMOTO_2004,
-    MAX_THREADS,
     N_WORKERS,
     NON_ROI_THRESHOLD,
     STANDARD_COND,
@@ -80,7 +79,6 @@ def find_montage_file(dir_path: str, montage: str) -> str:
 
 
 __all__ = [
-    "MAX_THREADS",
     "N_WORKERS",
     "NON_ROI_THRESHOLD",
     "STANDARD_COND",
