@@ -14,6 +14,8 @@ TI Focality Optimization Demo - 优化 focality
 - Focality 阈值: [0.1, 0.2] V/m
 """
 
+from pathlib import Path
+
 from neuracle.logger import setup_logging
 from neuracle.ti_optimization import (
     init_optimization,
@@ -21,14 +23,14 @@ from neuracle.ti_optimization import (
     setup_electrodes_and_roi,
     setup_goal,
 )
-from neuracle.utils.constants import DATA_ROOT, NEURACLE_DIR
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(str(NEURACLE_DIR / "log"))
+    setup_logging(str(PROJECT_ROOT / "log" / "ti_focality_optimize_demo"))
 
     # 设置路径
     subject_dir = DATA_ROOT / "m2m_ernie"
@@ -62,7 +64,7 @@ def main():
     setup_electrodes_and_roi(
         opt=opt,
         goal="focality",
-        mesh_file_path=mesh_file_path,
+        mesh_file_path=str(mesh_file_path),
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
         electrode_radius=[10],
@@ -78,13 +80,13 @@ def main():
     print("[4/5] 运行优化算法...")
     output_folder = run_optimization(
         opt=opt,
-        n_workers=24,
+        n_workers=8,
     )
 
     # 5. 导出 NIfTI 格式
     print("[5/5] 导出 NIfTI 格式...")
     msh_path = (
-        output_folder
+        Path(output_folder)
         / "mapped_electrodes_simulation"
         / "model_tes_mapped_opt_head_mesh.msh"
     )

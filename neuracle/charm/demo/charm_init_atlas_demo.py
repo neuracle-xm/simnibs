@@ -16,7 +16,7 @@ from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(str(PROJECT_ROOT / "log"))
+    setup_logging(str(PROJECT_ROOT / "log" / "charm_init_atlas"))
 
     # 设置路径
     subject_dir = DATA_ROOT / "m2m_ernie"

@@ -24,6 +24,7 @@ from neuracle.config import get_rabbitmq_config, load_env
 from neuracle.config.env import mask_rabbitmq_config
 from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQConsumer, RabbitMQPublisher
+from neuracle.utils.constants import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ def message_callback(channel, method, properties, body, message_queue: Queue):
 
 def main():
     """主函数"""
-    setup_logging()
+    setup_logging(str(PROJECT_ROOT / "log" / "rabbitmq_example"))
     load_env()
     config = get_rabbitmq_config()
     logger.info("RabbitMQ 配置: %s", mask_rabbitmq_config(config))

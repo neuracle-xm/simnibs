@@ -23,6 +23,7 @@ from neuracle.logger import setup_logging
 from neuracle.rabbitmq import RabbitMQConsumer, RabbitMQPublisher
 from neuracle.rabbitmq.message_builder import build_progress_message
 from neuracle.rabbitmq.validator import ValidationError, validate_message
+from neuracle.utils import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +270,6 @@ def run_simnibs_side(config):
 
 if __name__ == "__main__":
     load_env()
-    setup_logging()
+    setup_logging(str(PROJECT_ROOT / "log" / "simnibs_side_demo"))
     config = get_rabbitmq_config()
     run_simnibs_side(config)

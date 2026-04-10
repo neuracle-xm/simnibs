@@ -14,6 +14,8 @@ TI Focality Inverse Optimization Demo - 反向 focality 优化
 - Focality 阈值: [0.1, 0.2] V/m
 """
 
+from pathlib import Path
+
 from neuracle.logger import setup_logging
 from neuracle.ti_optimization import (
     init_optimization,
@@ -22,14 +24,14 @@ from neuracle.ti_optimization import (
     setup_goal,
 )
 from neuracle.utils import EEG10_20_EXTENDED_SPM12, find_montage_file
-from neuracle.utils.constants import DATA_ROOT, NEURACLE_DIR
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(str(NEURACLE_DIR / "log"))
+    setup_logging(str(PROJECT_ROOT / "log" / "ti_focality_inv_optimize"))
 
     # 设置路径
     subject_dir = DATA_ROOT / "m2m_ernie"
@@ -69,7 +71,7 @@ def main():
     setup_electrodes_and_roi(
         opt=opt,
         goal="focality_inv",
-        mesh_file_path=mesh_file_path,
+        mesh_file_path=str(mesh_file_path),
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
         electrode_radius=[10],
@@ -91,7 +93,7 @@ def main():
     # 6. 导出 NIfTI 格式
     print("[6/6] 导出 NIfTI 格式...")
     msh_path = (
-        output_folder
+        Path(output_folder)
         / "mapped_electrodes_simulation"
         / "model_tes_mapped_opt_head_mesh.msh"
     )

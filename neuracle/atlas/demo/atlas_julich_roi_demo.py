@@ -11,7 +11,7 @@ from neuracle.atlas.demo.roi_demo_common import (
 
 
 def main() -> None:
-    setup_demo_environment()
+    setup_demo_environment("atlas_julich_roi")
     # Julich 选择一个明确分侧的躯体感觉皮层脑区，便于检查 bilateral atlas 的落位效果。
     atlas_name = "JulichBrainAtlas_3.1_207areas_MPM_bilateral_MNI152"
     area_name = "Area 3b (PostCG)_lh"

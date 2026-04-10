@@ -33,6 +33,7 @@ from neuracle.rabbitmq import (
     RabbitMQSender,
     build_ack_test_message,
 )
+from neuracle.utils.constants import PROJECT_ROOT
 
 logger = logging.getLogger("neuracle.rabbitmq.demo.rabbitmq_ack_timing_demo")
 
@@ -141,7 +142,7 @@ def wait_for_tasks(
 
 def main() -> None:
     """主函数"""
-    setup_logging()
+    setup_logging(str(PROJECT_ROOT / "log" / "rabbitmq_ack_timing_demo"))
     load_env()
     config = get_rabbitmq_config()
     sleep_seconds = 15.0

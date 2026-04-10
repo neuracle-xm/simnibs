@@ -45,7 +45,7 @@ def demo_logging_in_loop():
 
 def main():
     """主函数"""
-    setup_logging(str(PROJECT_ROOT / "log"))
+    setup_logging(str(PROJECT_ROOT / "log" / "logger_example"))
     separator = "=" * 50
     logger.info(separator)
     logger.info("Logger 示例程序启动")

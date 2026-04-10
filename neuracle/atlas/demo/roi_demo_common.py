@@ -20,9 +20,15 @@ SUBJECT_DIR = DATA_ROOT / "m2m_ernie"
 T1_PATH = SUBJECT_DIR / "T1.nii.gz"
 
 
-def setup_demo_environment() -> None:
-    # demo 统一把可视化结果写到固定目录，便于多次运行后集中查看。
-    setup_logging(str(PROJECT_ROOT / "log"))
+def setup_demo_environment(log_dir: str) -> None:
+    """设置 demo 运行环境。
+
+    Parameters
+    ----------
+    log_dir : str
+        日志子目录名称，会被拼接到 PROJECT_ROOT / "log" / log_dir
+    """
+    setup_logging(str(PROJECT_ROOT / "log" / log_dir))
     DEMO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if not T1_PATH.exists():
         raise FileNotFoundError(f"demo T1 文件不存在: {T1_PATH}")

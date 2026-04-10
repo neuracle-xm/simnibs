@@ -13,13 +13,14 @@ from neuracle.storage.oss import (
     get_bucket,
     upload_bytes_to_oss,
 )
+from neuracle.utils.constants import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
 
 def demo_upload_download():
     """演示内存中的二进制数据上传和下载"""
-    setup_logging()
+    setup_logging(str(PROJECT_ROOT / "log" / "oss_example"))
     load_env()
     bucket = get_bucket()
     oss_key = "demo/test_content.bin"

@@ -3139,9 +3139,9 @@ class Msh:
                 units.append("")
 
         if 2 in mesh.elm.elm_type:
-            units_mesh = " mm²"
+            units_mesh = " mm^2"
         elif 4 in mesh.elm.elm_type:
-            units_mesh = " mm³"
+            units_mesh = " mm^3"
         if np.all(np.isin([2, 4], mesh.elm.elm_type)):
             warnings.warn(
                 "Can't report Field summary in meshes with volumes and surfaces"
@@ -4183,9 +4183,9 @@ class Data(object):
             units = " " + units
 
         if 2 in self.mesh.elm.elm_type:
-            units_mesh = " mm²"
+            units_mesh = " mm^2"
         elif 4 in self.mesh.elm.elm_type:
-            units_mesh = " mm³"
+            units_mesh = " mm^3"
         if np.all(np.isin([2, 4], self.mesh.elm.elm_type)):
             warnings.warn(
                 "Field summary in meshes with"

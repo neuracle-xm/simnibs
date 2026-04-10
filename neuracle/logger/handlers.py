@@ -9,7 +9,33 @@ import os
 from logging.handlers import RotatingFileHandler
 from typing import Final
 
-from simnibs.utils.simnibs_logger import Utf8StreamHandler
+
+class Utf8StreamHandler(logging.StreamHandler):
+    """
+    UTF-8 编码的控制台处理器
+
+    原理：
+        标准 StreamHandler 在 Windows 下默认使用 GBK 编码写入 stderr，
+        会导致中文等非 ASCII 字符显示为乱码。该类覆写 emit() 方法，
+        确保输出使用 UTF-8 编码。
+
+    用法：
+        handler = Utf8StreamHandler()
+        handler.setLevel(logging.INFO)
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+            stream = self.stream
+            # 写入前确保使用 UTF-8 编码
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            stream.write(msg + self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
 
 # 日志文件配置
 _MAX_BYTES: Final[int] = 1 * 1024 * 1024  # 1MB，单个日志文件最大大小
@@ -49,7 +75,7 @@ def create_level_handler(
     return handler
 
 
-def create_console_handler() -> logging.StreamHandler:
+def create_console_handler() -> Utf8StreamHandler:
     """
     创建控制台处理器
 

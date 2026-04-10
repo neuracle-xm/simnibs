@@ -438,7 +438,8 @@ class SubjectFiles:
                     "Does the folder have the format m2m_subID?"
                 )
             if not fnamehead:
-                self.fnamehead = os.path.join(self.subpath, self.subid + ".msh")
+                if not hasattr(self, 'fnamehead') or not self.fnamehead:
+                    self.fnamehead = os.path.join(self.subpath, self.subid + ".msh")
 
         # otherwise SESSION._prepare fails for meshes
         # that do not have a m2m_folder

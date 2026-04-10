@@ -26,7 +26,7 @@ from neuracle.utils.ti_export import export_ti_to_nifti
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(str(PROJECT_ROOT / "neuracle" / "log"))
+    setup_logging(str(PROJECT_ROOT / "log" / "ti_mean_optimize"))
 
     # 设置路径
     subject_dir = str(DATA_ROOT / "m2m_ernie")
@@ -59,7 +59,7 @@ def main():
     setup_electrodes_and_roi(
         opt=opt,
         goal="mean",
-        mesh_file_path=mesh_file_path,
+        mesh_file_path=str(mesh_file_path),
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
         electrode_radius=[10],

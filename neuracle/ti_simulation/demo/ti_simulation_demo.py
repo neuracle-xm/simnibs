@@ -28,7 +28,7 @@ from neuracle.utils.ti_export import export_ti_to_nifti
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(str(PROJECT_ROOT / "neuracle" / "log"))
+    setup_logging(str(PROJECT_ROOT / "log" / "ti_simulation"))
 
     # 设置路径
     subject_dir = str(DATA_ROOT / "m2m_ernie")

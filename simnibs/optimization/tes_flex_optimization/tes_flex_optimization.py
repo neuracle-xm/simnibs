@@ -283,7 +283,8 @@ class TesFlexOptimization:
         self._ff_subject = SubjectFiles(subpath=self.subpath)
 
         # read mesh or store in self
-        self.fn_mesh = self._ff_subject.fnamehead
+        if self.fn_mesh is None:
+            self.fn_mesh = self._ff_subject.fnamehead
         self._mesh = mesh_io.read_msh(self.fn_mesh)
 
         # Calculate node areas for whole mesh
@@ -1332,7 +1333,7 @@ class TesFlexOptimization:
                 self.fn_final_sim.append(s.run()[0])
                 
             # extract e-fields from FEM simulations, add extra data and show results
-            base_file_name = os.path.splitext(os.path.basename(self._ff_subject.fnamehead))[0]
+            base_file_name = os.path.splitext(os.path.basename(self.fn_mesh))[0]
             base_file_name += '_tes_flex_opt'
             
             fn_vis, m_head, m_surf = write_visualization(self.output_folder,
@@ -1398,7 +1399,7 @@ class TesFlexOptimization:
                     )
                     self.fn_mapped_sim.append(s.run()[0])
                 
-                base_file_name = os.path.splitext(os.path.basename(self._ff_subject.fnamehead))[0]
+                base_file_name = os.path.splitext(os.path.basename(self.fn_mesh))[0]
                 base_file_name += '_tes_mapped_opt'
                 
                 logger.info("Creating visualizations for mapped electrode simulations...")

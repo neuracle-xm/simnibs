@@ -51,7 +51,7 @@ DIFUMO_DEMOS = [
 
 
 def main() -> None:
-    setup_demo_environment()
+    setup_demo_environment("atlas_difumo_roi")
     for item in DIFUMO_DEMOS:
         # 每个分辨率独立跑一遍，方便比较不同 component 数量下 ROI 落位差异。
         atlas_name = item["atlas_name"]

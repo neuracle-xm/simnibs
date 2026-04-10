@@ -11,7 +11,7 @@ from neuracle.atlas.demo.roi_demo_common import (
 
 
 def main() -> None:
-    setup_demo_environment()
+    setup_demo_environment("mni_roi")
     # 这里直接保留 MNI 空间球形 ROI，由 SimNIBS 在内部完成到 subject 的映射。
     center = [-38.6, -18.7, 64.8]
     radius = 20.0

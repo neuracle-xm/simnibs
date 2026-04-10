@@ -23,12 +23,11 @@ from neuracle.rabbitmq.message_builder import (
     build_inverse_message,
     build_model_message,
 )
-from neuracle.utils.constants import BUILT_IN_DIR_PATH
+from neuracle.utils.constants import BUILT_IN_DIR_PATH, PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
 config = get_rabbitmq_config()
-DEMO_DIR_PATH = BUILT_IN_DIR_PATH
 
 
 def result_callback(channel, method, properties, body):
@@ -179,24 +178,24 @@ def get_test_messages():
 
     msg1 = build_model_message(
         id="test_model_001",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
     )
     messages.append(("model_必填参数", msg1))
 
     msg2 = build_model_message(
         id="test_model_002",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
-        T2_file_path=f"{DEMO_DIR_PATH}/T2_reg.nii.gz",
-        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
+        T2_file_path=f"{BUILT_IN_DIR_PATH}/T2_reg.nii.gz",
+        DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("model_可选参数", msg2))
 
     msg3 = build_forward_message(
         id="test_forward_001",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_UI_Jurak_2007",
         electrode_A=[
             {"name": "F5", "current_mA": 2.0},
@@ -213,8 +212,8 @@ def get_test_messages():
 
     msg4 = build_forward_message(
         id="test_forward_002",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         electrode_A=[
             {"name": "F5", "current_mA": 1.0},
@@ -226,14 +225,14 @@ def get_test_messages():
         ],
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
         anisotropy=True,
-        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
+        DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("forward_anisotropy_true", msg4))
 
     msg5 = build_forward_message(
         id="test_forward_004",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_UI_Jurak_2007",
         electrode_A=[
             {"name": "F5", "current_mA": 2.0},
@@ -245,14 +244,14 @@ def get_test_messages():
         ],
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
         anisotropy=False,
-        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
+        DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("forward_anisotropy_false_with_dti", msg5))
 
     msg6 = build_forward_message(
         id="test_forward_003",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-20_Okamoto_2004",
         electrode_A=[
             {"name": "F3", "current_mA": 1.0},
@@ -279,8 +278,8 @@ def get_test_messages():
 
     msg7 = build_inverse_message(
         id="test_inverse_001",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.002, -0.002],
         current_B=[0.001, -0.001],
@@ -297,8 +296,8 @@ def get_test_messages():
 
     msg8 = build_inverse_message(
         id="test_inverse_002",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -310,14 +309,14 @@ def get_test_messages():
         target_threshold=0.7,
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
         anisotropy=True,
-        DTI_file_path=f"{DEMO_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
+        DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("inverse_mni_pos_roi", msg8))
 
     msg9 = build_inverse_message(
         id="test_inverse_003",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -355,8 +354,8 @@ def get_error_messages():
 
     msg3 = build_forward_message(
         id="test_error_002",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_UI_Jurak_2007",
         electrode_A=[
             {"name": "F5", "current_mA": 2.0},
@@ -373,8 +372,8 @@ def get_error_messages():
 
     msg4 = build_inverse_message(
         id="test_error_003",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -391,8 +390,8 @@ def get_error_messages():
 
     msg5 = build_inverse_message(
         id="test_error_004",
-        dir_path=DEMO_DIR_PATH,
-        T1_file_path=f"{DEMO_DIR_PATH}/T1.nii.gz",
+        dir_path=BUILT_IN_DIR_PATH,
+        T1_file_path=f"{BUILT_IN_DIR_PATH}/T1.nii.gz",
         montage="EEG10-10_Cutini_2011",
         current_A=[0.001, -0.001],
         current_B=[0.001, -0.001],
@@ -415,5 +414,5 @@ def get_error_messages():
 
 if __name__ == "__main__":
     load_env()
-    setup_logging()
+    setup_logging(str(PROJECT_ROOT / "log" / "backend_side_demo"))
     run_backend_side()

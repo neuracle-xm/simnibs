@@ -16,7 +16,7 @@ from neuracle.atlas.demo.roi_demo_common import (
 
 
 def main() -> None:
-    setup_demo_environment()
+    setup_demo_environment("atlas_bn_roi")
     # BN 选择一个稳定且容易核对的左侧脑区，便于验证 atlas -> subject 映射链路。
     atlas_name = "BN_Atlas_246_1mm"
     area_name = "A8m_L"

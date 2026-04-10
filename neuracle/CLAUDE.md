@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 eval "$(conda shell.bash hook)"
-conda activate simnibs
+conda activate simnibs_env
 ```
 
 ### 生成时的规范

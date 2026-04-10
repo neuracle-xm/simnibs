@@ -594,7 +594,7 @@ class RegionOfInterest:
             else:
                 self._mesh = mesh_io.read_msh(mesh)
 
-        if subpath is not None:
+        elif subpath is not None:
             self._mesh = mesh_io.read_msh(_init_subject_files(subpath).fnamehead)
 
         if self._mesh is None:
