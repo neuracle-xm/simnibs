@@ -5,7 +5,7 @@ CHARM 步骤4: Atlas 初始仿射配准与颈部校正
 
 原理：
     1. 设置 samseg 相关的 atlas 路径和参数
-    2. 根据 init_type 设置决定初始化方式（atlas 或 mni）
+    2. 根据 init_type 设置决定初始化方式（atlas、mni 或 trega）
     3. 执行仿射配准，输出模板到受试者空间的变换
     4. 可选进行颈部校正（neck optimization）
 
@@ -27,7 +27,8 @@ import numpy as np
 
 from neuracle.utils.charm_utils import read_settings, setup_atlas
 from neuracle.utils.constants import N_WORKERS
-from simnibs.segmentation import charm_utils, simnibs_samseg
+from simnibs.segmentation import brain_surface, charm_utils
+from simnibs.segmentation import samseg_whole_head as simnibs_samseg
 from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ def init_atlas(
     执行 Atlas 初始仿射配准
 
     将 MNI Atlas 仿射配准到输入图像空间，并进行颈部校正。
-    根据 init_type 设置决定初始化方式（atlas 或 mni）。
+    根据 init_type 设置决定初始化方式（atlas、mni 或 trega）。
 
     Parameters
     ----------
@@ -70,10 +71,10 @@ def init_atlas(
     samseg_settings = settings["samseg"]
     num_threads = settings["general"]["threads"]
     if isinstance(num_threads, int) and num_threads > 0:
-        simnibs_samseg.setGlobalDefaultNumberOfThreads(num_threads)
+        simnibs_samseg.gems.setGlobalDefaultNumberOfThreads(num_threads)
         logger.info("使用 %d 个线程，而非全部可用线程。", num_threads)
     else:
-        simnibs_samseg.setGlobalDefaultNumberOfThreads(N_WORKERS)
+        simnibs_samseg.gems.setGlobalDefaultNumberOfThreads(N_WORKERS)
     show_figs = False
     show_movies = False
     visualizer = simnibs_samseg.initVisualizer(show_figs, show_movies)
@@ -107,6 +108,11 @@ def init_atlas(
             trans_mat = charm_utils._init_atlas_affine(
                 input_t1, mni_template, mni_settings
             )
+        elif samseg_settings["init_type"] == "trega":
+            logger.info("使用 TREGA 方法进行仿射初始化")
+            trans_mat = brain_surface.estimate_mni152_to_ras_affine([sub_files])[0]
+            RAS2LPS = np.diag([-1, -1, 1, 1])
+            trans_mat = RAS2LPS @ trans_mat @ RAS2LPS
         else:
             logger.info(
                 "仿射初始化类型未知 (%s)，默认为 'atlas'", samseg_settings["init_type"]

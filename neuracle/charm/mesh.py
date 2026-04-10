@@ -7,8 +7,9 @@ CHARM 步骤7: 四面体网格生成
     1. 加载上采样的组织标签图像
     2. 裁剪图像至感兴趣区域
     3. 使用 CGAL 进行四面体网格生成
-    4. 变换 EEG 电极位置到受试者空间
-    5. 输出最终的 .msh 文件
+    4. 重新标记内部空气边界
+    5. 变换 EEG 电极位置到受试者空间
+    6. 输出最终的 .msh 文件
 
 输入：
     - segmentation/tissue_labeling_upsampled.nii.gz
@@ -49,7 +50,7 @@ def create_mesh_step(
 
     从组织标签图像生成 tetrahedral 头模型网格。
     包括：加载组织标签图像、裁剪感兴趣区域、CGAL 四面体网格生成、
-    EEG 电极位置变换、输出最终 msh 文件。
+    重新标记内部空气边界、EEG 电极位置变换、输出最终 msh 文件。
 
     Parameters
     ----------
@@ -65,6 +66,7 @@ def create_mesh_step(
     See Also
     --------
     create_mesh : CGAL 网格生成核心函数
+    relabel_internal_air : 重新标记内部空气边界
     warp_coordinates : 坐标变换函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
@@ -127,6 +129,8 @@ def create_mesh_step(
         debug_path=debug_path,
         debug=debug,
     )
+    logger.info("正在重新标记内部空气边界")
+    final_mesh = final_mesh.relabel_internal_air()
     logger.info("正在写入网格文件")
     write_msh(final_mesh, output_msh_path)
     v = final_mesh.view(cond_list=cond_utils.standard_cond(), add_logo=True)

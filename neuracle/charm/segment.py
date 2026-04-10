@@ -29,7 +29,9 @@ import nibabel as nib
 
 from neuracle.utils.charm_utils import read_settings, setup_atlas
 from neuracle.utils.constants import N_WORKERS
-from simnibs.segmentation import charm_utils, simnibs_samseg
+from simnibs.segmentation import charm_utils
+from simnibs.segmentation import samseg_whole_head as simnibs_samseg
+from simnibs.segmentation import simnibs_segmentation_utils
 from simnibs.utils import file_finder
 
 logger = logging.getLogger(__name__)
@@ -68,10 +70,10 @@ def run_segmentation(
     segment_settings = settings["segment"]
     num_threads = settings["general"]["threads"]
     if isinstance(num_threads, int) and num_threads > 0:
-        simnibs_samseg.setGlobalDefaultNumberOfThreads(num_threads)
+        simnibs_samseg.gems.setGlobalDefaultNumberOfThreads(num_threads)
         logger.info("使用 %d 个线程进行分割", num_threads)
     else:
-        simnibs_samseg.setGlobalDefaultNumberOfThreads(N_WORKERS)
+        simnibs_samseg.gems.setGlobalDefaultNumberOfThreads(N_WORKERS)
         logger.info("线程数无效 (%s)，使用 N_WORKERS (%d)", num_threads, N_WORKERS)
     show_figs = False
     show_movies = False
@@ -119,29 +121,21 @@ def run_segmentation(
         bias_corrected_image_names.append(sub_files.T2_bias_corrected)
         logger.info("将使用 T2 图像进行偏置场校正")
     logger.info("正在输出归一化图像和标签。")
-    cat_images = [
-        sub_files.norm_image,
-        sub_files.cereb_mask,
-        sub_files.subcortical_mask,
-        sub_files.hemi_mask,
-    ]
-    cat_structs = atlas_settings["CAT_structures"]
     tissue_settings = atlas_settings["conductivity_mapping"]
     csf_factor = segment_settings["csf_factor"]
-    simnibs_samseg.simnibs_segmentation_utils.writeBiasCorrectedImagesAndSegmentation(
+    simnibs_segmentation_utils.writeBiasCorrectedImagesAndSegmentation(
         bias_corrected_image_names,
         sub_files.labeling,
         segment_parameters_and_inputs,
         tissue_settings,
         csf_factor,
-        cat_structure_options=cat_structs,
-        cat_images=cat_images,
+        sub_files.template_coregistered,
     )
     fn_lut = sub_files.labeling.rsplit(".", 2)[0] + "_LUT.txt"
     shutil.copyfile(file_finder.templates.labeling_LUT, fn_lut)
     logger.info("正在输出 MNI 变形场。")
     os.makedirs(sub_files.mni_transf_folder, exist_ok=True)
-    simnibs_samseg.simnibs_segmentation_utils.saveWarpField(
+    simnibs_segmentation_utils.saveWarpField(
         template_name,
         sub_files.mni2conf_nonl,
         sub_files.conf2mni_nonl,

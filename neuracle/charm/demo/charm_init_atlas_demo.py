@@ -29,7 +29,7 @@ def main():
     # 执行 Atlas 配准
     # 这将:
     # 1. 设置 samseg 相关的 atlas 路径和参数
-    # 2. 根据 init_type 设置决定初始化方式（atlas 或 mni）
+    # 2. 根据 init_type 设置决定初始化方式（atlas、mni 或 trega）
     # 3. 执行仿射配准
     # 4. 可选进行颈部校正
     # 输出:

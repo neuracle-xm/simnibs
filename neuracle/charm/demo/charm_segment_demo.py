@@ -35,6 +35,8 @@ def main():
     # 输出:
     # - segmentation/tissue_labeling_upsampled.nii.gz
     # - segmentation/tissue_labeling_upsampled_LUT.txt
+    # - segmentation/norm_image.nii.gz
+    # - segmentation/segmentation/BiasCorrectedT1.nii.gz
     run_segmentation(
         subject_dir=str(subject_dir),
         debug=False,  # 设置为 True 会保留中间结果

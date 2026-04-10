@@ -29,7 +29,7 @@ def main():
     # 执行表面重建
     # 这将:
     # 1. 如果提供 FreeSurfer 目录，从 FreeSurfer 表面加载
-    # 2. 否则使用 CAT12 方法进行表面重建
+    # 2. 否则使用 TopoFit 方法进行皮层表面估计（默认）
     # 3. 可选地根据表面更新分割结果
     # 输出:
     # - surfaces/lh.white
@@ -38,6 +38,10 @@ def main():
     # - surfaces/rh.pial
     # - surfaces/lh.central
     # - surfaces/rh.central
+    # - surfaces/lh.sphere
+    # - surfaces/rh.sphere
+    # - surfaces/lh.sphere.reg
+    # - surfaces/rh.sphere.reg
     create_surfaces(
         subject_dir=str(subject_dir),
         fs_dir=None,  # 可选：FreeSurfer subjects 目录

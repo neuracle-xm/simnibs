@@ -5,7 +5,7 @@ CHARM 步骤6: 皮层表面重建
 
 原理：
     1. 如果提供 FreeSurfer 目录，从 FreeSurfer 表面加载
-    2. 否则使用 CAT12 方法进行表面重建
+    2. 否则使用 TopoFit 方法进行皮层表面估计（默认）
     3. 可选地根据表面更新分割结果
 
 输入：
@@ -19,11 +19,16 @@ CHARM 步骤6: 皮层表面重建
     - surfaces/rh.pial
     - surfaces/lh.central
     - surfaces/rh.central
+    - surfaces/lh.sphere
+    - surfaces/rh.sphere
+    - surfaces/lh.sphere.reg
+    - surfaces/rh.sphere.reg
 
 用法：
     python -m neuracle.charm.create_surfaces <subid> [--fs-subjects-dir <path>]
 """
 
+import itertools
 import logging
 import os
 import re
@@ -46,8 +51,15 @@ from simnibs.mesh_tools.mesh_io import (
     write_off,
 )
 from simnibs.segmentation import brain_surface, charm_utils
+from simnibs.segmentation.charm_main import (
+    _fs_lut_labels_to_fs_lut_values,
+    _write_cortex_as_gifti,
+    _write_gifti,
+    _write_vertex_data_as_curv,
+)
 from simnibs.utils import file_finder, settings_reader
 from simnibs.utils.spawn_process import spawn_process
+from simnibs.utils.threading import run_in_multiprocessing_pool
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +72,7 @@ def create_surfaces(
     创建皮层表面
 
     从分割结果重建皮层表面（white、pial、central surface）。
-    支持 FreeSurfer 方法和 CAT12 方法两种重建方式。
+    支持 TopoFit 方法（默认）和 FreeSurfer 方法两种重建方式。
 
     Parameters
     ----------
@@ -75,8 +87,8 @@ def create_surfaces(
 
     See Also
     --------
+    _create_surfaces_from_topofit : TopoFit 表面重建
     _create_surfaces_from_freesurfer : FreeSurfer 表面重建
-    _create_surfaces_from_cat12 : CAT12 表面重建
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     settings = read_settings()
@@ -90,9 +102,85 @@ def create_surfaces(
             sub_files, fs_dir, surface_settings, atlas_settings
         )
     else:
-        logger.info("使用 CAT12 方法创建表面")
-        _create_surfaces_from_cat12(sub_files, surface_settings, atlas_settings)
+        logger.info("使用 TopoFit 方法创建表面")
+        _create_surfaces_from_topofit(sub_files, surface_settings, atlas_settings)
     logger.info("表面重建完成")
+
+
+def _create_surfaces_from_topofit(
+    sub_files: file_finder.SubjectFiles,
+    surface_settings: dict,
+    atlas_settings: dict,
+) -> None:
+    """
+    使用 TopoFit 方法创建表面
+
+    Parameters
+    ----------
+    sub_files : SubjectFiles
+        Subject files 对象
+    surface_settings : dict
+        表面设置
+    atlas_settings : dict
+        Atlas 设置
+
+    Returns
+    -------
+    None
+    """
+    t_start = time.perf_counter()
+    tissue_map_simnibs = atlas_settings["conductivity_mapping"]["simnibs_tissues"]
+
+    logger.info("正在估计皮层表面")
+    cortex, curv = brain_surface.cortical_surface_estimation(
+        [sub_files],
+        surface_settings["topofit_contrast"],
+        surface_settings["topofit_resolution"],
+        surface_settings["topofit_device"],
+    )
+    # only one subject
+    cortex = cortex[0]
+    curv = curv[0]
+    cortex.lh.registration = None
+    cortex.rh.registration = None
+
+    logger.info("正在估计中央灰质表面")
+    central = cortex.estimate_layers(
+        surface_settings["central_surface_method"],
+        surface_settings["central_surface_fraction"],
+        curv_kwargs=dict(smooth_iter=10),
+        return_surface=True,
+    )
+
+    logger.info("正在保存皮层表面")
+    _write_cortex_as_gifti(cortex, sub_files)
+    _write_gifti(central.lh, sub_files, "central", "lh")
+    _write_gifti(central.rh, sub_files, "central", "rh")
+    _write_vertex_data_as_curv(curv, sub_files)
+
+    if not cortex.lh.has_registration():
+        logger.info("正在生成球面配准")
+
+        _ = run_in_multiprocessing_pool(
+            surface_settings["spherical_registration_process_pool"],
+            brain_surface.spherical_registration_cat,
+            itertools.product([sub_files], file_finder.HEMISPHERES),
+            start_method="spawn",
+        )
+
+    if surface_settings["update_segmentation_from_surfaces"]:
+        logger.info("正在使用皮层表面更新分割结果")
+        charm_utils.update_labeling_from_cortical_surfaces(
+            sub_files,
+            _fs_lut_labels_to_fs_lut_values(
+                surface_settings["update_segmentation_protect"]
+            ),
+            tissue_map_simnibs,
+        )
+
+    t_end = time.perf_counter()
+    time_elapsed = time.strftime("%H:%M:%S", time.gmtime(t_end - t_start))
+    logger.info("表面创建耗时: %s", time_elapsed)
 
 
 def _create_surfaces_from_freesurfer(
