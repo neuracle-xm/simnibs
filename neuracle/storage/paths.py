@@ -8,15 +8,14 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Final
 
-from neuracle.utils.constants import BUILT_IN_DIR_PATH, BUILT_IN_DTI_FILE_PATH
+from neuracle.utils.constants import (
+    BUILT_IN_DIR_PATH,
+    BUILT_IN_DTI_FILE_PATH,
+    DATA_ROOT,
+)
 
 logger = logging.getLogger(__name__)
-
-# 项目根目录
-PROJECT_ROOT: Final[Path] = Path(__file__).parent.parent
-DATA_ROOT: Final[Path] = PROJECT_ROOT / "data"
 
 
 def normalize_dir_path(dir_path: str) -> str:

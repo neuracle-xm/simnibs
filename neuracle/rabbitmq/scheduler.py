@@ -721,7 +721,7 @@ def handle_inverse_task(
 
 
 def handle_ack_test_task(
-    message_queue: Queue, task_id: str, params: AckTestParams
+    message_queue: Queue, task_id: str, params: AckTestParams, redelivered: bool = False
 ) -> None:
     """
     处理 ack 时机验证任务（用于测试 RabbitMQ ack 机制）

@@ -11,12 +11,12 @@ from typing import Any, Final
 
 from dotenv import load_dotenv
 
+from neuracle.utils.constants import PROJECT_ROOT
+
 logger = logging.getLogger(__name__)
 
-# 项目根目录
-_PROJECT_ROOT: Final[Path] = Path(__file__).parent.parent.parent
 # .env 文件路径
-_ENV_FILE: Final[Path] = _PROJECT_ROOT / "neuracle" / "config" / ".env"
+_ENV_FILE: Final[Path] = PROJECT_ROOT / "neuracle" / "config" / ".env"
 
 
 def load_env() -> None:

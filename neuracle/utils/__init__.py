@@ -17,6 +17,7 @@ from neuracle.utils.constants import (
     BUILT_IN_DIR_PATH,
     BUILT_IN_DTI_FILE_PATH,
     CONDUCTIVITY_TISSUE_NAMES,
+    DATA_ROOT,
     DEBUG,
     DEFAULT_STS_ROLE_SESSION_NAME,
     DEFAULT_STS_TOKEN_DURATION_SECONDES,
@@ -26,7 +27,9 @@ from neuracle.utils.constants import (
     EEG10_20_EXTENDED_SPM12,
     EEG10_20_OKAMOTO_2004,
     N_WORKERS,
+    NEURACLE_DIR,
     NON_ROI_THRESHOLD,
+    PROJECT_ROOT,
     STANDARD_COND,
 )
 from neuracle.utils.ti_export import export_ti_to_nifti
@@ -74,6 +77,9 @@ def find_montage_file(dir_path: str, montage: str) -> str:
 __all__ = [
     "N_WORKERS",
     "NON_ROI_THRESHOLD",
+    "PROJECT_ROOT",
+    "NEURACLE_DIR",
+    "DATA_ROOT",
     "STANDARD_COND",
     "CONDUCTIVITY_TISSUE_NAMES",
     "BUILT_IN_DIR_PATH",

@@ -12,11 +12,12 @@ from alibabacloud_sts20150401.client import Client as StsClient
 from alibabacloud_tea_openapi import models as open_api_models
 
 from neuracle.config.env import get_aliyun_config
+from neuracle.utils import (
+    DEFAULT_STS_ROLE_SESSION_NAME,
+    DEFAULT_STS_TOKEN_DURATION_SECONDES,
+)
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_STS_TOKEN_DURATION_SECONDES: Final[int] = 3600
-DEFAULT_STS_ROLE_SESSION_NAME: Final[str] = "simnibs_session"
 
 
 def get_assume_role(

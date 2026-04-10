@@ -8,28 +8,18 @@ CHARM 步骤5: 体积与表面分割示例
 - T1fs.nii.gz / T2_reg.nii.gz (偏置校正输出)
 """
 
-import os
-
 from neuracle.charm.segment import run_segmentation
 from neuracle.logger import setup_logging
-
-# 获取当前脚本所在目录的绝对路径
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# neuracle 目录
-NEURACLE_DIR = os.path.dirname(SCRIPT_DIR)
-# 项目根目录 (simnibs)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(NEURACLE_DIR))
-# 数据目录
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 
 
 def main():
     """主函数"""
     # 启用日志
-    setup_logging(os.path.join(PROJECT_ROOT, "neuracle", "log", "charm_segment"))
+    setup_logging(str(PROJECT_ROOT / "log" / "charm_segment"))
 
     # 设置路径
-    subject_dir = os.path.join(DATA_DIR, "m2m_ernie")
+    subject_dir = DATA_ROOT / "m2m_ernie"
 
     print("=" * 60)
     print("CHARM 步骤5: 体积与表面分割")
@@ -46,7 +36,7 @@ def main():
     # - segmentation/tissue_labeling_upsampled.nii.gz
     # - segmentation/tissue_labeling_upsampled_LUT.txt
     run_segmentation(
-        subject_dir=subject_dir,
+        subject_dir=str(subject_dir),
         debug=False,  # 设置为 True 会保留中间结果
     )
 
