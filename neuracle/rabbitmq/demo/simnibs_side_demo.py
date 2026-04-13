@@ -12,6 +12,7 @@ SimNIBS 端 RabbitMQ 测试示例
 
 import json
 import logging
+import re
 import threading
 import time
 from functools import partial
@@ -89,17 +90,18 @@ def process_message_async(
         message_queue.put(progress_msg)
         logger.info("已发送进度消息: progress_rate=50")
 
+        dir_path = params.get("dir_path", "")
+        subid = re.search("m2m_(.+)", dir_path).group(1) if dir_path else msg_id
+
         if msg_type == "model":
-            result = {"msh_file_path": f"/data/{msg_id}/{msg_id}.msh"}
+            result = {"msh_file_path": f"/data/{msg_id}/{subid}.msh"}
         elif msg_type == "forward":
             result = {
-                "T1": f"/data/{msg_id}/T1.nii.gz",
-                "TI_file": f"/data/{msg_id}/forward_result.nii.gz",
+                "TI_file": f"/data/{msg_id}/{subid}_simulation_max_TI.nii.gz",
             }
         else:
             result = {
-                "T1": f"/data/{msg_id}/T1.nii.gz",
-                "TI_file": f"/data/{msg_id}/inverse_result.nii.gz",
+                "TI_file": f"/data/{msg_id}/{subid}_optimization_max_TI.nii.gz",
                 "electrode_A": ["F3", "FC5"],
                 "electrode_B": ["P3", "PO7"],
             }

@@ -25,6 +25,7 @@ from neuracle.ti_optimization import (
 )
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 from neuracle.utils.ti_export import export_ti_to_nifti
+from simnibs.utils import file_finder
 
 
 def main():
@@ -35,7 +36,8 @@ def main():
     # 设置路径
     subject_dir = DATA_ROOT / "m2m_ernie"
     output_dir = DATA_ROOT / "TI_focality_optimize_ernie"
-    mesh_file_path = subject_dir / "model.msh"
+    sub_files = file_finder.SubjectFiles(subpath=str(subject_dir))
+    subid = sub_files.subid
 
     print("=" * 60)
     print("TI Focality Optimization: 优化 focality")
@@ -48,7 +50,7 @@ def main():
     opt = init_optimization(
         subject_dir=str(subject_dir),
         output_dir=str(output_dir),
-        msh_file_path=str(mesh_file_path),
+        msh_file_path=sub_files.fnamehead,
     )
 
     # 2. 配置目标函数
@@ -64,7 +66,7 @@ def main():
     setup_electrodes_and_roi(
         opt=opt,
         goal="focality",
-        mesh_file_path=str(mesh_file_path),
+        mesh_file_path=sub_files.fnamehead,
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
         electrode_radius=[10],
@@ -88,13 +90,14 @@ def main():
     msh_path = (
         Path(output_folder)
         / "mapped_electrodes_simulation"
-        / "model_tes_mapped_opt_head_mesh.msh"
+        / f"{subid}_tes_mapped_opt_head_mesh.msh"
     )
     ti_nifti_path = export_ti_to_nifti(
         msh_path=str(msh_path),
         output_dir=str(output_dir),
         reference=str(subject_dir / "T1.nii.gz"),
         field_name="max_TI",
+        prefix=f"{subid}_optimization",
     )
 
     print("=" * 60)

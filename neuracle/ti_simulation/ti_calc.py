@@ -61,7 +61,7 @@ def calculate_ti(
     Returns
     -------
     str
-        TI 结果网格路径 (TI.msh)
+        TI 结果网格路径 ({base_name}_TI.msh)
 
     Raises
     ------
@@ -73,8 +73,8 @@ def calculate_ti(
     Notes
     -----
     输出文件：
-    - {output_dir}/TI.msh: TI 场网格文件，包含 max_TI 字段
-    - {output_dir}/TI.msh.png: Gmsh 可视化脚本
+    - {output_dir}/{base_name}_TI.msh: TI 场网格文件，包含 max_TI 字段
+    - {output_dir}/{base_name}_TI.msh.png: Gmsh 可视化脚本
 
     TI 最大调制振幅的范围通常是 [0, ~25] V/m（取决于刺激强度）。
     """
@@ -118,7 +118,8 @@ def calculate_ti(
     mout.add_element_field(ti_max, "max_TI")
 
     os.makedirs(output_dir, exist_ok=True)
-    ti_mesh_path = os.path.join(output_dir, "TI.msh")
+    base_name = os.path.basename(mesh1_path).replace("_TDCS_1_scalar.msh", "")
+    ti_mesh_path = os.path.join(output_dir, f"{base_name}_TI.msh")
     mesh_io.write_msh(mout, ti_mesh_path)
 
     v = mout.view(

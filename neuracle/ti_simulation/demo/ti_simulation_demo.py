@@ -23,6 +23,7 @@ from neuracle.ti_simulation import (
 )
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
 from neuracle.utils.ti_export import export_ti_to_nifti
+from simnibs.utils import file_finder
 
 
 def main():
@@ -33,6 +34,8 @@ def main():
     # 设置路径
     subject_dir = str(DATA_ROOT / "m2m_ernie")
     output_dir = str(DATA_ROOT / "TI_ernie")
+    sub_files = file_finder.SubjectFiles(subpath=subject_dir)
+    subid = sub_files.subid
 
     print("=" * 60)
     print("TI Simulation: Temporal Interference 正向仿真")
@@ -45,7 +48,7 @@ def main():
     S = setup_session(
         subject_dir=subject_dir,
         output_dir=output_dir,
-        msh_file_path=str(DATA_ROOT / "m2m_ernie" / "model.msh"),
+        msh_file_path=sub_files.fnamehead,
     )
 
     # 2. 配置第一个电极对
@@ -88,6 +91,7 @@ def main():
         output_dir=output_dir,
         reference=str(DATA_ROOT / "m2m_ernie" / "T1.nii.gz"),
         field_name="max_TI",
+        prefix=f"{subid}_simulation",
     )
 
     print("=" * 60)

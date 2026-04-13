@@ -70,7 +70,7 @@ def create_mesh_step(
     warp_coordinates : 坐标变换函数
     """
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
-    output_msh_path = os.path.join(subject_dir, "model.msh")
+    output_msh_path = os.path.join(subject_dir, f"{sub_files.subid}.msh")
     settings = read_settings()
     mesh_settings = settings["mesh"]
     logger.info("开始生成网格")

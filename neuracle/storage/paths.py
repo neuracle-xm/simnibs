@@ -6,6 +6,7 @@
 
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -97,19 +98,22 @@ def get_model_mesh_path(dir_path: str) -> Path:
     """获取头模网格文件路径
 
     原理：
-        返回 subject 目录下的 model.msh 文件路径，这是 TI 仿真的核心输入。
+        返回 subject 目录下的 {subid}.msh 文件路径，这是 TI 仿真的核心输入。
+        文件名根据 dir_path (m2m_xxx) 动态提取 subid。
 
     Parameters
     ----------
     dir_path : str
-        subject 目录名
+        subject 目录名 (m2m_xxx)
 
     Returns
     -------
     Path
-        model.msh 文件路径
+        {subid}.msh 文件路径
     """
-    return get_subject_dir(dir_path) / "model.msh"
+
+    subid = re.search("m2m_(.+)", dir_path).group(1)
+    return get_subject_dir(dir_path) / f"{subid}.msh"
 
 
 def resolve_local_dti_path(

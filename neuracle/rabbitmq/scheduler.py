@@ -28,6 +28,7 @@ RabbitMQ 任务调度器模块
 import json
 import logging
 import os
+import re
 import shutil
 import threading
 import time
@@ -316,14 +317,16 @@ def handle_model_task(
     if current_progress < ModelProgress.COMPLETED:
         # 生成最终头部模型 mesh 文件
         create_mesh(str(subject_dir))
+        # 提取 subid 用于构造动态文件名
+        subid = re.search("m2m_(.+)", params.dir_path).group(1)
         # 规范化路径后上传到 OSS
         normalized = normalize_dir_path(params.dir_path)
-        upload_model_outputs(params.dir_path, subject_dir, normalized)
+        upload_model_outputs(params.dir_path, subject_dir, normalized, subid)
         # 标记完成，删除进度文件
         save_progress(progress_file, ModelProgress.COMPLETED)
         progress_file.unlink()
         # 构造返回结果，包含 mesh 文件的 OSS 路径
-        msh_path = f"{normalize_dir_path(params.dir_path)}/model.msh"
+        msh_path = f"{normalize_dir_path(params.dir_path)}/{subid}.msh"
         result = {"msh_file_path": msh_path}
         send_progress(
             message_queue, task_id, "model", ModelProgress.COMPLETED, result=result
@@ -481,19 +484,23 @@ def handle_forward_task(
 
     # ===== 步骤 6：NIfTI 导出 =====
     # 将 TI mesh 配准到 T1 空间并导出为 NIfTI
+    subid = re.search("m2m_(.+)", params.dir_path).group(1)
     ti_nifti_path = export_ti_to_nifti(
         msh_path=ti_mesh_path,
         output_dir=str(output_dir),
         reference=str(subject_dir / Path(params.T1_file_path).name),
         field_name="max_TI",
+        prefix=f"{subid}_simulation",
     )
     send_progress(message_queue, task_id, "forward", ForwardProgress.NIFTI_EXPORTED)
 
     # ===== 步骤 7：上传与清理 =====
-    # 上传 NIfTI 到 OSS，路径格式：{dir_path}_TI_simulation_{task_id}/TI_max_TI.nii.gz
+    # 上传 NIfTI 到 OSS，路径格式：{dir_path}_TI_simulation_{task_id}/{subid}_simulation_max_TI.nii.gz
+    # 注意：export_ti_to_nifti 生成的文件名格式为 {prefix}_{field_name}.nii.gz
+    oss_folder = f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}"
     ti_file_key = upload_task_result(
         Path(ti_nifti_path),
-        f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}/TI_max_TI.nii.gz",
+        f"{oss_folder}/{subid}_simulation_max_TI.nii.gz",
     )
     # 删除本地临时输出目录（非 DEBUG 模式）
     if not DEBUG:
@@ -689,21 +696,25 @@ def handle_inverse_task(
 
     # ===== 步骤 6：NIfTI 导出 =====
     # 使用优化后的 mesh 导出电场分布到 NIfTI
-    msh_name = "model_tes_mapped_opt_head_mesh.msh"
+    subid = re.search("m2m_(.+)", params.dir_path).group(1)
+    msh_name = f"{subid}_tes_mapped_opt_head_mesh.msh"
     msh_path = str(output_dir / "mapped_electrodes_simulation" / msh_name)
     ti_nifti_path = export_ti_to_nifti(
         msh_path=msh_path,
         output_dir=str(output_dir),
         reference=str(subject_dir / Path(params.T1_file_path).name),
         field_name="max_TI",
+        prefix=f"{subid}_optimization",
     )
     send_progress(message_queue, task_id, "inverse", InverseProgress.NIFTI_EXPORTED)
 
     # ===== 步骤 7：上传与清理 =====
-    # 上传 NIfTI 和电极配置到 OSS
+    # 上传 NIfTI 和电极配置到 OSS，路径格式：{dir_path}_TI_optimization_{task_id}/{subid}_optimization_max_TI.nii.gz
+    # 注意：export_ti_to_nifti 生成的文件名格式为 {prefix}_{field_name}.nii.gz
+    oss_folder = f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}"
     ti_file_key = upload_task_result(
         Path(ti_nifti_path),
-        f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}/TI_max_TI.nii.gz",
+        f"{oss_folder}/{subid}_optimization_max_TI.nii.gz",
     )
     # 删除本地临时输出目录（非 DEBUG 模式）
     if not DEBUG:

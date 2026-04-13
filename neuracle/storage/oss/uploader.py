@@ -5,6 +5,7 @@ OSS 上传模块
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import List
 
@@ -146,6 +147,7 @@ def upload_model_outputs(
     dir_path: str,
     subject_dir: Path,
     normalized: str,
+    subid: str,
 ) -> dict[str, str]:
     """上传模型输出到 OSS
 
@@ -162,12 +164,17 @@ def upload_model_outputs(
         本地 subject 目录路径
     normalized : str
         OSS 根路径前缀
+    subid : str
+        Subject ID，用于构造动态文件名
 
     Returns
     -------
     dict[str, str]
         上传文件映射，key 为本地文件名，value 为 OSS 路径
     """
+    if not subid:
+        subid = re.search("m2m_(.+)", dir_path).group(1)
+
     bucket = get_bucket()
     uploaded: dict[str, str] = {}
     folder_mappings = {
@@ -183,8 +190,8 @@ def upload_model_outputs(
             uploaded[local_dir.name] = f"{oss_prefix}/"
 
     file_mappings = {
-        f"{normalized}/model.msh": subject_dir / "model.msh",
-        f"{normalized}/model.msh.opt": subject_dir / "model.msh.opt",
+        f"{normalized}/{subid}.msh": subject_dir / f"{subid}.msh",
+        f"{normalized}/{subid}.msh.opt": subject_dir / f"{subid}.msh.opt",
         f"{normalized}/T2_reg.nii.gz": subject_dir / "T2_reg.nii.gz",
     }
     for oss_key, local_file in file_mappings.items():
