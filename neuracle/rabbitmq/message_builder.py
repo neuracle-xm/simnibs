@@ -74,7 +74,7 @@ def build_forward_message(
     electrode_A: list[dict],
     electrode_B: list[dict],
     conductivity_config: dict[str, float],
-    anisotropy: bool,
+    anisotropy: Literal["scalar", "dir", "vn", "mc"],
     DTI_file_path: str | None = None,
 ) -> dict:
     """
@@ -96,8 +96,8 @@ def build_forward_message(
         电极组 B 列表，每个元素为 {name: str, current_mA: number}
     conductivity_config : dict[str, float]
         组织电导率配置
-    anisotropy : bool
-        是否启用各向异性电导率
+    anisotropy : Literal["scalar", "dir", "vn", "mc"]
+        各向异性类型：scalar=各向同性，dir=直接映射，mc=直接映射平均电导率，vn=体积归一化
     DTI_file_path : str, optional
         DTI 张量文件路径
 
@@ -135,7 +135,7 @@ def build_inverse_message(
     roi_param: dict,
     target_threshold: float,
     conductivity_config: dict[str, float],
-    anisotropy: bool,
+    anisotropy: Literal["scalar", "dir", "vn", "mc"],
     DTI_file_path: str | None = None,
 ) -> dict:
     """
@@ -163,8 +163,8 @@ def build_inverse_message(
         目标电场强度阈值
     conductivity_config : dict[str, float]
         组织电导率配置
-    anisotropy : bool
-        是否启用各向异性电导率
+    anisotropy : Literal["scalar", "dir", "vn", "mc"]
+        各向异性类型：scalar=各向同性，dir=直接映射，mc=直接映射平均电导率，vn=体积归一化
     DTI_file_path : str, optional
         DTI 张量文件路径
 

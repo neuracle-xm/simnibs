@@ -137,7 +137,7 @@
       "Blood": 0.6,
       "Muscle": 0.16
     },
-    "anisotropy": false
+    "anisotropy": "scalar"
   }
 }
 ```
@@ -150,7 +150,7 @@
 | `params.electrode_A` | list[dict] | 是 | 第一组电极，元素为 `{"name": str, "current_mA": number}`，current_mA 总和必须为 0 |
 | `params.electrode_B` | list[dict] | 是 | 第二组电极，元素为 `{"name": str, "current_mA": number}`，current_mA 总和必须为 0 |
 | `params.conductivity_config` | dict | 是 | 电导率字典，值必须为数字 |
-| `params.anisotropy` | bool | 是 | 是否启用各向异性 |
+| `params.anisotropy` | string | 是 | 各向异性类型：`"scalar"`(各向同性), `"dir"`, `"vn"`, `"mc"` |
 | `params.DTI_file_path` | string | 否 | 各向异性场景可传 |
 
 ### 4.1 `montage` 的实际解析规则
@@ -217,7 +217,7 @@
       "Blood": 0.6,
       "Muscle": 0.16
     },
-    "anisotropy": false
+    "anisotropy": "scalar"
   }
 }
 ```
@@ -233,7 +233,7 @@
 | `params.roi_param` | dict | 是 | ROI 参数 |
 | `params.target_threshold` | number | 是 | 必须 `>= 0` |
 | `params.conductivity_config` | dict | 是 | 电导率字典 |
-| `params.anisotropy` | bool | 是 | 是否启用各向异性 |
+| `params.anisotropy` | string | 是 | 各向异性类型：`"scalar"`(各向同性), `"dir"`, `"vn"`, `"mc"` |
 | `params.DTI_file_path` | string | 否 | 各向异性场景可传 |
 
 ### 5.1 `roi_param` 结构

@@ -14,6 +14,7 @@ import os
 import threading
 import time
 from queue import Empty, Queue
+from typing import Literal
 
 from neuracle.config import get_rabbitmq_config, load_env
 from neuracle.logger import setup_logging
@@ -42,7 +43,7 @@ def create_model_message(task_id: str, with_dti: bool = False) -> dict:
 def create_forward_message(
     task_id: str,
     montage: str,
-    anisotropy: bool = False,
+    anisotropy: Literal["scalar", "dir", "vn", "mc"] = "scalar",
     electrode_a: list[dict] | None = None,
     electrode_b: list[dict] | None = None,
 ) -> dict:
@@ -66,13 +67,15 @@ def create_forward_message(
         "conductivity_config": STANDARD_COND,
         "anisotropy": anisotropy,
     }
-    if anisotropy:
+    if anisotropy != "scalar":
         params["DTI_file_path"] = f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "forward", "params": params}
 
 
 def create_inverse_message(
-    task_id: str, montage: str, anisotropy: bool = False
+    task_id: str,
+    montage: str,
+    anisotropy: Literal["scalar", "dir", "vn", "mc"] = "scalar",
 ) -> dict:
     """创建 inverse 任务消息"""
     params = {
@@ -93,7 +96,7 @@ def create_inverse_message(
         "conductivity_config": STANDARD_COND,
         "anisotropy": anisotropy,
     }
-    if anisotropy:
+    if anisotropy != "scalar":
         params["DTI_file_path"] = f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "inverse", "params": params}
 
@@ -103,7 +106,7 @@ def create_inverse_atlas_message(
     montage: str,
     atlas_name: str = "BN",
     area_name: str = "A8m_L",
-    anisotropy: bool = False,
+    anisotropy: Literal["scalar", "dir", "vn", "mc"] = "scalar",
 ) -> dict:
     """创建 inverse atlas 任务消息。
 
@@ -129,7 +132,7 @@ def create_inverse_atlas_message(
         "conductivity_config": STANDARD_COND,
         "anisotropy": anisotropy,
     }
-    if anisotropy:
+    if anisotropy != "scalar":
         params["DTI_file_path"] = f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz"
     return {"id": task_id, "type": "inverse", "params": params}
 
@@ -342,12 +345,12 @@ def main():
 
     model_msg = create_model_message("test_model_001", with_dti=True)
     forward_msg = create_forward_message(
-        "test_forward_001", "EEG10-10_UI_Jurak_2007", anisotropy=False
+        "test_forward_001", "EEG10-10_UI_Jurak_2007", anisotropy="scalar"
     )
     forward_aniso_msg = create_forward_message(
         "test_forward_002",
         "EEG10-20_Okamoto_2004",
-        anisotropy=True,
+        anisotropy="vn",
         electrode_a=[
             {"name": "F3", "current_mA": 1.0},
             {"name": "P3", "current_mA": -1.0},
@@ -358,17 +361,17 @@ def main():
         ],
     )
     inverse_msg = create_inverse_message(
-        "test_inverse_001", "EEG10-10_Cutini_2011", anisotropy=False
+        "test_inverse_001", "EEG10-10_Cutini_2011", anisotropy="scalar"
     )
     inverse_aniso_msg = create_inverse_message(
-        "test_inverse_002", "EEG10-20_extended_SPM12", anisotropy=True
+        "test_inverse_002", "EEG10-20_extended_SPM12", anisotropy="vn"
     )
     inverse_atlas_msg = create_inverse_atlas_message(
         "test_inverse_003",
         "EEG10-10_Cutini_2011",
         atlas_name="BN",
         area_name="A8m_L",
-        anisotropy=False,
+        anisotropy="scalar",
     )
     ack_test_msg = create_ack_test_message("test_ack_001", sleep_seconds=10.0)
 

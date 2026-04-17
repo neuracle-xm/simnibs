@@ -93,7 +93,7 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     - electrode_A 中 current_mA 总和必须为 0
     - electrode_B 中 current_mA 总和必须为 0
     - conductivity_config: 非空字典，值为浮点数
-    - anisotropy: 布尔值
+    - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
     - DTI_file_path: 可选
 
     Notes
@@ -172,9 +172,9 @@ def validate_forward_params(params: dict[str, Any]) -> None:
         raise ValidationError("conductivity_config 值必须是数字")
 
     anisotropy = params.get("anisotropy")
-    if not isinstance(anisotropy, bool):
-        logger.error("[anisotropy] anisotropy 必须是布尔值")
-        raise ValidationError("anisotropy 必须是布尔值")
+    if anisotropy not in ("scalar", "dir", "vn", "mc"):
+        logger.error("[anisotropy] anisotropy 必须是 'scalar', 'dir', 'vn', 'mc' 之一")
+        raise ValidationError("anisotropy 必须是 'scalar', 'dir', 'vn', 'mc' 之一")
 
     dti_path = params.get("DTI_file_path")
     if dti_path is not None and not isinstance(dti_path, str):
@@ -193,7 +193,7 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     - current_A: 非空列表，元素为浮点数，总和必须为 0
     - current_B: 非空列表，元素为浮点数，总和必须为 0
     - cond: 非空字典，值为浮点数
-    - anisotropy: 布尔值
+    - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
     - roi_type: 字符串，必须为 "atlas" 或 "mni_pos"
     - roi_param: 字典，根据 roi_type 验证对应参数
     - roi_type=atlas 时，atlas_param 必填（name, area）
@@ -253,9 +253,9 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
         raise ValidationError("conductivity_config 值必须是数字")
 
     anisotropy = params.get("anisotropy")
-    if not isinstance(anisotropy, bool):
-        logger.error("[anisotropy] anisotropy 必须是布尔值")
-        raise ValidationError("anisotropy 必须是布尔值")
+    if anisotropy not in ("scalar", "dir", "vn", "mc"):
+        logger.error("[anisotropy] anisotropy 必须是 'scalar', 'dir', 'vn', 'mc' 之一")
+        raise ValidationError("anisotropy 必须是 'scalar', 'dir', 'vn', 'mc' 之一")
 
     roi_type = params.get("roi_type")
     if not roi_type or roi_type not in ("atlas", "mni_pos"):

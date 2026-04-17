@@ -206,7 +206,7 @@ def get_test_messages():
             {"name": "P5", "current_mA": -1.0},
         ],
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("forward_anisotropy_false", msg3))
 
@@ -224,7 +224,7 @@ def get_test_messages():
             {"name": "F5", "current_mA": -1.0},
         ],
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
-        anisotropy=True,
+        anisotropy="vn",
         DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("forward_anisotropy_true", msg4))
@@ -243,7 +243,7 @@ def get_test_messages():
             {"name": "P5", "current_mA": -1.0},
         ],
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
         DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("forward_anisotropy_false_with_dti", msg5))
@@ -272,7 +272,7 @@ def get_test_messages():
             "Bone": 0.01,
             "Scalp": 0.465,
         },
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("forward_多电极", msg6))
 
@@ -290,7 +290,7 @@ def get_test_messages():
         },
         target_threshold=0.5,
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("inverse_atlas_roi", msg7))
 
@@ -308,7 +308,7 @@ def get_test_messages():
         },
         target_threshold=0.7,
         conductivity_config={"White Matter": 0.126, "Gray Matter": 0.275, "CSF": 1.654},
-        anisotropy=True,
+        anisotropy="vn",
         DTI_file_path=f"{BUILT_IN_DIR_PATH}/DTI_coregT1_tensor.nii.gz",
     )
     messages.append(("inverse_mni_pos_roi", msg8))
@@ -327,7 +327,7 @@ def get_test_messages():
         },
         target_threshold=0.0,
         conductivity_config={"Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("inverse_threshold_边界值", msg9))
 
@@ -366,7 +366,7 @@ def get_error_messages():
             {"name": "P5", "current_mA": -1.0},
         ],
         conductivity_config={"Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("forward_电极电流总和不等于0", msg3))
 
@@ -384,7 +384,7 @@ def get_error_messages():
         },
         target_threshold=0.5,
         conductivity_config={"Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("inverse_roi_type非法", msg4))
 
@@ -402,7 +402,7 @@ def get_error_messages():
         },
         target_threshold=-0.5,
         conductivity_config={"Gray Matter": 0.275},
-        anisotropy=False,
+        anisotropy="scalar",
     )
     messages.append(("inverse_threshold负数", msg5))
 

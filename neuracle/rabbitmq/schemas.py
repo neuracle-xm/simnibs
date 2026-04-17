@@ -16,7 +16,23 @@ dataclass 的优势
 """
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Literal
+
+
+class AnisotropyType(str, Enum):
+    """各向异性类型枚举
+
+    - scalar: 使用各向同性值（默认）
+    - dir: 直接映射（direct mapping）
+    - mc: 直接映射的平均电导率（mean conductivity from direct mapping）
+    - vn: 体积归一化（volume normalized）
+    """
+
+    SCALAR = "scalar"
+    DIR = "dir"
+    VN = "vn"
+    MC = "mc"
 
 
 @dataclass
@@ -73,7 +89,7 @@ class ForwardParams:
     electrode_A: list[ElectrodeWithCurrent]
     electrode_B: list[ElectrodeWithCurrent]
     conductivity_config: dict[str, float]
-    anisotropy: bool
+    anisotropy: AnisotropyType
     DTI_file_path: str | None = None
 
 
@@ -91,7 +107,7 @@ class InverseParams:
     roi_param: ROIParam
     target_threshold: float
     conductivity_config: dict[str, float]
-    anisotropy: bool
+    anisotropy: AnisotropyType
     DTI_file_path: str | None = None
 
 

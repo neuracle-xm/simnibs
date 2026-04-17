@@ -219,7 +219,7 @@ handle_message()
 
 - 输出目录固定为 `Dir_path/TI_simulation/{task_id}`
 - 若目录已存在，先删除旧目录
-- `anisotropy=True` 时传入 `anisotropy_type="vn"`，否则为 `"scalar"`
+- `anisotropy` 直接传入 `anisotropy_type`（值为 `"scalar"`, `"dir"`, `"vn"`, `"mc"` 之一）
 - `montage` 通过 `find_montage_file()` 解析为 CSV 路径
 
 执行顺序：

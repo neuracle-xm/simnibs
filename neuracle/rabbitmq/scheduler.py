@@ -411,8 +411,8 @@ def handle_forward_task(
     output_dir = get_task_output_dir(params.dir_path, "TI_simulation", task_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 确定各向异性类型：vn=体积中性（各向异性），scalar=标量（各向同性）
-    anisotropy_type = "vn" if params.anisotropy else "scalar"
+    # 确定各向异性类型：scalar=各向同性，dir=直接映射，mc=直接映射平均电导率，vn=体积归一化
+    anisotropy_type = params.anisotropy
 
     # 非 DEBUG 模式下重置输出目录（清空旧文件）
     if not DEBUG:
@@ -602,8 +602,8 @@ def handle_inverse_task(
     output_dir = get_task_output_dir(params.dir_path, "TI_optimization", task_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 确定各向异性类型：vn=体积中性（各向异性），scalar=标量（各向同性）
-    anisotropy_type = "vn" if params.anisotropy else "scalar"
+    # 确定各向异性类型：scalar=各向同性，dir=直接映射，mc=直接映射平均电导率，vn=体积归一化
+    anisotropy_type = params.anisotropy
 
     # 非 DEBUG 模式下重置输出目录
     if not DEBUG:
