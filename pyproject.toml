@@ -20,8 +20,6 @@ requires-python = ">=3.11"
 dependencies = [
   "python-dotenv",
   "pika",
-  "oss2",
-  "alibabacloud_sts20150401",
   "nilearn"
 ]
 

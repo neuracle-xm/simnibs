@@ -77,12 +77,6 @@ from neuracle.rabbitmq.validator import (
     validate_inverse_params,
     validate_model_params,
 )
-from neuracle.storage.oss import (
-    download_folder_from_oss,
-    download_input_file,
-    upload_model_outputs,
-    upload_task_result,
-)
 from neuracle.storage.paths import (
     ensure_data_root,
     get_model_mesh_path,
@@ -167,8 +161,8 @@ def handle_model_task(
         - 判断是否为重发消息（redelivered），若是则从 .progress.txt 恢复进度
         - 新消息则从头开始，发送进度 0% 表示任务启动
 
-    步骤 1：下载输入文件（0%~10%）
-        - 从 OSS 下载 T1/T2/DTI 图像文件到本地 subject 目录
+    步骤 1：准备输入文件（0%~10%）
+        - 使用传入的本地 T1/T2/DTI 文件路径
         - 仅在 PREPARE_T1_DONE 未完成时执行（支持断点续传）
 
     步骤 2：T1 图像预处理（10%）
@@ -191,9 +185,8 @@ def handle_model_task(
     步骤 7：表面重建（85%）
         - 调用 create_surfaces() 生成头皮、脑皮层等表面 mesh
 
-    步骤 8：Mesh 生成与上传（100%）
+    步骤 8：Mesh 生成（100%）
         - 调用 create_mesh() 生成最终的头部模型 mesh 文件
-        - 上传到 OSS
         - 删除本地进度文件，发送完成消息
 
     Parameters
@@ -237,24 +230,20 @@ def handle_model_task(
         # 发送任务启动进度 0%
         send_progress(message_queue, task_id, "model", ModelProgress.START)
 
-    # ===== 步骤 1：下载输入文件 =====
-    # 准备 T1/T2/DTI 文件本地路径
-    t1_local_path = subject_dir / Path(params.T1_file_path).name
-    t2_local_path = (
-        subject_dir / Path(params.T2_file_path).name if params.T2_file_path else None
-    )
+    # ===== 步骤 1：准备输入文件 =====
+    # 使用传入的本地文件路径
+    t1_local_path = Path(params.T1_file_path) if params.T1_file_path else None
+    t2_local_path = Path(params.T2_file_path) if params.T2_file_path else None
+    dti_local_path = Path(params.DTI_file_path) if params.DTI_file_path else None
 
-    # 仅在尚未完成 T1 准备时下载（避免重复下载）
+    # 仅在尚未完成 T1 准备时验证文件存在（避免重复验证）
     if current_progress < ModelProgress.PREPARE_T1_DONE:
-        # 从 OSS 下载输入文件到本地
-        t1_local_path = download_input_file(params.T1_file_path, t1_local_path)
-        if params.T2_file_path:
-            t2_local_path = download_input_file(params.T2_file_path, t2_local_path)
-        if params.DTI_file_path:
-            download_input_file(
-                params.DTI_file_path,
-                subject_dir / Path(params.DTI_file_path).name,
-            )
+        if not t1_local_path or not t1_local_path.exists():
+            raise FileNotFoundError(f"T1 文件不存在: {t1_local_path}")
+        if t2_local_path and not t2_local_path.exists():
+            raise FileNotFoundError(f"T2 文件不存在: {t2_local_path}")
+        if dti_local_path and not dti_local_path.exists():
+            raise FileNotFoundError(f"DTI 文件不存在: {dti_local_path}")
 
     # ===== 步骤 2：T1 图像预处理 =====
     if current_progress < ModelProgress.PREPARE_T1_DONE:
@@ -313,20 +302,17 @@ def handle_model_task(
         save_progress(progress_file, ModelProgress.SURFACES_DONE)
         send_progress(message_queue, task_id, "model", ModelProgress.SURFACES_DONE)
 
-    # ===== 步骤 8：Mesh 生成与上传 =====
+    # ===== 步骤 8：Mesh 生成 =====
     if current_progress < ModelProgress.COMPLETED:
         # 生成最终头部模型 mesh 文件
         create_mesh(str(subject_dir))
         # 提取 subid 用于构造动态文件名
         subid = re.search("m2m_(.+)", params.dir_path).group(1)
-        # 规范化路径后上传到 OSS
-        normalized = normalize_dir_path(params.dir_path)
-        upload_model_outputs(params.dir_path, subject_dir, normalized, subid)
         # 标记完成，删除进度文件
         save_progress(progress_file, ModelProgress.COMPLETED)
         progress_file.unlink()
-        # 构造返回结果，包含 mesh 文件的 OSS 路径
-        msh_path = f"{normalize_dir_path(params.dir_path)}/{subid}.msh"
+        # 构造返回结果，包含 mesh 文件的本地路径
+        msh_path = str(subject_dir / f"{subid}.msh")
         result = {"msh_file_path": msh_path}
         send_progress(
             message_queue, task_id, "model", ModelProgress.COMPLETED, result=result
@@ -344,8 +330,8 @@ def handle_forward_task(
 
     任务流程
     ------
-    步骤 0：初始化与下载（0%）
-        - 获取 subject 目录，若本地无则从 OSS 下载
+    步骤 0：初始化与检查（0%）
+        - 检查 subject 目录是否本地存在
         - 创建任务输出目录
 
     步骤 1：会话初始化（10%）
@@ -370,9 +356,8 @@ def handle_forward_task(
         - 调用 export_ti_to_nifti() 将 TI 结果导出为 NIfTI 格式
         - 以 T1 图像为参考空间
 
-    步骤 7：上传与清理（100%）
-        - 上传结果到 OSS
-        - 删除本地临时输出目录
+    步骤 7：清理（100%）
+        - 删除本地临时输出目录（非 DEBUG 模式）
 
     Parameters
     ----------
@@ -397,15 +382,15 @@ def handle_forward_task(
         params.conductivity_config,
     )
 
-    # ===== 步骤 0：初始化与下载 =====
+    # ===== 步骤 0：初始化与检查 =====
     send_progress(message_queue, task_id, "forward", ForwardProgress.START)
 
-    # 获取 subject 本地目录，若不存在则从 OSS 下载完整目录
+    # 获取 subject 本地目录，不存在则报错
     subject_dir = get_subject_dir(params.dir_path)
     if not subject_dir.is_dir():
-        ensure_data_root()
-        subject_dir.mkdir(parents=True, exist_ok=True)
-        download_folder_from_oss(normalize_dir_path(params.dir_path), subject_dir)
+        raise FileNotFoundError(
+            f"subject 目录不存在: {subject_dir}。请先执行头模生成任务。"
+        )
 
     # 创建任务输出目录（TI_simulation/{task_id}）
     output_dir = get_task_output_dir(params.dir_path, "TI_simulation", task_id)
@@ -494,19 +479,14 @@ def handle_forward_task(
     )
     send_progress(message_queue, task_id, "forward", ForwardProgress.NIFTI_EXPORTED)
 
-    # ===== 步骤 7：上传与清理 =====
-    # 上传 NIfTI 到 OSS，路径格式：{dir_path}_TI_simulation_{task_id}/{subid}_simulation_max_TI.nii.gz
-    # 注意：export_ti_to_nifti 生成的文件名格式为 {prefix}_{field_name}.nii.gz
-    oss_folder = f"{normalize_dir_path(params.dir_path)}_TI_simulation_{task_id}"
-    ti_file_key = upload_task_result(
-        Path(ti_nifti_path),
-        f"{oss_folder}/{subid}_simulation_max_TI.nii.gz",
-    )
+    # ===== 步骤 7：清理 =====
+    # 返回本地 NIfTI 文件路径
+    ti_file_path = str(ti_nifti_path)
     # 删除本地临时输出目录（非 DEBUG 模式）
     if not DEBUG:
         shutil.rmtree(output_dir, ignore_errors=True)
 
-    result = {"TI_file": ti_file_key}
+    result = {"TI_file": ti_file_path}
     send_progress(
         message_queue, task_id, "forward", ForwardProgress.COMPLETED, result=result
     )
@@ -523,8 +503,8 @@ def handle_inverse_task(
 
     任务流程
     ------
-    步骤 0：初始化与下载（0%）
-        - 获取 subject 目录，若本地无则从 OSS 下载
+    步骤 0：初始化与检查（0%）
+        - 检查 subject 目录是否本地存在
         - 创建任务输出目录
         - 解析 ROI 参数（atlas 或 MNI 球形区域）
 
@@ -550,8 +530,8 @@ def handle_inverse_task(
     步骤 6：NIfTI 导出（95%）
         - 将优化后的电场分布导出为 NIfTI 格式
 
-    步骤 7：上传与清理（100%）
-        - 上传结果到 OSS，包含 TI 文件和电极配置
+    步骤 7：清理（100%）
+        - 返回结果，包含 TI 文件和电极配置
         - 删除本地临时输出目录
 
     Parameters
@@ -588,15 +568,15 @@ def handle_inverse_task(
         params.conductivity_config,
     )
 
-    # ===== 步骤 0：初始化与下载 =====
+    # ===== 步骤 0：初始化与检查 =====
     send_progress(message_queue, task_id, "inverse", InverseProgress.START)
 
-    # 获取 subject 本地目录，若不存在则从 OSS 下载完整目录
+    # 获取 subject 本地目录，不存在则报错
     subject_dir = get_subject_dir(params.dir_path)
     if not subject_dir.is_dir():
-        ensure_data_root()
-        subject_dir.mkdir(parents=True, exist_ok=True)
-        download_folder_from_oss(normalize_dir_path(params.dir_path), subject_dir)
+        raise FileNotFoundError(
+            f"subject 目录不存在: {subject_dir}。请先执行头模生成任务。"
+        )
 
     # 创建任务输出目录（TI_optimization/{task_id}）
     output_dir = get_task_output_dir(params.dir_path, "TI_optimization", task_id)
@@ -708,21 +688,15 @@ def handle_inverse_task(
     )
     send_progress(message_queue, task_id, "inverse", InverseProgress.NIFTI_EXPORTED)
 
-    # ===== 步骤 7：上传与清理 =====
-    # 上传 NIfTI 和电极配置到 OSS，路径格式：{dir_path}_TI_optimization_{task_id}/{subid}_optimization_max_TI.nii.gz
-    # 注意：export_ti_to_nifti 生成的文件名格式为 {prefix}_{field_name}.nii.gz
-    oss_folder = f"{normalize_dir_path(params.dir_path)}_TI_optimization_{task_id}"
-    ti_file_key = upload_task_result(
-        Path(ti_nifti_path),
-        f"{oss_folder}/{subid}_optimization_max_TI.nii.gz",
-    )
+    # ===== 步骤 7：清理 =====
+    # 返回本地 NIfTI 文件路径和优化后的电极配置
+    ti_file_path = str(ti_nifti_path)
     # 删除本地临时输出目录（非 DEBUG 模式）
     if not DEBUG:
         shutil.rmtree(output_dir, ignore_errors=True)
 
-    # 返回结果包含 TI 文件路径和优化后的电极配置
     result = {
-        "TI_file": ti_file_key,
+        "TI_file": ti_file_path,
         "electrode_A": electrode_A,
         "electrode_B": electrode_B,
     }
@@ -834,7 +808,7 @@ def execute_task(
         logger.error("参数验证失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))
     except Exception as e:
-        # 其他执行异常（如文件不存在、OSS 上传失败、SimNIBS 计算错误）
+        # 其他执行异常（如文件不存在、SimNIBS 计算错误）
         ack_reason = "task_exception"
         logger.error("任务执行失败: %s - %s", task_id, e)
         send_progress(message_queue, task_id, msg_type, 0, str(e))

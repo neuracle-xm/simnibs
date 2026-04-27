@@ -5,7 +5,6 @@ config 模块
 """
 
 from neuracle.config.env import (
-    get_aliyun_config,
     get_rabbitmq_config,
     load_env,
     mask_rabbitmq_config,
@@ -14,6 +13,5 @@ from neuracle.config.env import (
 __all__ = [
     "load_env",
     "get_rabbitmq_config",
-    "get_aliyun_config",
     "mask_rabbitmq_config",
 ]

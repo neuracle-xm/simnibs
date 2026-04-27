@@ -8,7 +8,6 @@
 - 标准电导率值
 - 组织名称列表
 - EEG Montage 文件名常量
-- OSS 相关常量
 """
 
 from pathlib import Path
@@ -62,10 +61,6 @@ EEG10_10_NEUROELECTRICS = "EEG10-10_Neuroelectrics"
 EEG10_10_UI_JURAK_2007 = "EEG10-10_UI_Jurak_2007"
 EEG10_20_OKAMOTO_2004 = "EEG10-20_Okamoto_2004"
 EEG10_20_EXTENDED_SPM12 = "EEG10-20_extended_SPM12"
-
-# OSS 相关常量
-DEFAULT_STS_TOKEN_DURATION_SECONDES = 3600
-DEFAULT_STS_ROLE_SESSION_NAME = "simnibs_session"
 
 # 内置头模相关常量
 BUILT_IN_DIR_PATH = "m2m_ernie"
