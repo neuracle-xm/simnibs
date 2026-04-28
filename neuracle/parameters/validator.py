@@ -1,7 +1,7 @@
 """
-RabbitMQ 消息参数验证器
+参数验证模块
 
-在接收消息时进行参数合法性检查，确保满足以下条件：
+在接收参数时进行合法性检查，确保满足以下条件：
 1. 必填字段存在
 2. 字段类型正确
 3. 值范围有效
@@ -11,20 +11,10 @@ RabbitMQ 消息参数验证器
 - validate_model_params()：验证头模生成参数
 - validate_forward_params()：验证正向仿真参数
 - validate_inverse_params()：验证逆向仿真参数
-- validate_ack_test_params()：验证 ACK 测试参数
-- validate_message()：验证消息整体结构
 
 验证失败处理
 -----------
 当验证失败时，抛出 ValidationError 异常。
-在 scheduler.py 的 handle_message() 中捕获并处理：
-- 发送错误进度到后端
-- 直接 ack 消息（丢弃，不重发）
-- 记录错误日志
-
-为什么验证失败要 ack 而不是 nack？
-因为验证失败通常意味着消息格式错误，即使重发也会失败。
-nack 并 requeue 会导致无限重发循环。
 """
 
 import logging
@@ -49,10 +39,6 @@ def validate_model_params(params: dict[str, Any]) -> None:
     - dir_path: 非空字符串
     - T2_file_path: 可选
     - DTI_file_path: 可选
-
-    Notes
-    -----
-        id 在消息顶层验证，params 内不验证 id
 
     Raises
     ------
@@ -95,10 +81,6 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     - conductivity_config: 非空字典，值为浮点数
     - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
     - DTI_file_path: 可选
-
-    Notes
-    -----
-        id 在消息顶层验证，params 内不验证 id
 
     Raises
     ------
@@ -200,10 +182,6 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     - roi_type=mni_pos 时，mni_param 必填（center, radius）
     - target_threshold: 浮点数，>= 0
     - DTI_file_path: 可选
-
-    Notes
-    -----
-        逆向仿真与正向仿真不同，没有 electrode_A 和 electrode_B 参数
 
     Raises
     ------
@@ -310,75 +288,3 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     if dti_path is not None and not isinstance(dti_path, str):
         logger.error("[DTI_file_path] DTI_file_path 必须是字符串")
         raise ValidationError("DTI_file_path 必须是字符串")
-
-
-def validate_ack_test_params(params: dict[str, Any]) -> None:
-    """
-    验证 ack 时机测试参数
-
-    验证规则
-    -------
-    - sleep_seconds: 数字且 > 0
-
-    Raises
-    ------
-    ValidationError
-        验证失败时抛出
-    """
-    sleep_seconds = params.get("sleep_seconds", 30.0)
-    if not isinstance(sleep_seconds, (int, float)):
-        logger.error("[sleep_seconds] sleep_seconds 必须是数字")
-        raise ValidationError("sleep_seconds 必须是数字")
-    if sleep_seconds <= 0:
-        logger.error("[sleep_seconds] sleep_seconds 必须大于 0")
-        raise ValidationError("sleep_seconds 必须大于 0")
-
-
-def validate_message(message: dict[str, Any]) -> None:
-    """
-    验证消息完整性
-
-    验证规则
-    -------
-    - message 必须是字典
-    - id: 非空字符串
-    - type: 非空字符串，必须为 "model", "forward", "inverse" 或 "ack_test"
-    - params: 字典，根据 type 验证对应参数
-
-    Parameters
-    ----------
-    message : dict
-        消息字典
-
-    Raises
-    ------
-    ValidationError
-        验证失败时抛出
-    """
-    if not isinstance(message, dict):
-        logger.error("[message] 消息必须是字典")
-        raise ValidationError("消息必须是字典")
-
-    msg_id = message.get("id")
-    if not msg_id or not isinstance(msg_id, str):
-        logger.error("[id] id 必须是字符串")
-        raise ValidationError("id 必须是字符串")
-
-    msg_type = message.get("type")
-    if not msg_type or msg_type not in ("model", "forward", "inverse", "ack_test"):
-        logger.error('[type] type 必须是 "model", "forward", "inverse" 或 "ack_test"')
-        raise ValidationError('type 必须是 "model", "forward", "inverse" 或 "ack_test"')
-
-    params = message.get("params")
-    if not params or not isinstance(params, dict):
-        logger.error("[params] params 必须是字典")
-        raise ValidationError("params 必须是字典")
-
-    if msg_type == "model":
-        validate_model_params(params)
-    elif msg_type == "forward":
-        validate_forward_params(params)
-    elif msg_type == "inverse":
-        validate_inverse_params(params)
-    elif msg_type == "ack_test":
-        validate_ack_test_params(params)

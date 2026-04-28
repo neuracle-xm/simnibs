@@ -1,24 +1,23 @@
 """
 参数转换模块
 
-将字典转换为对应的 dataclass 参数类型，用于 RabbitMQ 消息解析和参数校验。
+将字典转换为对应的 dataclass 参数类型，用于参数解析和校验。
 
-该模块是消息处理的中间层：
+该模块是参数处理的中间层：
 1. validator.py 验证字典格式正确（字段存在、类型正确、值范围合法）
-2. params.py 将验证通过的字典转换为强类型的 dataclass
-3. scheduler.py 使用这些 dataclass 进行任务处理
+2. converter.py 将验证通过的字典转换为强类型的 dataclass
+3. 业务代码直接使用 dataclass，不用处理原始字典
 
 这样做的好处：
 - validator 不关心业务逻辑，只关心数据格式
-- params 转换后的 dataclass 有类型提示，方便 IDE 和静态检查
-- scheduler 直接使用 dataclass，不用处理原始字典
+- converter 转换后的 dataclass 有类型提示，方便 IDE 和静态检查
+- 业务代码直接使用 dataclass，不用处理原始字典
 """
 
 import logging
 from pathlib import Path
 
-from neuracle.rabbitmq.schemas import (
-    AckTestParams,
+from neuracle.parameters.schemas import (
     AtlasParam,
     ElectrodeWithCurrent,
     ForwardParams,
@@ -53,7 +52,7 @@ def _get_t1_and_dti_path(data: dict) -> tuple[str, str | None]:
     return t1_file_path, dti_file_path
 
 
-def dict_to_model_params(data: dict, task_id: str) -> ModelParams:
+def dict_to_model_params(data: dict) -> ModelParams:
     """
     将字典转换为 ModelParams。
 
@@ -61,8 +60,6 @@ def dict_to_model_params(data: dict, task_id: str) -> ModelParams:
     ----------
     data : dict
         包含 T1_file_path、dir_path、T2_file_path、DTI_file_path 的字典
-    task_id : str
-        任务 ID，从消息顶层获取
 
     Returns
     -------
@@ -70,7 +67,7 @@ def dict_to_model_params(data: dict, task_id: str) -> ModelParams:
         模型参数据类实例
     """
     return ModelParams(
-        id=task_id,
+        id=data.get("id", ""),
         T1_file_path=data["T1_file_path"],
         dir_path=data["dir_path"],
         T2_file_path=data.get("T2_file_path"),
@@ -78,7 +75,7 @@ def dict_to_model_params(data: dict, task_id: str) -> ModelParams:
     )
 
 
-def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
+def dict_to_forward_params(data: dict) -> ForwardParams:
     """
     将字典转换为 ForwardParams。
 
@@ -87,8 +84,6 @@ def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
     data : dict
         包含 dir_path、T1_file_path、montage、electrode_A、electrode_B、
         conductivity_config、anisotropy、DTI_file_path 的字典
-    task_id : str
-        任务 ID，从消息顶层获取
 
     Returns
     -------
@@ -107,7 +102,7 @@ def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
     t1_file_path, dti_file_path = _get_t1_and_dti_path(data)
 
     return ForwardParams(
-        id=task_id,
+        id=data.get("id", ""),
         dir_path=data["dir_path"],
         T1_file_path=t1_file_path,
         montage=data["montage"],
@@ -119,7 +114,7 @@ def dict_to_forward_params(data: dict, task_id: str) -> ForwardParams:
     )
 
 
-def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
+def dict_to_inverse_params(data: dict) -> InverseParams:
     """
     将字典转换为 InverseParams。
 
@@ -129,8 +124,6 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
         包含 dir_path、T1_file_path、montage、current_A、current_B、
         roi_type、roi_param、target_threshold、conductivity_config、
         anisotropy、DTI_file_path 的字典
-    task_id : str
-        任务 ID，从消息顶层获取
 
     Returns
     -------
@@ -153,7 +146,7 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
     t1_file_path, dti_file_path = _get_t1_and_dti_path(data)
 
     return InverseParams(
-        id=task_id,
+        id=data.get("id", ""),
         dir_path=data["dir_path"],
         T1_file_path=t1_file_path,
         montage=data["montage"],
@@ -165,26 +158,4 @@ def dict_to_inverse_params(data: dict, task_id: str) -> InverseParams:
         conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
         DTI_file_path=dti_file_path,
-    )
-
-
-def dict_to_ack_test_params(data: dict, task_id: str) -> AckTestParams:
-    """
-    将字典转换为 AckTestParams。
-
-    Parameters
-    ----------
-    data : dict
-        包含 sleep_seconds 的字典
-    task_id : str
-        任务 ID，从消息顶层获取
-
-    Returns
-    -------
-    AckTestParams
-        心跳测试参数据类实例
-    """
-    return AckTestParams(
-        id=task_id,
-        sleep_seconds=float(data.get("sleep_seconds", 30.0)),
     )

@@ -2,7 +2,7 @@
 
 ## 需求分析
 
-1. 创建通用的 neuracle 级别日志系统（不局限于 rabbitmq）
+1. 创建通用的 neuracle 级别日志系统
 2. 将 logger 改为模块级别（非类内部）
 3. 增加 logger 保存到文件功能
 4. 日志路径可配置，默认为 `neuracle/log/`

@@ -1,12 +1,12 @@
 """
-RabbitMQ 消息数据结构定义
+参数和结果数据结构定义
 
-定义所有消息类型的参数和结果数据类（使用 dataclass）。
+定义所有任务类型的参数和结果数据类（使用 dataclass）。
 
 这些数据类用于：
-1. 定义消息参数的结构（ModelParams, ForwardParams, InverseParams, AckTestParams）
-2. 定义消息结果的结构（ModelResult, ForwardResult, InverseResult）
-3. 定义 ROI 参数结构（ROIParam, AtlasParam, MNIParam）
+1. 定义参数的结构（ModelParams, ForwardParams, InverseParams）
+2. 定义 ROI 参数结构（ROIParam, AtlasParam, MNIParam）
+3. 定义电极参数结构（ElectrodeWithCurrent）
 
 dataclass 的优势
 --------------
@@ -109,45 +109,3 @@ class InverseParams:
     conductivity_config: dict[str, float]
     anisotropy: AnisotropyType
     DTI_file_path: str | None = None
-
-
-@dataclass
-class AckTestParams:
-    """ack 时机验证参数"""
-
-    id: str
-    sleep_seconds: float = 30.0
-
-
-@dataclass
-class ModelResult:
-    """头模生成结果"""
-
-    msh_file_path: str | None = None
-
-
-@dataclass
-class ForwardResult:
-    """正向仿真结果"""
-
-    TI_file: str | None = None
-
-
-@dataclass
-class InverseResult:
-    """逆向仿真结果"""
-
-    TI_file: str | None = None
-    electrode_A: list[str] | None = None
-    electrode_B: list[str] | None = None
-
-
-@dataclass
-class ReturnMessage:
-    """返回消息"""
-
-    id: str
-    type: Literal["model", "forward", "inverse", "ack_test"]
-    progress_rate: int
-    message: str | None = None
-    result: ModelResult | ForwardResult | InverseResult | None = None

@@ -1,19 +1,13 @@
 """
 任务进度管理
 
-提供进度枚举和进度文件的加载保存功能。
-
-进度枚举说明
------------
-- ModelProgress：头模生成任务的进度阶段
-- ForwardProgress：正向仿真任务的进度阶段
-- InverseProgress：逆向仿真任务的进度阶段
+提供头模生成任务的进度枚举和进度文件的加载保存功能。
 
 进度持久化
 ---------
 进度信息保存到 subject_dir/.progress.txt 文件中。
 文件内容为单个整数（0-100），表示当前进度百分比。
-当 RabbitMQ 消息被重发（redelivered=True）时，可从此文件恢复执行进度。
+当消息被重发时，可从此文件恢复执行进度。
 
 使用场景
 -------
@@ -21,8 +15,6 @@
 - 任务开始时检查 progress_file 是否存在
 - 每个步骤完成后保存当前进度
 - 若消息被重发，从进度文件恢复
-
-Forward/Inverse 任务暂不支持进度恢复。
 """
 
 from enum import IntEnum
@@ -39,32 +31,6 @@ class ModelProgress(IntEnum):
     INIT_ATLAS_DONE = 50
     SEGMENTATION_DONE = 70
     SURFACES_DONE = 85
-    COMPLETED = 100
-
-
-class ForwardProgress(IntEnum):
-    """Forward 任务进度枚举"""
-
-    START = 0
-    SESSION_SETUP = 10
-    ELECTRODE_PAIR1_DONE = 20
-    ELECTRODE_PAIR2_DONE = 35
-    TDCS_SIMULATION_DONE = 70
-    TI_CALCULATED = 85
-    NIFTI_EXPORTED = 95
-    COMPLETED = 100
-
-
-class InverseProgress(IntEnum):
-    """Inverse 任务进度枚举"""
-
-    START = 0
-    OPTIMIZATION_INIT = 10
-    GOAL_SETUP = 20
-    ELECTRODES_ROI_SETUP = 35
-    OPTIMIZATION_DONE = 85
-    ELECTRODE_MAPPING_DONE = 90
-    NIFTI_EXPORTED = 95
     COMPLETED = 100
 
 
