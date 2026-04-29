@@ -21,6 +21,7 @@ from neuracle.charm import (
     create_mesh,
     create_surfaces,
     denoise_inputs,
+    export_niivue_surfaces,
     init_atlas,
     prepare_t1,
     prepare_t2,
@@ -57,6 +58,7 @@ def generate_head_model(
     步骤 5：组织分割
     步骤 6：表面重建
     步骤 7：Mesh 生成
+    步骤 8：导出 Niivue central 表面
 
     每个步骤完成后保存进度到 .progress.txt，支持断点续传。
 
@@ -153,9 +155,15 @@ def generate_head_model(
         save_progress(progress_file, ModelProgress.SURFACES_DONE)
         logger.info("表面重建完成")
 
-    # ===== 步骤 8：Mesh 生成 =====
-    if current_progress < ModelProgress.COMPLETED:
+    # ===== 步骤 7：Mesh 生成 =====
+    if current_progress < ModelProgress.MESH_DONE:
         create_mesh(str(subject_dir))
-        save_progress(progress_file, ModelProgress.COMPLETED)
+        save_progress(progress_file, ModelProgress.MESH_DONE)
+        logger.info("Mesh 生成完成")
+
+    # ===== 步骤 8：导出 Niivue central 表面 =====
+    if current_progress < ModelProgress.EXPORT_SURFACE_DONE:
+        export_niivue_surfaces(str(subject_dir))
+        save_progress(progress_file, ModelProgress.EXPORT_SURFACE_DONE)
         progress_file.unlink()
         logger.info("头模生成完成: %s", subject_dir)

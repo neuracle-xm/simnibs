@@ -11,15 +11,18 @@ CHARM Pipeline 步骤脚本包
 步骤 5 - segment : 体积与表面分割
 步骤 6 - create_surfaces : 皮层表面重建
 步骤 7 - mesh : 四面体网格生成
+步骤 8 - export_niivue_surfaces : 从重建表面导出 Niivue GIfTI
 
 用法：
     from neuracle.charm import prepare_t1, prepare_t2, denoise_inputs
     from neuracle.charm import init_atlas, run_segmentation, create_surfaces
     from neuracle.charm import create_mesh
+    from neuracle.charm import export_niivue_surfaces
 """
 
 from .create_surfaces import create_surfaces
 from .denoise import denoise_inputs
+from .export_niivue_surfaces import export_niivue_surfaces
 from .init_atlas import init_atlas
 from .mesh import create_mesh_step as create_mesh
 from .prepare_t1 import prepare_t1
@@ -34,4 +37,5 @@ __all__ = [
     "run_segmentation",
     "create_surfaces",
     "create_mesh",
+    "export_niivue_surfaces",
 ]

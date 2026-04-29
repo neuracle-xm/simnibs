@@ -31,7 +31,8 @@ class ModelProgress(IntEnum):
     INIT_ATLAS_DONE = 50
     SEGMENTATION_DONE = 70
     SURFACES_DONE = 85
-    COMPLETED = 100
+    MESH_DONE = 95
+    EXPORT_SURFACE_DONE = 100
 
 
 def load_progress(progress_file: Path) -> int:

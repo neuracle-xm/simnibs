@@ -30,6 +30,12 @@ from neuracle.utils.constants import (
     PROJECT_ROOT,
     STANDARD_COND,
 )
+from neuracle.utils.surface_to_niivue import (
+    export_surface_to_niivue_gifti,
+    join_hemisphere_surfaces,
+    read_central_surfaces,
+    write_niivue_surface_gifti,
+)
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
@@ -90,5 +96,9 @@ __all__ = [
     "EEG10_20_EXTENDED_SPM12",
     "cond_dict_to_list",
     "export_ti_to_nifti",
+    "read_central_surfaces",
+    "join_hemisphere_surfaces",
+    "write_niivue_surface_gifti",
+    "export_surface_to_niivue_gifti",
     "find_montage_file",
 ]
