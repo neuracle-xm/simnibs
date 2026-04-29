@@ -120,12 +120,26 @@ def generate_head_model(
     if current_progress < ModelProgress.PREPARE_T2_DONE:
         if t2_local_path and t2_local_path.exists():
             try:
-                prepare_t2(str(subject_dir), str(t2_local_path))
+                prepare_t2(
+                    str(subject_dir),
+                    str(t2_local_path),
+                    register_t2=True,
+                )
             except Exception:
                 try:
-                    prepare_t2(str(subject_dir), str(t2_local_path), force_qform=True)
+                    prepare_t2(
+                        str(subject_dir),
+                        str(t2_local_path),
+                        register_t2=True,
+                        force_qform=True,
+                    )
                 except Exception:
-                    prepare_t2(str(subject_dir), str(t2_local_path), force_sform=True)
+                    prepare_t2(
+                        str(subject_dir),
+                        str(t2_local_path),
+                        register_t2=True,
+                        force_sform=True,
+                    )
         save_progress(progress_file, ModelProgress.PREPARE_T2_DONE)
         logger.info("T2 预处理完成")
 
