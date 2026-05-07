@@ -10,8 +10,11 @@ CHARM 流程辅助工具函数
     from neuracle.utils.charm_utils import check_q_and_s_form, read_settings
 """
 
+import json
 import logging
 import os
+from pathlib import Path
+from typing import Any
 
 import nibabel as nib
 import numpy as np
@@ -20,6 +23,11 @@ from simnibs import SIMNIBSDIR
 from simnibs.utils import file_finder, settings_reader
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_OVERRIDE_FIELDS = {
+    "segment": {"downsampling_targets"},
+    "mesh": {"elem_sizes", "skin_facet_size", "facet_distances"},
+}
 
 
 def check_q_and_s_form(
@@ -83,7 +91,157 @@ def read_settings() -> dict:
         设置字典
     """
     src_settings = os.path.join(SIMNIBSDIR, "charm.ini")
-    return settings_reader.read_ini(src_settings)
+    settings = settings_reader.read_ini(src_settings)
+    override_path = get_charm_override_path()
+    if not override_path.exists():
+        logger.info("未找到 CHARM 覆盖配置，使用默认配置: %s", src_settings)
+        return settings
+    override_settings = read_charm_override(override_path)
+    validate_charm_override(override_settings)
+    logger.info(
+        "CHARM 覆盖配置内容: %s",
+        json.dumps(override_settings, ensure_ascii=False, sort_keys=True),
+    )
+    apply_charm_override(settings, override_settings)
+    logger.info("已加载 CHARM 覆盖配置: %s", override_path)
+    return settings
+
+
+def get_charm_override_path() -> Path:
+    """
+    获取 CHARM 覆盖配置文件路径。
+
+    Returns
+    -------
+    Path
+        覆盖配置文件路径
+    """
+    return Path(__file__).resolve().parents[1] / "charm_override.json"
+
+
+def read_charm_override(config_file: Path) -> dict[str, Any]:
+    """
+    读取 CHARM 覆盖配置文件。
+
+    Parameters
+    ----------
+    config_file : Path
+        覆盖配置文件路径
+
+    Returns
+    -------
+    dict[str, Any]
+        覆盖配置字典
+    """
+    logger.info("读取 CHARM 覆盖配置: %s", config_file)
+    with config_file.open("r", encoding="utf-8") as file_obj:
+        try:
+            config = json.load(file_obj)
+        except json.JSONDecodeError as exc:
+            logger.error("CHARM 覆盖配置不是合法 JSON: %s", config_file)
+            raise ValueError(f"CHARM 覆盖配置不是合法 JSON: {config_file}") from exc
+    if not isinstance(config, dict):
+        logger.error("CHARM 覆盖配置顶层必须是对象: %s", config_file)
+        raise ValueError(f"CHARM 覆盖配置顶层必须是对象: {config_file}")
+    return config
+
+
+def validate_charm_override(config: dict[str, Any]) -> None:
+    """
+    校验 CHARM 覆盖配置。
+
+    Parameters
+    ----------
+    config : dict[str, Any]
+        覆盖配置字典
+
+    Returns
+    -------
+    None
+    """
+    for section, values in config.items():
+        if section not in ALLOWED_OVERRIDE_FIELDS:
+            logger.error("CHARM 覆盖配置包含不允许的 section: %s", section)
+            raise ValueError(f"CHARM 覆盖配置包含不允许的 section: {section}")
+        if not isinstance(values, dict):
+            logger.error("CHARM 覆盖配置的 section 必须是对象: %s", section)
+            raise ValueError(f"CHARM 覆盖配置的 section 必须是对象: {section}")
+        allowed_keys = ALLOWED_OVERRIDE_FIELDS[section]
+        for key, value in values.items():
+            if key not in allowed_keys:
+                logger.error("CHARM 覆盖配置包含不允许的字段: %s.%s", section, key)
+                raise ValueError(f"CHARM 覆盖配置包含不允许的字段: {section}.{key}")
+            validate_charm_override_value(section, key, value)
+
+
+def validate_charm_override_value(section: str, key: str, value: Any) -> None:
+    """
+    校验单个 CHARM 覆盖字段。
+
+    Parameters
+    ----------
+    section : str
+        配置 section 名称
+    key : str
+        配置字段名称
+    value : Any
+        配置字段值
+
+    Returns
+    -------
+    None
+    """
+    if section == "segment" and key == "downsampling_targets":
+        if not isinstance(value, list):
+            logger.error("%s.%s 必须是数组", section, key)
+            raise ValueError(f"{section}.{key} 必须是数组")
+        return
+    if section == "mesh" and key == "elem_sizes":
+        if not isinstance(value, dict):
+            logger.error("%s.%s 必须是对象", section, key)
+            raise ValueError(f"{section}.{key} 必须是对象")
+        return
+    if section == "mesh" and key == "skin_facet_size":
+        if isinstance(value, bool):
+            if value is False:
+                return
+            logger.error("%s.%s 只能是数字或 false", section, key)
+            raise ValueError(f"{section}.{key} 只能是数字或 false")
+        if not isinstance(value, int) and not isinstance(value, float):
+            logger.error("%s.%s 必须是数字或 false", section, key)
+            raise ValueError(f"{section}.{key} 必须是数字或 false")
+        return
+    if section == "mesh" and key == "facet_distances":
+        if not isinstance(value, dict):
+            logger.error("%s.%s 必须是对象", section, key)
+            raise ValueError(f"{section}.{key} 必须是对象")
+        return
+    logger.error("未识别的 CHARM 覆盖字段: %s.%s", section, key)
+    raise ValueError(f"未识别的 CHARM 覆盖字段: {section}.{key}")
+
+
+def apply_charm_override(
+    base_settings: dict[str, Any],
+    override_settings: dict[str, Any],
+) -> None:
+    """
+    应用 CHARM 覆盖配置。
+
+    Parameters
+    ----------
+    base_settings : dict[str, Any]
+        默认配置
+    override_settings : dict[str, Any]
+        覆盖配置
+
+    Returns
+    -------
+    None
+    """
+    for section, values in override_settings.items():
+        for key, value in values.items():
+            logger.info("覆盖 CHARM 配置: %s.%s", section, key)
+            base_settings[section][key] = value
 
 
 def setup_atlas(

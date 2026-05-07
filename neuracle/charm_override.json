@@ -1,0 +1,32 @@
+{
+  "segment": {
+    "downsampling_targets": [3.0, 2.0]
+  },
+  "mesh": {
+    "elem_sizes": {
+      "standard": {
+        "range": [1.5, 7.0],
+        "slope": 1.0
+      },
+      "1": {
+        "range": [1, 7],
+        "slope": 1.0
+      },
+      "2": {
+        "range": [1.2, 3.0],
+        "slope": 1.0
+      },
+      "5": {
+        "range": [1, 10],
+        "slope": 0.6
+      }
+    },
+    "skin_facet_size": 3.0,
+    "facet_distances": {
+      "standard": {
+        "range": [0.2, 4.0],
+        "slope": 0.7
+      }
+    }
+  }
+}

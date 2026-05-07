@@ -275,9 +275,9 @@ elem_sizes = {"standard": {"range": [1, 5], "slope": 1.0},
 - `range`: 单元大小的上下限（mm）
 - `slope`: 越小网格越细
 - `standard`: 适用于未定义的其他组织
-- 组织标签 1 (GM): range [1, 7]
-- 组织标签 2 (WM): range [1, 2]
-- 组织标签 5 (CSF): range [1, 10], slope 0.6
+- 组织标签 1 (WM): range [1, 7]
+- 组织标签 2 (GM): range [1, 2]
+- 组织标签 5 (Scalp): range [1, 10], slope 0.6
 
 **`facet_distances` 默认值**：
 ```ini
