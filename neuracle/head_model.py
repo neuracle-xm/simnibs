@@ -14,8 +14,14 @@
     )
 """
 
+import argparse
 import logging
+import sys
 from pathlib import Path
+
+# 支持直接执行当前脚本文件时使用 `from neuracle...` 绝对导入
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from neuracle.charm import (
     create_mesh,
@@ -27,14 +33,22 @@ from neuracle.charm import (
     prepare_t2,
     run_segmentation,
 )
+from neuracle.logger import setup_logging
+from neuracle.parameters.converter import dict_to_model_params
 from neuracle.parameters.progress import (
     ModelProgress,
     load_progress,
     save_progress,
 )
+from neuracle.parameters.validator import ValidationError, validate_model_params
 from neuracle.storage.paths import (
     ensure_data_root,
     get_subject_dir,
+)
+from neuracle.utils.constants import (
+    EXIT_INVALID_ARGS,
+    EXIT_RUNTIME_ERROR,
+    EXIT_SUCCESS,
 )
 
 logger = logging.getLogger(__name__)
@@ -181,3 +195,72 @@ def generate_head_model(
         save_progress(progress_file, ModelProgress.EXPORT_SURFACE_DONE)
         progress_file.unlink()
         logger.info("头模生成完成: %s", subject_dir)
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """
+    构建头模生成命令行解析器。
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        命令行解析器
+    """
+    parser = argparse.ArgumentParser(
+        prog="python neuracle/head_model.py",
+        description="运行 CHARM 头模生成流程",
+    )
+    parser.add_argument("dir_path", help="subject 输出目录名，例如 m2m_ernie")
+    parser.add_argument("T1_file_path", help="T1 加权 MRI 图像路径")
+    parser.add_argument(
+        "--t2-file-path", dest="T2_file_path", help="T2 加权 MRI 图像路径"
+    )
+    parser.add_argument(
+        "--dti-file-path", dest="DTI_file_path", help="DTI 扩散张量图像路径"
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """
+    头模生成命令行入口。
+
+    Parameters
+    ----------
+    argv : list[str] | None
+        命令行参数列表，默认读取 sys.argv
+
+    Returns
+    -------
+    int
+        进程退出码
+    """
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    params_dict = {
+        "dir_path": args.dir_path,
+        "T1_file_path": args.T1_file_path,
+        "T2_file_path": args.T2_file_path,
+        "DTI_file_path": args.DTI_file_path,
+    }
+    try:
+        setup_logging()
+        validate_model_params(params_dict)
+        params = dict_to_model_params(params_dict)
+        generate_head_model(
+            dir_path=params.dir_path,
+            T1_file_path=params.T1_file_path,
+            T2_file_path=params.T2_file_path,
+            DTI_file_path=params.DTI_file_path,
+        )
+    except ValidationError as exc:
+        logger.error("头模生成参数校验失败: %s", exc)
+        return EXIT_INVALID_ARGS
+    except Exception:
+        logger.exception("头模生成执行失败")
+        return EXIT_RUNTIME_ERROR
+    return EXIT_SUCCESS
+
+
+if __name__ == "__main__":
+    sys.exit(main())

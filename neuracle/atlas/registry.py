@@ -16,7 +16,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from neuracle.utils.constants import NEURACLE_DIR, PROJECT_ROOT
+from neuracle.utils.constants import NEURACLE_DIR
+from simnibs import SIMNIBSDIR
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ ATLAS_SCRIPTS_DIR = ATLAS_ROOT / "scripts"
 ATLAS_COLOR_TABLE_DIR = ATLAS_SOURCE_DIR / "颜色查找表"
 ATLAS_REGISTRY_PATH = ATLAS_MANIFESTS_DIR / "atlas_registry.json"
 SIMNIBS_MNI_TEMPLATE = (
-    PROJECT_ROOT / "simnibs" / "resources" / "templates" / "MNI152_T1_1mm.nii.gz"
+    Path(SIMNIBSDIR) / "resources" / "templates" / "MNI152_T1_1mm.nii.gz"
 )
 
 
@@ -76,9 +77,9 @@ def _slugify(value: str) -> str:
     return slug or "roi"
 
 
-def _to_repo_relative(path: Path) -> str:
+def _to_neuracle_relative(path: Path) -> str:
     """
-    将路径转换为相对于仓库根目录的路径。
+    将路径转换为相对于 NEURACLE_DIR 的路径。
 
     Parameters
     ----------
@@ -88,13 +89,14 @@ def _to_repo_relative(path: Path) -> str:
     Returns
     -------
     str
-        相对于仓库根目录的路径字符串
+        相对于 NEURACLE_DIR 的路径字符串
 
     Notes
     -----
-    registry 内统一保存仓库相对路径，避免把本机绝对路径写死进去。
+    registry 内统一保存相对 NEURACLE_DIR 的路径，避免把本机绝对路径写死进去。
+    例如 `atlas/standardized/...`，而不是 `neuracle/atlas/standardized/...`。
     """
-    return path.resolve().relative_to(PROJECT_ROOT).as_posix()
+    return path.resolve().relative_to(NEURACLE_DIR).as_posix()
 
 
 def _build_area_entries(label_table: Path, roi_dir: Path) -> list[dict[str, Any]]:
@@ -132,7 +134,7 @@ def _build_area_entries(label_table: Path, roi_dir: Path) -> list[dict[str, Any]
                 "label_en": label_en,
                 "label_zh": label_zh,
                 "roi_filename": filename,
-                "roi_path": _to_repo_relative(roi_dir / filename),
+                "roi_path": _to_neuracle_relative(roi_dir / filename),
             }
         )
     return areas
@@ -145,8 +147,7 @@ def build_atlas_registry() -> dict[str, Any]:
     Returns
     -------
     dict[str, Any]
-        包含 schema_version、simnibs_mni_template、atlas_root、
-        standardized_root、atlases 的 registry 字典
+        包含 atlases 的 registry 字典
 
     Notes
     -----
@@ -154,10 +155,6 @@ def build_atlas_registry() -> dict[str, Any]:
     registry 信息，包括 BN、JulichBrainAtlas、DiFuMo 等 atlas。
     """
     registry: dict[str, Any] = {
-        "schema_version": 1,
-        "simnibs_mni_template": _to_repo_relative(SIMNIBS_MNI_TEMPLATE),
-        "atlas_root": _to_repo_relative(ATLAS_ROOT),
-        "standardized_root": _to_repo_relative(ATLAS_STANDARDIZED_DIR),
         "atlases": {},
     }
 
@@ -234,17 +231,17 @@ def build_atlas_registry() -> dict[str, Any]:
 
         registry["atlases"][spec["name"]] = {
             "name": spec["name"],
-            "raw_atlas": _to_repo_relative(Path(spec["raw_atlas"])),
-            "raw_label_table": _to_repo_relative(Path(spec["raw_label_table"])),
-            "color_table": _to_repo_relative(Path(spec["color_table"])),
-            "space_template": _to_repo_relative(Path(spec["space_template"])),
+            "raw_atlas": _to_neuracle_relative(Path(spec["raw_atlas"])),
+            "raw_label_table": _to_neuracle_relative(Path(spec["raw_label_table"])),
+            "color_table": _to_neuracle_relative(Path(spec["color_table"])),
+            "space_template": _to_neuracle_relative(Path(spec["space_template"])),
             "space_name": spec["space_name"],
             "is_discrete": spec["is_discrete"],
             "interpolation": spec["interpolation"],
-            "standardized_dir": _to_repo_relative(standardized_dir),
-            "standardized_atlas": _to_repo_relative(atlas_target),
-            "standardized_label_table": _to_repo_relative(label_table_target),
-            "roi_dir": _to_repo_relative(roi_dir),
+            "standardized_dir": _to_neuracle_relative(standardized_dir),
+            "standardized_atlas": _to_neuracle_relative(atlas_target),
+            "standardized_label_table": _to_neuracle_relative(label_table_target),
+            "roi_dir": _to_neuracle_relative(roi_dir),
             "areas": areas,
         }
 

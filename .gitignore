@@ -151,10 +151,13 @@ miniconda3/
 *.vrb
 *.xdy
 *.tdo
-.claude/*
-data/*
+.claude
+data
 neuracle_backup/*
 *.env
 neuracle/atlas/manifests/*
 neuracle/atlas/standardized/*
 neuracle/atlas/validation/*
+simnibs_package
+log
+.pytest_cache

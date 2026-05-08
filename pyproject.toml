@@ -18,9 +18,6 @@ requires-python = ">=3.11"
 # python-mumps - only works automatically via conda
 # mpfr, gmp - from conda
 dependencies = [
-  "python-dotenv",
-  "pika",
-  "nilearn"
 ]
 
 [project.urls] # Optional
@@ -45,7 +42,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-exclude = ["packing*", "docs*"]
+exclude = ["packing*", "docs*", "neuracle*"]
 
 [tool.setuptools_scm]
 # setuptools_scm complains if this section is not present

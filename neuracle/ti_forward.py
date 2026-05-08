@@ -22,11 +22,21 @@ TI 正向仿真入口
     )
 """
 
+import argparse
 import logging
 import re
 import shutil
+import sys
+from pathlib import Path
 
+# 支持直接执行当前脚本文件时使用 `from neuracle...` 绝对导入
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from neuracle.logger import setup_logging
+from neuracle.parameters.converter import dict_to_forward_params
 from neuracle.parameters.schemas import AnisotropyType, ElectrodeWithCurrent
+from neuracle.parameters.validator import ValidationError, validate_forward_params
 from neuracle.storage.paths import (
     get_model_mesh_path,
     get_subject_dir,
@@ -43,6 +53,17 @@ from neuracle.ti_simulation import (
 from neuracle.utils import (
     cond_dict_to_list,
     find_montage_file,
+)
+from neuracle.utils.cli_utils import (
+    add_conductivity_argument,
+    parse_anisotropy,
+    parse_conductivity_specs,
+    parse_electrode_specs,
+)
+from neuracle.utils.constants import (
+    EXIT_INVALID_ARGS,
+    EXIT_RUNTIME_ERROR,
+    EXIT_SUCCESS,
 )
 from neuracle.utils.ti_export import export_ti_to_nifti
 
@@ -192,3 +213,101 @@ def run_ti_forward(
         shutil.rmtree(output_dir, ignore_errors=True)
 
     logger.info("TI 正向仿真完成")
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """
+    构建 TI 正向仿真命令行解析器。
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        命令行解析器
+    """
+    parser = argparse.ArgumentParser(
+        prog="python neuracle/ti_forward.py",
+        description="运行 TI 正向仿真流程",
+    )
+    parser.add_argument("dir_path", help="头模目录名，例如 m2m_ernie")
+    parser.add_argument("montage", help="电极导联名称或 CSV 路径")
+    parser.add_argument(
+        "--electrode-a",
+        action="append",
+        required=True,
+        metavar="NAME:CURRENT",
+        help="电极组 A，可重复传入，例如 --electrode-a F5:1.0 --electrode-a P5:-1.0",
+    )
+    parser.add_argument(
+        "--electrode-b",
+        action="append",
+        required=True,
+        metavar="NAME:CURRENT",
+        help="电极组 B，可重复传入，例如 --electrode-b F6:1.0 --electrode-b P6:-1.0",
+    )
+    add_conductivity_argument(parser)
+    parser.add_argument(
+        "--anisotropy",
+        default=AnisotropyType.SCALAR.value,
+        choices=[item.value for item in AnisotropyType],
+        help="各向异性类型，默认 scalar",
+    )
+    parser.add_argument(
+        "--dti-file-path", dest="DTI_file_path", help="DTI 张量文件路径"
+    )
+    parser.add_argument("--n-workers", type=int, default=8, help="并行工作进程数")
+    parser.add_argument("--debug", action="store_true", help="调试模式，不清理临时目录")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """
+    TI 正向仿真命令行入口。
+
+    Parameters
+    ----------
+    argv : list[str] | None
+        命令行参数列表，默认读取 sys.argv
+
+    Returns
+    -------
+    int
+        进程退出码
+    """
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    try:
+        params_dict = {
+            "dir_path": args.dir_path,
+            "T1_file_path": "",
+            "montage": args.montage,
+            "electrode_A": parse_electrode_specs(args.electrode_a),
+            "electrode_B": parse_electrode_specs(args.electrode_b),
+            "conductivity_config": parse_conductivity_specs(args.conductivity),
+            "anisotropy": parse_anisotropy(args.anisotropy),
+            "DTI_file_path": args.DTI_file_path,
+        }
+        setup_logging()
+        validate_forward_params(params_dict)
+        params = dict_to_forward_params(params_dict)
+        run_ti_forward(
+            dir_path=params.dir_path,
+            montage=params.montage,
+            electrode_A=params.electrode_A,
+            electrode_B=params.electrode_B,
+            conductivity_config=params.conductivity_config,
+            anisotropy=params.anisotropy,
+            DTI_file_path=params.DTI_file_path,
+            n_workers=args.n_workers,
+            debug=args.debug,
+        )
+    except (ValidationError, ValueError) as exc:
+        logger.error("TI 正向仿真参数校验失败: %s", exc)
+        return EXIT_INVALID_ARGS
+    except Exception:
+        logger.exception("TI 正向仿真执行失败")
+        return EXIT_RUNTIME_ERROR
+    return EXIT_SUCCESS
+
+
+if __name__ == "__main__":
+    sys.exit(main())

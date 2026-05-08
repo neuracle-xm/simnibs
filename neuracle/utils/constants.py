@@ -12,14 +12,25 @@
 
 from pathlib import Path
 
-# 项目根目录
-PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
+# neuracle 根目录
+NEURACLE_DIR: Path = Path(__file__).resolve().parents[1]
 
-# neuracle 包目录
-NEURACLE_DIR: Path = PROJECT_ROOT / "neuracle"
+# 业务根目录（开发态为仓库根目录，打包态为 simnibs_package）
+PACKAGE_ROOT: Path = NEURACLE_DIR.parent
+
+# 兼容旧名称
+PROJECT_ROOT: Path = PACKAGE_ROOT
 
 # 数据根目录
-DATA_ROOT: Path = PROJECT_ROOT / "data"
+DATA_ROOT: Path = PACKAGE_ROOT / "data"
+
+# 日志根目录
+LOG_ROOT: Path = PACKAGE_ROOT / "log"
+
+# 进程退出码
+EXIT_SUCCESS = 0
+EXIT_RUNTIME_ERROR = 1
+EXIT_INVALID_ARGS = 2
 
 # 并行计算相关常量
 N_WORKERS = 8

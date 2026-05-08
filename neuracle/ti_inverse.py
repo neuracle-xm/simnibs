@@ -23,14 +23,24 @@ TI 逆向优化入口
     )
 """
 
+import argparse
 import logging
 import os
 import re
 import shutil
+import sys
+from pathlib import Path
 from typing import Literal
 
+# 支持直接执行当前脚本文件时使用 `from neuracle...` 绝对导入
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from neuracle.atlas.standardized import get_standardized_roi_path
+from neuracle.logger import setup_logging
+from neuracle.parameters.converter import dict_to_inverse_params
 from neuracle.parameters.schemas import AnisotropyType, ROIParam
+from neuracle.parameters.validator import ValidationError, validate_inverse_params
 from neuracle.storage.paths import (
     get_model_mesh_path,
     get_subject_dir,
@@ -48,6 +58,18 @@ from neuracle.utils import (
     NON_ROI_THRESHOLD,
     cond_dict_to_list,
     find_montage_file,
+)
+from neuracle.utils.cli_utils import (
+    add_conductivity_argument,
+    build_atlas_roi_param,
+    build_mni_roi_param,
+    parse_anisotropy,
+    parse_conductivity_specs,
+)
+from neuracle.utils.constants import (
+    EXIT_INVALID_ARGS,
+    EXIT_RUNTIME_ERROR,
+    EXIT_SUCCESS,
 )
 from neuracle.utils.ti_export import export_ti_to_nifti
 
@@ -236,3 +258,153 @@ def run_ti_inverse(
         shutil.rmtree(output_dir, ignore_errors=True)
 
     logger.info("TI 逆向优化完成")
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """
+    构建 TI 逆向优化命令行解析器。
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        命令行解析器
+    """
+    parser = argparse.ArgumentParser(
+        prog="python neuracle/ti_inverse.py",
+        description="运行 TI 逆向优化流程",
+    )
+    parser.add_argument("dir_path", help="头模目录名，例如 m2m_ernie")
+    parser.add_argument("montage", help="电极导联名称或 CSV 路径")
+    parser.add_argument(
+        "--current-a",
+        nargs="+",
+        type=float,
+        required=True,
+        metavar="CURRENT",
+        help="电极组 A 初始电流列表，单位 mA",
+    )
+    parser.add_argument(
+        "--current-b",
+        nargs="+",
+        type=float,
+        required=True,
+        metavar="CURRENT",
+        help="电极组 B 初始电流列表，单位 mA",
+    )
+    parser.add_argument(
+        "--roi-type",
+        required=True,
+        choices=["atlas", "mni_pos"],
+        help="ROI 类型",
+    )
+    parser.add_argument("--atlas-name", help="atlas 模式下的图谱名称")
+    parser.add_argument("--atlas-area", help="atlas 模式下的区域名称")
+    parser.add_argument(
+        "--mni-center",
+        nargs=3,
+        type=float,
+        metavar=("X", "Y", "Z"),
+        help="mni_pos 模式下的 MNI 中心坐标",
+    )
+    parser.add_argument("--mni-radius", type=float, help="mni_pos 模式下的 ROI 半径")
+    parser.add_argument(
+        "--target-threshold", type=float, required=True, help="目标电场强度阈值"
+    )
+    add_conductivity_argument(parser)
+    parser.add_argument(
+        "--anisotropy",
+        default=AnisotropyType.SCALAR.value,
+        choices=[item.value for item in AnisotropyType],
+        help="各向异性类型，默认 scalar",
+    )
+    parser.add_argument(
+        "--dti-file-path", dest="DTI_file_path", help="DTI 张量文件路径"
+    )
+    parser.add_argument("--n-workers", type=int, default=8, help="并行工作进程数")
+    parser.add_argument("--debug", action="store_true", help="调试模式，不清理临时目录")
+    return parser
+
+
+def build_roi_param_dict(args: argparse.Namespace) -> dict[str, object]:
+    """
+    根据命令行参数构造 ROI 参数字典。
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        命令行解析结果
+
+    Returns
+    -------
+    dict[str, object]
+        ROI 参数字典
+    """
+    if args.roi_type == "atlas":
+        if not args.atlas_name or not args.atlas_area:
+            raise ValueError(
+                "roi_type=atlas 时必须同时提供 --atlas-name 和 --atlas-area"
+            )
+        return build_atlas_roi_param(args.atlas_name, args.atlas_area)
+    if not args.mni_center or args.mni_radius is None:
+        raise ValueError("roi_type=mni_pos 时必须提供 --mni-center 和 --mni-radius")
+    return build_mni_roi_param(args.mni_center, args.mni_radius)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """
+    TI 逆向优化命令行入口。
+
+    Parameters
+    ----------
+    argv : list[str] | None
+        命令行参数列表，默认读取 sys.argv
+
+    Returns
+    -------
+    int
+        进程退出码
+    """
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    try:
+        params_dict = {
+            "dir_path": args.dir_path,
+            "T1_file_path": "",
+            "montage": args.montage,
+            "current_A": args.current_a,
+            "current_B": args.current_b,
+            "roi_type": args.roi_type,
+            "roi_param": build_roi_param_dict(args),
+            "target_threshold": args.target_threshold,
+            "conductivity_config": parse_conductivity_specs(args.conductivity),
+            "anisotropy": parse_anisotropy(args.anisotropy),
+            "DTI_file_path": args.DTI_file_path,
+        }
+        setup_logging()
+        validate_inverse_params(params_dict)
+        params = dict_to_inverse_params(params_dict)
+        run_ti_inverse(
+            dir_path=params.dir_path,
+            montage=params.montage,
+            current_A=params.current_A,
+            current_B=params.current_B,
+            roi_type=params.roi_type,
+            roi_param=params.roi_param,
+            target_threshold=params.target_threshold,
+            conductivity_config=params.conductivity_config,
+            anisotropy=params.anisotropy,
+            DTI_file_path=params.DTI_file_path,
+            n_workers=args.n_workers,
+            debug=args.debug,
+        )
+    except (ValidationError, ValueError) as exc:
+        logger.error("TI 逆向优化参数校验失败: %s", exc)
+        return EXIT_INVALID_ARGS
+    except Exception:
+        logger.exception("TI 逆向优化执行失败")
+        return EXIT_RUNTIME_ERROR
+    return EXIT_SUCCESS
+
+
+if __name__ == "__main__":
+    sys.exit(main())

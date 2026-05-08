@@ -14,12 +14,12 @@ from pathlib import Path
 from typing import Any
 
 from neuracle.atlas.registry import load_atlas_registry
-from neuracle.utils.constants import PROJECT_ROOT
+from neuracle.utils.constants import NEURACLE_DIR
 
 logger = logging.getLogger(__name__)
 
 
-def _resolve_repo_path(path_str: str | Path) -> Path:
+def _resolve_neuracle_path(path_str: str | Path) -> Path:
     """
     将路径字符串解析为绝对路径。
 
@@ -41,7 +41,7 @@ def _resolve_repo_path(path_str: str | Path) -> Path:
     path = Path(path_str)
     if path.is_absolute():
         return path
-    return PROJECT_ROOT / path
+    return NEURACLE_DIR / path
 
 
 def _resolve_area_entry(area: dict[str, Any]) -> dict[str, Any]:
@@ -59,7 +59,7 @@ def _resolve_area_entry(area: dict[str, Any]) -> dict[str, Any]:
         roi_path 已转换为绝对路径的脑区条目
     """
     resolved = dict(area)
-    resolved["roi_path"] = str(_resolve_repo_path(area["roi_path"]))
+    resolved["roi_path"] = str(_resolve_neuracle_path(area["roi_path"]))
     return resolved
 
 
@@ -92,7 +92,7 @@ def _resolve_atlas_spec(spec: dict[str, Any]) -> dict[str, Any]:
         "standardized_label_table",
         "roi_dir",
     ):
-        resolved[key] = str(_resolve_repo_path(spec[key]))
+        resolved[key] = str(_resolve_neuracle_path(spec[key]))
     resolved["areas"] = [_resolve_area_entry(area) for area in spec["areas"]]
     return resolved
 

@@ -87,9 +87,18 @@ neuracle/atlas/
 
 registry 由 `build_standardized_registry.py` 生成，格式与实现保持一致：
 
-- registry 内部保存的是**仓库相对路径**
+- registry 内部保存的是**相对 `NEURACLE_DIR` 的路径**
 - 运行时由 `loader.py` 自动解析为绝对路径
 - 每个脑区对应一个 `index`、`label_en`、`label_zh` 和 `roi_filename`
+
+例如 registry 中会保存：
+
+- `atlas/atlas/...`
+- `atlas/standardized/...`
+
+而不会保存：
+
+- `neuracle/atlas/...`
 
 这样做的原因：
 

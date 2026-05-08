@@ -36,7 +36,7 @@ atlas/
 │  ├─ mni_roi_demo.py                         MNI 坐标球形 ROI demo
 │  └─ roi_demo_common.py                       demo 公共工具函数
 ├─ manifests/                                   atlas registry 目录
-│  └─ atlas_registry.json                        atlas 注册表（离线脚本生成）
+│  └─ atlas_registry.json                        atlas 注册表（离线脚本生成，内部路径相对 NEURACLE_DIR 保存）
 ├─ standardized/                               标准化 atlas 产物目录
 │  ├─ BN_Atlas_246_1mm/                  BN 标准化产物
 │  ├─ JulichBrainAtlas_3.1_207areas_MPM_bilateral_MNI152/  Julich 标准化产物
