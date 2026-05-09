@@ -35,35 +35,26 @@ def validate_model_params(params: dict[str, Any]) -> None:
 
     验证规则
     -------
+    - head_model_dir: 非空字符串
     - T1_file_path: 非空字符串
-    - dir_path: 非空字符串
     - T2_file_path: 可选
-    - DTI_file_path: 可选
 
     Raises
     ------
     ValidationError
         验证失败时抛出
     """
+    head_model_dir = params.get("head_model_dir")
+    if not head_model_dir or not isinstance(head_model_dir, str):
+        raise ValidationError("head_model_dir 验证失败")
+
     t1_path = params.get("T1_file_path")
     if not t1_path or not isinstance(t1_path, str):
-        logger.error("[T1_file_path] T1_file_path 必须是非空字符串")
         raise ValidationError("T1_file_path 验证失败")
-
-    dir_path = params.get("dir_path")
-    if not dir_path or not isinstance(dir_path, str):
-        logger.error("[dir_path] dir_path 必须是字符串")
-        raise ValidationError("dir_path 验证失败")
 
     t2_path = params.get("T2_file_path")
     if t2_path is not None and not isinstance(t2_path, str):
-        logger.error("[T2_file_path] T2_file_path 必须是字符串")
         raise ValidationError("T2_file_path 必须是字符串")
-
-    dti_path = params.get("DTI_file_path")
-    if dti_path is not None and not isinstance(dti_path, str):
-        logger.error("[DTI_file_path] DTI_file_path 必须是字符串")
-        raise ValidationError("DTI_file_path 必须是字符串")
 
 
 def validate_forward_params(params: dict[str, Any]) -> None:
@@ -72,7 +63,6 @@ def validate_forward_params(params: dict[str, Any]) -> None:
 
     验证规则
     -------
-    - dir_path: 非空字符串
     - montage: 非空字符串
     - electrode_A: 非空列表，元素为对象 {name: str, current_mA: number}
     - electrode_B: 非空列表，元素为对象 {name: str, current_mA: number}
@@ -80,18 +70,12 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     - electrode_B 中 current_mA 总和必须为 0
     - conductivity_config: 非空字典，值为浮点数
     - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
-    - DTI_file_path: 可选
 
     Raises
     ------
     ValidationError
         验证失败时抛出
     """
-    dir_path = params.get("dir_path")
-    if not dir_path or not isinstance(dir_path, str):
-        logger.error("[dir_path] dir_path 必须是字符串")
-        raise ValidationError("dir_path 验证失败")
-
     montage = params.get("montage")
     if not montage or not isinstance(montage, str):
         logger.error("[montage] montage 必须是字符串")
@@ -158,11 +142,6 @@ def validate_forward_params(params: dict[str, Any]) -> None:
         logger.error("[anisotropy] anisotropy 必须是 'scalar', 'dir', 'vn', 'mc' 之一")
         raise ValidationError("anisotropy 必须是 'scalar', 'dir', 'vn', 'mc' 之一")
 
-    dti_path = params.get("DTI_file_path")
-    if dti_path is not None and not isinstance(dti_path, str):
-        logger.error("[DTI_file_path] DTI_file_path 必须是字符串")
-        raise ValidationError("DTI_file_path 必须是字符串")
-
 
 def validate_inverse_params(params: dict[str, Any]) -> None:
     """
@@ -170,7 +149,6 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
 
     验证规则
     -------
-    - dir_path: 非空字符串
     - montage: 非空字符串
     - current_A: 非空列表，元素为浮点数，总和必须为 0
     - current_B: 非空列表，元素为浮点数，总和必须为 0
@@ -181,18 +159,12 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     - roi_type=atlas 时，atlas_param 必填（name, area）
     - roi_type=mni_pos 时，mni_param 必填（center, radius）
     - target_threshold: 浮点数，>= 0
-    - DTI_file_path: 可选
 
     Raises
     ------
     ValidationError
         验证失败时抛出
     """
-    dir_path = params.get("dir_path")
-    if not dir_path or not isinstance(dir_path, str):
-        logger.error("[dir_path] dir_path 必须是字符串")
-        raise ValidationError("dir_path 验证失败")
-
     montage = params.get("montage")
     if not montage or not isinstance(montage, str):
         logger.error("[montage] montage 必须是字符串")
@@ -283,8 +255,3 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     if threshold < 0:
         logger.error("[target_threshold] target_threshold 必须 >= 0")
         raise ValidationError("target_threshold 必须 >= 0")
-
-    dti_path = params.get("DTI_file_path")
-    if dti_path is not None and not isinstance(dti_path, str):
-        logger.error("[DTI_file_path] DTI_file_path 必须是字符串")
-        raise ValidationError("DTI_file_path 必须是字符串")

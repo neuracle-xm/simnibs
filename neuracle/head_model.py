@@ -7,10 +7,7 @@
     from neuracle.head_model import generate_head_model
 
     generate_head_model(
-        dir_path="m2m_subject001",
-        T1_file_path="/path/to/T1.nii.gz",
-        T2_file_path="/path/to/T2.nii.gz",   # 可选
-        DTI_file_path="/path/to/DTI.nii.gz",  # 可选
+        head_model_dir="/path/to/data_root/head_models/m2m_{head_model_id}",
     )
 """
 
@@ -41,24 +38,18 @@ from neuracle.parameters.progress import (
     save_progress,
 )
 from neuracle.parameters.validator import ValidationError, validate_model_params
-from neuracle.storage.paths import (
-    ensure_data_root,
-    get_subject_dir,
-)
 from neuracle.utils.constants import (
     EXIT_INVALID_ARGS,
     EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
 )
+from neuracle.utils.find_nifty import find_optional_nifti_file
 
 logger = logging.getLogger(__name__)
 
 
 def generate_head_model(
-    dir_path: str,
-    T1_file_path: str,
-    T2_file_path: str | None = None,
-    DTI_file_path: str | None = None,
+    head_model_dir: str,
 ) -> None:
     """
     运行 CHARM 头模生成流程，生成失败则抛出异常。
@@ -78,44 +69,32 @@ def generate_head_model(
 
     Parameters
     ----------
-    dir_path : str
-        subject 输出目录名（如 m2m_ernie）
-    T1_file_path : str
-        T1 加权 MRI 图像路径
-    T2_file_path : str, optional
-        T2 加权 MRI 图像路径
-    DTI_file_path : str, optional
-        DTI 扩散张量图像路径
+    head_model_dir : str
+        头模目录路径
     """
     logger.info(
-        "开始头模生成: dir_path=%s, T1_file=%s, T2_file=%s, DTI_file=%s",
-        dir_path,
-        T1_file_path,
-        T2_file_path,
-        DTI_file_path,
+        "开始头模生成: 目录=%s",
+        head_model_dir,
     )
 
     # ===== 步骤 0：初始化 =====
-    subject_dir = get_subject_dir(dir_path)
-    ensure_data_root()
-    subject_dir.mkdir(parents=True, exist_ok=True)
+    subject_dir = Path(head_model_dir)
 
     progress_file = subject_dir / ".progress.txt"
     current_progress = load_progress(progress_file)
     logger.info("从进度 %d 开始执行", current_progress)
 
     # ===== 步骤 1：准备输入文件 =====
-    t1_local_path = Path(T1_file_path) if T1_file_path else None
-    t2_local_path = Path(T2_file_path) if T2_file_path else None
-    dti_local_path = Path(DTI_file_path) if DTI_file_path else None
+    t1_file_path = find_optional_nifti_file(subject_dir, ("T1.nii.gz", "T1.nii"))
+    t2_file_path = find_optional_nifti_file(subject_dir, ("T2.nii.gz", "T2.nii"))
+    t1_local_path = Path(t1_file_path) if t1_file_path else None
+    t2_local_path = Path(t2_file_path) if t2_file_path else None
 
     if current_progress < ModelProgress.PREPARE_T1_DONE:
         if not t1_local_path or not t1_local_path.exists():
             raise FileNotFoundError(f"T1 文件不存在: {t1_local_path}")
         if t2_local_path and not t2_local_path.exists():
             raise FileNotFoundError(f"T2 文件不存在: {t2_local_path}")
-        if dti_local_path and not dti_local_path.exists():
-            raise FileNotFoundError(f"DTI 文件不存在: {dti_local_path}")
 
     # ===== 步骤 2：T1 图像预处理 =====
     if current_progress < ModelProgress.PREPARE_T1_DONE:
@@ -197,6 +176,46 @@ def generate_head_model(
         logger.info("头模生成完成: %s", subject_dir)
 
 
+def resolve_head_model_inputs(data_root: str, task_id: str) -> dict[str, str | None]:
+    """
+    根据 data_root 和 task_id 解析头模输入参数。
+
+    原理
+    ----
+    命令行只传入任务根目录和任务标识，程序内部拼出任务目录，
+    并在该目录下自动查找 T1/T2 输入文件，减少外部调用方拼参负担。
+
+    Parameters
+    ----------
+    data_root : str
+        数据根目录
+    task_id : str
+        任务 ID
+
+    Returns
+    -------
+    dict[str, str | None]
+        头模生成所需参数字典
+
+    Raises
+    ------
+    FileNotFoundError
+        当任务目录不存在或缺少 T1 文件时抛出
+    """
+    subject_dir = Path(data_root) / "head_models" / f"m2m_{task_id}"
+    if not subject_dir.exists() or not subject_dir.is_dir():
+        raise FileNotFoundError(f"任务目录不存在: {subject_dir}")
+    t1_file_path = find_optional_nifti_file(subject_dir, ("T1.nii.gz", "T1.nii"))
+    if t1_file_path is None:
+        raise FileNotFoundError(f"未找到 T1 文件: {subject_dir}")
+    t2_file_path = find_optional_nifti_file(subject_dir, ("T2.nii.gz", "T2.nii"))
+    return {
+        "head_model_dir": str(subject_dir),
+        "T1_file_path": t1_file_path,
+        "T2_file_path": t2_file_path,
+    }
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     """
     构建头模生成命令行解析器。
@@ -210,14 +229,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         prog="python neuracle/head_model.py",
         description="运行 CHARM 头模生成流程",
     )
-    parser.add_argument("dir_path", help="subject 输出目录名，例如 m2m_ernie")
-    parser.add_argument("T1_file_path", help="T1 加权 MRI 图像路径")
-    parser.add_argument(
-        "--t2-file-path", dest="T2_file_path", help="T2 加权 MRI 图像路径"
-    )
-    parser.add_argument(
-        "--dti-file-path", dest="DTI_file_path", help="DTI 扩散张量图像路径"
-    )
+    parser.add_argument("data_root", help="数据根目录")
+    parser.add_argument("task_id", help="任务目录名")
     return parser
 
 
@@ -237,21 +250,13 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = build_arg_parser()
     args = parser.parse_args(argv)
-    params_dict = {
-        "dir_path": args.dir_path,
-        "T1_file_path": args.T1_file_path,
-        "T2_file_path": args.T2_file_path,
-        "DTI_file_path": args.DTI_file_path,
-    }
     try:
-        setup_logging()
+        params_dict = resolve_head_model_inputs(args.data_root, args.task_id)
         validate_model_params(params_dict)
+        setup_logging(str(Path(params_dict["head_model_dir"]) / "logs"))
         params = dict_to_model_params(params_dict)
         generate_head_model(
-            dir_path=params.dir_path,
-            T1_file_path=params.T1_file_path,
-            T2_file_path=params.T2_file_path,
-            DTI_file_path=params.DTI_file_path,
+            head_model_dir=params.head_model_dir,
         )
     except ValidationError as exc:
         logger.error("头模生成参数校验失败: %s", exc)

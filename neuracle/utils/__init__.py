@@ -30,6 +30,7 @@ from neuracle.utils.constants import (
     PROJECT_ROOT,
     STANDARD_COND,
 )
+from neuracle.utils.find_nifty import find_optional_nifti_file
 from neuracle.utils.surface_to_niivue import (
     export_surface_to_niivue_gifti,
     join_hemisphere_surfaces,
@@ -101,4 +102,5 @@ __all__ = [
     "write_niivue_surface_gifti",
     "export_surface_to_niivue_gifti",
     "find_montage_file",
+    "find_optional_nifti_file",
 ]

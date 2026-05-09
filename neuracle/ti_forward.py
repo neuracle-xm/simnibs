@@ -11,7 +11,8 @@ TI 正向仿真入口
     from neuracle.parameters.schemas import ElectrodeWithCurrent
 
     run_ti_forward(
-        dir_path="m2m_ernie",
+        head_model_dir="/path/to/data_root/head_models/m2m_ernie",
+        output_dir="/path/to/data_root/simulations/ti_forward_demo",
         montage="EEG10-10_Neuroelectrics",
         electrode_A=[ElectrodeWithCurrent(name="F5", current_mA=1.0),
                       ElectrodeWithCurrent(name="P5", current_mA=-1.0)],
@@ -23,9 +24,8 @@ TI 正向仿真入口
 """
 
 import argparse
+import json
 import logging
-import re
-import shutil
 import sys
 from pathlib import Path
 
@@ -34,15 +34,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from neuracle.logger import setup_logging
-from neuracle.parameters.converter import dict_to_forward_params
 from neuracle.parameters.schemas import AnisotropyType, ElectrodeWithCurrent
 from neuracle.parameters.validator import ValidationError, validate_forward_params
-from neuracle.storage.paths import (
-    get_model_mesh_path,
-    get_subject_dir,
-    get_task_output_dir,
-    reset_task_output_dir,
-)
 from neuracle.ti_simulation import (
     calculate_ti,
     run_tdcs_simulation,
@@ -54,32 +47,28 @@ from neuracle.utils import (
     cond_dict_to_list,
     find_montage_file,
 )
-from neuracle.utils.cli_utils import (
-    add_conductivity_argument,
-    parse_anisotropy,
-    parse_conductivity_specs,
-    parse_electrode_specs,
-)
 from neuracle.utils.constants import (
     EXIT_INVALID_ARGS,
     EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
+    N_WORKERS,
 )
+from neuracle.utils.find_nifty import find_optional_nifti_file
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
 
 
 def run_ti_forward(
-    dir_path: str,
+    head_model_id: str,
+    head_model_dir: str,
+    output_dir: str,
     montage: str,
     electrode_A: list[ElectrodeWithCurrent],
     electrode_B: list[ElectrodeWithCurrent],
     conductivity_config: dict[str, float],
     anisotropy: AnisotropyType,
-    DTI_file_path: str | None = None,
     n_workers: int = 8,
-    debug: bool = False,
 ) -> None:
     """
     运行 TI 正向仿真，生成失败则抛出异常。
@@ -92,12 +81,15 @@ def run_ti_forward(
     步骤 4：TDCS 仿真执行
     步骤 5：TI 计算
     步骤 6：NIfTI 导出
-    步骤 7：清理
 
     Parameters
     ----------
-    dir_path : str
-        头模目录名
+    head_model_id : str
+        头模 ID
+    head_model_dir : str
+        头模目录路径
+    output_dir : str
+        仿真输出目录路径
     montage : str
         电极导联名称
     electrode_A : list[ElectrodeWithCurrent]
@@ -108,17 +100,15 @@ def run_ti_forward(
         组织电导率配置
     anisotropy : AnisotropyType
         各向异性类型
-    DTI_file_path : str, optional
-        DTI 张量文件路径
     n_workers : int
         并行工作进程数
-    debug : bool
-        调试模式，为 True 时不清理临时输出目录
     """
     logger.info(
-        "开始 TI 正向仿真: dir_path=%s, montage=%s, anisotropy=%s, "
+        "开始 TI 正向仿真: head_model_id=%s, head_model_dir=%s, output_dir=%s, montage=%s, anisotropy=%s, "
         "electrode_A=%s, electrode_B=%s, conductivity=%s",
-        dir_path,
+        head_model_id,
+        head_model_dir,
+        output_dir,
         montage,
         anisotropy,
         electrode_A,
@@ -127,21 +117,25 @@ def run_ti_forward(
     )
 
     # ===== 步骤 0：初始化与检查 =====
-    subject_dir = get_subject_dir(dir_path)
+    subject_dir = Path(head_model_dir)
     if not subject_dir.is_dir():
         raise FileNotFoundError(
             f"subject 目录不存在: {subject_dir}。请先执行头模生成任务。"
         )
 
-    task_id = "forward"
-    output_dir = get_task_output_dir(dir_path, "TI_simulation", task_id)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    if not debug:
-        reset_task_output_dir(str(output_dir))
+    output_dir_path = Path(output_dir)
+    t1_file_path = find_optional_nifti_file(subject_dir, ("T1.nii.gz", "T1.nii"))
+    if t1_file_path is None:
+        raise FileNotFoundError(f"未找到 T1 文件: {subject_dir}")
+    dti_file_path = find_optional_nifti_file(
+        subject_dir,
+        ("DTI_coregT1_tensor.nii.gz", "DTI_coregT1_tensor.nii"),
+    )
 
     eeg_cap = find_montage_file(str(subject_dir), montage)
-    mesh_path = get_model_mesh_path(dir_path)
+    mesh_path = subject_dir / f"{head_model_id}.msh"
+    if not mesh_path.exists():
+        raise FileNotFoundError(f"头模 mesh 文件不存在: {mesh_path}")
 
     electrode_A_names = [e.name for e in electrode_A]
     electrode_A_currents = [e.current_mA / 1000 for e in electrode_A]
@@ -152,10 +146,10 @@ def run_ti_forward(
     S = setup_session(
         subject_dir=str(subject_dir),
         msh_file_path=str(mesh_path),
-        output_dir=str(output_dir),
+        output_dir=str(output_dir_path),
         anisotropy_type=anisotropy,
         cond=cond_dict_to_list(conductivity_config),
-        fname_tensor=DTI_file_path,
+        fname_tensor=dti_file_path,
         eeg_cap=eeg_cap,
     )
     logger.info("会话初始化完成")
@@ -180,7 +174,7 @@ def run_ti_forward(
     mesh1_path, mesh2_path = run_tdcs_simulation(
         session=S,
         subject_dir=str(subject_dir),
-        output_dir=str(output_dir),
+        output_dir=str(output_dir_path),
         n_workers=n_workers,
     )
     logger.info("TDCS 仿真完成")
@@ -189,30 +183,122 @@ def run_ti_forward(
     ti_mesh_path = calculate_ti(
         mesh1_path=mesh1_path,
         mesh2_path=mesh2_path,
-        output_dir=str(output_dir),
+        output_dir=str(output_dir_path),
     )
     logger.info("TI 计算完成")
 
     # ===== 步骤 6：NIfTI 导出 =====
-    subid = re.search("m2m_(.+)", dir_path).group(1)
-    # 从 subject 目录查找 T1 文件作为参考空间
-    t1_candidates = list(subject_dir.glob("T1*.nii.gz"))
-    reference_file = str(t1_candidates[0]) if t1_candidates else ""
-    # 导出到 subject 目录，避免被清理步骤删除
     ti_nifti_path = export_ti_to_nifti(
         msh_path=ti_mesh_path,
-        output_dir=str(subject_dir),
-        reference=reference_file,
+        output_dir=str(output_dir_path),
+        reference=t1_file_path,
         field_name="max_TI",
-        prefix=f"{subid}_simulation",
+        prefix=f"{head_model_id}_simulation",
     )
     logger.info("NIfTI 导出完成: %s", ti_nifti_path)
 
-    # ===== 步骤 7：清理 =====
-    if not debug:
-        shutil.rmtree(output_dir, ignore_errors=True)
-
     logger.info("TI 正向仿真完成")
+
+
+def resolve_ti_forward_inputs(
+    data_root: str,
+    task_id: str,
+    head_model_id: str,
+) -> tuple[dict, str]:
+    """
+    根据目录约定解析 TI 正向仿真输入参数。
+
+    原理
+    ----
+    头模文件和仿真参数分离存储：
+    - 头模相关文件位于 head_models
+    - 当前任务参数、日志和结果位于 simulations
+    该函数统一负责目录拼接、文件发现和 JSON 读取。
+
+    Parameters
+    ----------
+    data_root : str
+        数据根目录
+    task_id : str
+        仿真任务 ID
+    head_model_id : str
+        头模 ID
+
+    Returns
+    -------
+    tuple[dict, str]
+        参数字典、仿真目录
+
+    Raises
+    ------
+    FileNotFoundError
+        当目录或 params.json 不存在时抛出
+    ValueError
+        当 params.json 顶层结构不是对象时抛出
+    """
+    root_dir = Path(data_root)
+    simulation_dir = root_dir / "simulations" / f"ti_forward_{task_id}"
+    head_model_dir = root_dir / "head_models" / f"m2m_{head_model_id}"
+    params_path = simulation_dir / "params.json"
+    if not simulation_dir.is_dir():
+        raise FileNotFoundError(f"仿真目录不存在: {simulation_dir}")
+    if not head_model_dir.is_dir():
+        raise FileNotFoundError(f"头模目录不存在: {head_model_dir}")
+    if not params_path.exists():
+        raise FileNotFoundError(f"参数文件不存在: {params_path}")
+    with params_path.open("r", encoding="utf-8") as file_obj:
+        params_data = json.load(file_obj)
+    if not isinstance(params_data, dict):
+        raise ValueError("params.json 顶层必须是 JSON 对象")
+    params_dict = {
+        "head_model_dir": str(head_model_dir),
+        "montage": params_data.get("montage"),
+        "electrode_A": params_data.get("electrode_A"),
+        "electrode_B": params_data.get("electrode_B"),
+        "conductivity_config": params_data.get("conductivity_config"),
+        "anisotropy": params_data.get("anisotropy_type"),
+    }
+    return params_dict, str(simulation_dir)
+
+
+def build_forward_params(
+    params_dict: dict,
+) -> tuple[
+    str,
+    list[ElectrodeWithCurrent],
+    list[ElectrodeWithCurrent],
+    dict[str, float],
+    AnisotropyType,
+]:
+    """
+    将已验证的参数字典转换为运行时参数。
+
+    Parameters
+    ----------
+    params_dict : dict
+        已通过校验的参数字典
+
+    Returns
+    -------
+    tuple[str, list[ElectrodeWithCurrent], list[ElectrodeWithCurrent], dict[str, float], AnisotropyType]
+        montage、电极组 A、电极组 B、电导率、各向异性
+    """
+    electrode_a = [
+        ElectrodeWithCurrent(name=item["name"], current_mA=item["current_mA"])
+        for item in params_dict["electrode_A"]
+    ]
+    electrode_b = [
+        ElectrodeWithCurrent(name=item["name"], current_mA=item["current_mA"])
+        for item in params_dict["electrode_B"]
+    ]
+    anisotropy = AnisotropyType(params_dict["anisotropy"])
+    return (
+        params_dict["montage"],
+        electrode_a,
+        electrode_b,
+        params_dict["conductivity_config"],
+        anisotropy,
+    )
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -228,34 +314,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
         prog="python neuracle/ti_forward.py",
         description="运行 TI 正向仿真流程",
     )
-    parser.add_argument("dir_path", help="头模目录名，例如 m2m_ernie")
-    parser.add_argument("montage", help="电极导联名称或 CSV 路径")
-    parser.add_argument(
-        "--electrode-a",
-        action="append",
-        required=True,
-        metavar="NAME:CURRENT",
-        help="电极组 A，可重复传入，例如 --electrode-a F5:1.0 --electrode-a P5:-1.0",
-    )
-    parser.add_argument(
-        "--electrode-b",
-        action="append",
-        required=True,
-        metavar="NAME:CURRENT",
-        help="电极组 B，可重复传入，例如 --electrode-b F6:1.0 --electrode-b P6:-1.0",
-    )
-    add_conductivity_argument(parser)
-    parser.add_argument(
-        "--anisotropy",
-        default=AnisotropyType.SCALAR.value,
-        choices=[item.value for item in AnisotropyType],
-        help="各向异性类型，默认 scalar",
-    )
-    parser.add_argument(
-        "--dti-file-path", dest="DTI_file_path", help="DTI 张量文件路径"
-    )
-    parser.add_argument("--n-workers", type=int, default=8, help="并行工作进程数")
-    parser.add_argument("--debug", action="store_true", help="调试模式，不清理临时目录")
+    parser.add_argument("data_root", help="数据根目录")
+    parser.add_argument("task_id", help="仿真任务 ID")
+    parser.add_argument("head_model_id", help="头模 ID，不带 m2m_ 前缀")
     return parser
 
 
@@ -276,29 +337,30 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     try:
-        params_dict = {
-            "dir_path": args.dir_path,
-            "T1_file_path": "",
-            "montage": args.montage,
-            "electrode_A": parse_electrode_specs(args.electrode_a),
-            "electrode_B": parse_electrode_specs(args.electrode_b),
-            "conductivity_config": parse_conductivity_specs(args.conductivity),
-            "anisotropy": parse_anisotropy(args.anisotropy),
-            "DTI_file_path": args.DTI_file_path,
-        }
-        setup_logging()
+        params_dict, simulation_dir = resolve_ti_forward_inputs(
+            args.data_root,
+            args.task_id,
+            args.head_model_id,
+        )
+        setup_logging(str(Path(simulation_dir) / "logs"))
         validate_forward_params(params_dict)
-        params = dict_to_forward_params(params_dict)
+        (
+            montage,
+            electrode_a,
+            electrode_b,
+            conductivity_config,
+            anisotropy,
+        ) = build_forward_params(params_dict)
         run_ti_forward(
-            dir_path=params.dir_path,
-            montage=params.montage,
-            electrode_A=params.electrode_A,
-            electrode_B=params.electrode_B,
-            conductivity_config=params.conductivity_config,
-            anisotropy=params.anisotropy,
-            DTI_file_path=params.DTI_file_path,
-            n_workers=args.n_workers,
-            debug=args.debug,
+            head_model_id=args.head_model_id,
+            head_model_dir=params_dict["head_model_dir"],
+            output_dir=simulation_dir,
+            montage=montage,
+            electrode_A=electrode_a,
+            electrode_B=electrode_b,
+            conductivity_config=conductivity_config,
+            anisotropy=anisotropy,
+            n_workers=N_WORKERS,
         )
     except (ValidationError, ValueError) as exc:
         logger.error("TI 正向仿真参数校验失败: %s", exc)

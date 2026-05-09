@@ -11,7 +11,9 @@ TI 逆向优化入口
     from neuracle.parameters.schemas import ROIParam, MNIParam
 
     run_ti_inverse(
-        dir_path="m2m_ernie",
+        head_model_id="ernie",
+        head_model_dir="/path/to/data_root/head_models/m2m_ernie",
+        output_dir="/path/to/data_root/simulations/ti_inverse_demo",
         montage="EEG10-10_Neuroelectrics",
         current_A=[1.0, -1.0],
         current_B=[1.0, -1.0],
@@ -24,10 +26,9 @@ TI 逆向优化入口
 """
 
 import argparse
+import json
 import logging
 import os
-import re
-import shutil
 import sys
 from pathlib import Path
 from typing import Literal
@@ -38,15 +39,13 @@ if __package__ in (None, ""):
 
 from neuracle.atlas.standardized import get_standardized_roi_path
 from neuracle.logger import setup_logging
-from neuracle.parameters.converter import dict_to_inverse_params
-from neuracle.parameters.schemas import AnisotropyType, ROIParam
-from neuracle.parameters.validator import ValidationError, validate_inverse_params
-from neuracle.storage.paths import (
-    get_model_mesh_path,
-    get_subject_dir,
-    get_task_output_dir,
-    reset_task_output_dir,
+from neuracle.parameters.schemas import (
+    AnisotropyType,
+    AtlasParam,
+    MNIParam,
+    ROIParam,
 )
+from neuracle.parameters.validator import ValidationError, validate_inverse_params
 from neuracle.ti_optimization import (
     get_electrode_mapping,
     init_optimization,
@@ -59,25 +58,22 @@ from neuracle.utils import (
     cond_dict_to_list,
     find_montage_file,
 )
-from neuracle.utils.cli_utils import (
-    add_conductivity_argument,
-    build_atlas_roi_param,
-    build_mni_roi_param,
-    parse_anisotropy,
-    parse_conductivity_specs,
-)
 from neuracle.utils.constants import (
     EXIT_INVALID_ARGS,
     EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
+    N_WORKERS,
 )
+from neuracle.utils.find_nifty import find_optional_nifti_file
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger(__name__)
 
 
 def run_ti_inverse(
-    dir_path: str,
+    head_model_id: str,
+    head_model_dir: str,
+    output_dir: str,
     montage: str,
     current_A: list[float],
     current_B: list[float],
@@ -86,9 +82,7 @@ def run_ti_inverse(
     target_threshold: float,
     conductivity_config: dict[str, float],
     anisotropy: AnisotropyType,
-    DTI_file_path: str | None = None,
     n_workers: int = 8,
-    debug: bool = False,
 ) -> None:
     """
     运行 TI 逆向优化，生成失败则抛出异常。
@@ -101,12 +95,15 @@ def run_ti_inverse(
     步骤 4：执行优化
     步骤 5：电极映射获取
     步骤 6：NIfTI 导出
-    步骤 7：清理
 
     Parameters
     ----------
-    dir_path : str
-        头模目录名
+    head_model_id : str
+        头模 ID
+    head_model_dir : str
+        头模目录路径
+    output_dir : str
+        仿真输出目录路径
     montage : str
         电极导联名称
     current_A : list[float]
@@ -123,12 +120,8 @@ def run_ti_inverse(
         组织电导率配置
     anisotropy : AnisotropyType
         各向异性类型
-    DTI_file_path : str, optional
-        DTI 张量文件路径
     n_workers : int
         并行工作进程数
-    debug : bool
-        调试模式，为 True 时不清理临时输出目录
     """
     roi_info = (
         f"atlas={roi_param.atlas_param}"
@@ -138,10 +131,12 @@ def run_ti_inverse(
         else "None"
     )
     logger.info(
-        "开始 TI 逆向优化: dir_path=%s, montage=%s, anisotropy=%s, "
+        "开始 TI 逆向优化: head_model_id=%s, head_model_dir=%s, output_dir=%s, montage=%s, anisotropy=%s, "
         "current_A=%s, current_B=%s, roi_type=%s, roi=%s, "
         "target_threshold=%s, conductivity=%s",
-        dir_path,
+        head_model_id,
+        head_model_dir,
+        output_dir,
         montage,
         anisotropy,
         current_A,
@@ -153,21 +148,23 @@ def run_ti_inverse(
     )
 
     # ===== 步骤 0：初始化与检查 =====
-    subject_dir = get_subject_dir(dir_path)
+    subject_dir = Path(head_model_dir)
     if not subject_dir.is_dir():
         raise FileNotFoundError(
             f"subject 目录不存在: {subject_dir}。请先执行头模生成任务。"
         )
-
-    task_id = "inverse"
-    output_dir = get_task_output_dir(dir_path, "TI_optimization", task_id)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    if not debug:
-        reset_task_output_dir(str(output_dir))
-
+    output_dir_path = Path(output_dir)
+    t1_file_path = find_optional_nifti_file(subject_dir, ("T1.nii.gz", "T1.nii"))
+    if t1_file_path is None:
+        raise FileNotFoundError(f"未找到 T1 文件: {subject_dir}")
+    dti_file_path = find_optional_nifti_file(
+        subject_dir,
+        ("DTI_coregT1_tensor.nii.gz", "DTI_coregT1_tensor.nii"),
+    )
     net_electrode_file = find_montage_file(str(subject_dir), montage)
-    mesh_path = get_model_mesh_path(dir_path)
+    mesh_path = subject_dir / f"{head_model_id}.msh"
+    if not mesh_path.exists():
+        raise FileNotFoundError(f"头模 mesh 文件不存在: {mesh_path}")
 
     roi_center = None
     roi_radius = None
@@ -197,10 +194,10 @@ def run_ti_inverse(
     opt = init_optimization(
         subject_dir=str(subject_dir),
         msh_file_path=str(mesh_path),
-        output_dir=str(output_dir),
+        output_dir=str(output_dir_path),
         anisotropy_type=anisotropy,
         cond=cond_dict_to_list(conductivity_config),
-        fname_tensor=DTI_file_path,
+        fname_tensor=dti_file_path,
     )
     logger.info("优化器初始化完成")
 
@@ -233,29 +230,20 @@ def run_ti_inverse(
     logger.info("优化执行完成")
 
     # ===== 步骤 5：电极映射获取 =====
-    electrode_A, electrode_B = get_electrode_mapping(output_dir=str(output_dir))
+    electrode_A, electrode_B = get_electrode_mapping(output_dir=str(output_dir_path))
     logger.info("电极映射获取完成: A=%s, B=%s", electrode_A, electrode_B)
 
     # ===== 步骤 6：NIfTI 导出 =====
-    subid = re.search("m2m_(.+)", dir_path).group(1)
-    msh_name = f"{subid}_tes_mapped_opt_head_mesh.msh"
-    msh_path = str(output_dir / "mapped_electrodes_simulation" / msh_name)
-    # 从 subject 目录查找 T1 文件作为参考空间
-    t1_candidates = list(subject_dir.glob("T1*.nii.gz"))
-    reference_file = str(t1_candidates[0]) if t1_candidates else ""
-    # 导出到 subject 目录，避免被清理步骤删除
+    msh_name = f"{head_model_id}_tes_mapped_opt_head_mesh.msh"
+    msh_path = str(output_dir_path / "mapped_electrodes_simulation" / msh_name)
     ti_nifti_path = export_ti_to_nifti(
         msh_path=msh_path,
-        output_dir=str(subject_dir),
-        reference=reference_file,
+        output_dir=str(output_dir_path),
+        reference=t1_file_path,
         field_name="max_TI",
-        prefix=f"{subid}_optimization",
+        prefix=f"{head_model_id}_optimization",
     )
     logger.info("NIfTI 导出完成: %s", ti_nifti_path)
-
-    # ===== 步骤 7：清理 =====
-    if not debug:
-        shutil.rmtree(output_dir, ignore_errors=True)
 
     logger.info("TI 逆向优化完成")
 
@@ -273,81 +261,109 @@ def build_arg_parser() -> argparse.ArgumentParser:
         prog="python neuracle/ti_inverse.py",
         description="运行 TI 逆向优化流程",
     )
-    parser.add_argument("dir_path", help="头模目录名，例如 m2m_ernie")
-    parser.add_argument("montage", help="电极导联名称或 CSV 路径")
-    parser.add_argument(
-        "--current-a",
-        nargs="+",
-        type=float,
-        required=True,
-        metavar="CURRENT",
-        help="电极组 A 初始电流列表，单位 mA",
-    )
-    parser.add_argument(
-        "--current-b",
-        nargs="+",
-        type=float,
-        required=True,
-        metavar="CURRENT",
-        help="电极组 B 初始电流列表，单位 mA",
-    )
-    parser.add_argument(
-        "--roi-type",
-        required=True,
-        choices=["atlas", "mni_pos"],
-        help="ROI 类型",
-    )
-    parser.add_argument("--atlas-name", help="atlas 模式下的图谱名称")
-    parser.add_argument("--atlas-area", help="atlas 模式下的区域名称")
-    parser.add_argument(
-        "--mni-center",
-        nargs=3,
-        type=float,
-        metavar=("X", "Y", "Z"),
-        help="mni_pos 模式下的 MNI 中心坐标",
-    )
-    parser.add_argument("--mni-radius", type=float, help="mni_pos 模式下的 ROI 半径")
-    parser.add_argument(
-        "--target-threshold", type=float, required=True, help="目标电场强度阈值"
-    )
-    add_conductivity_argument(parser)
-    parser.add_argument(
-        "--anisotropy",
-        default=AnisotropyType.SCALAR.value,
-        choices=[item.value for item in AnisotropyType],
-        help="各向异性类型，默认 scalar",
-    )
-    parser.add_argument(
-        "--dti-file-path", dest="DTI_file_path", help="DTI 张量文件路径"
-    )
-    parser.add_argument("--n-workers", type=int, default=8, help="并行工作进程数")
-    parser.add_argument("--debug", action="store_true", help="调试模式，不清理临时目录")
+    parser.add_argument("data_root", help="数据根目录")
+    parser.add_argument("task_id", help="仿真任务 ID")
+    parser.add_argument("head_model_id", help="头模 ID，不带 m2m_ 前缀")
     return parser
 
 
-def build_roi_param_dict(args: argparse.Namespace) -> dict[str, object]:
+def resolve_ti_inverse_inputs(
+    data_root: str,
+    task_id: str,
+    head_model_id: str,
+) -> tuple[dict, str]:
     """
-    根据命令行参数构造 ROI 参数字典。
+    根据目录约定解析 TI 逆向优化输入参数。
 
     Parameters
     ----------
-    args : argparse.Namespace
-        命令行解析结果
+    data_root : str
+        数据根目录
+    task_id : str
+        仿真任务 ID
+    head_model_id : str
+        头模 ID
 
     Returns
     -------
-    dict[str, object]
-        ROI 参数字典
+    tuple[dict, str]
+        参数字典、仿真目录
     """
-    if args.roi_type == "atlas":
-        if not args.atlas_name or not args.atlas_area:
-            raise ValueError(
-                "roi_type=atlas 时必须同时提供 --atlas-name 和 --atlas-area"
-            )
-        return build_atlas_roi_param(args.atlas_name, args.atlas_area)
-    if not args.mni_center or args.mni_radius is None:
-        raise ValueError("roi_type=mni_pos 时必须提供 --mni-center 和 --mni-radius")
-    return build_mni_roi_param(args.mni_center, args.mni_radius)
+    root_dir = Path(data_root)
+    simulation_dir = root_dir / "simulations" / f"ti_inverse_{task_id}"
+    head_model_dir = root_dir / "head_models" / f"m2m_{head_model_id}"
+    params_path = simulation_dir / "params.json"
+    if not simulation_dir.is_dir():
+        raise FileNotFoundError(f"仿真目录不存在: {simulation_dir}")
+    if not head_model_dir.is_dir():
+        raise FileNotFoundError(f"头模目录不存在: {head_model_dir}")
+    if not params_path.exists():
+        raise FileNotFoundError(f"参数文件不存在: {params_path}")
+    with params_path.open("r", encoding="utf-8") as file_obj:
+        params_data = json.load(file_obj)
+    if not isinstance(params_data, dict):
+        raise ValueError("params.json 顶层必须是 JSON 对象")
+    params_dict = {
+        "head_model_dir": str(head_model_dir),
+        "montage": params_data.get("montage"),
+        "current_A": params_data.get("current_A"),
+        "current_B": params_data.get("current_B"),
+        "roi_type": params_data.get("roi_type"),
+        "roi_param": params_data.get("roi_param"),
+        "target_threshold": params_data.get("target_threshold"),
+        "conductivity_config": params_data.get("conductivity_config"),
+        "anisotropy": params_data.get("anisotropy_type"),
+    }
+    return params_dict, str(simulation_dir)
+
+
+def build_inverse_params(
+    params_dict: dict,
+) -> tuple[
+    str,
+    list[float],
+    list[float],
+    Literal["atlas", "mni_pos"],
+    ROIParam,
+    float,
+    dict[str, float],
+    AnisotropyType,
+]:
+    """
+    将已验证的参数字典转换为运行时参数。
+
+    Parameters
+    ----------
+    params_dict : dict
+        已通过校验的参数字典
+
+    Returns
+    -------
+    tuple[str, list[float], list[float], Literal["atlas", "mni_pos"], ROIParam, float, dict[str, float], AnisotropyType]
+        montage、电流组 A、电流组 B、ROI 类型、ROI 参数、目标阈值、电导率、各向异性
+    """
+    roi_param_data = params_dict["roi_param"]
+    roi_param = ROIParam()
+    if roi_param_data.get("mni_param"):
+        roi_param.mni_param = MNIParam(
+            center=roi_param_data["mni_param"]["center"],
+            radius=roi_param_data["mni_param"]["radius"],
+        )
+    if roi_param_data.get("atlas_param"):
+        roi_param.atlas_param = AtlasParam(
+            name=roi_param_data["atlas_param"]["name"],
+            area=roi_param_data["atlas_param"]["area"],
+        )
+    return (
+        params_dict["montage"],
+        params_dict["current_A"],
+        params_dict["current_B"],
+        params_dict["roi_type"],
+        roi_param,
+        params_dict["target_threshold"],
+        params_dict["conductivity_config"],
+        AnisotropyType(params_dict["anisotropy"]),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -367,35 +383,36 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     try:
-        params_dict = {
-            "dir_path": args.dir_path,
-            "T1_file_path": "",
-            "montage": args.montage,
-            "current_A": args.current_a,
-            "current_B": args.current_b,
-            "roi_type": args.roi_type,
-            "roi_param": build_roi_param_dict(args),
-            "target_threshold": args.target_threshold,
-            "conductivity_config": parse_conductivity_specs(args.conductivity),
-            "anisotropy": parse_anisotropy(args.anisotropy),
-            "DTI_file_path": args.DTI_file_path,
-        }
-        setup_logging()
+        params_dict, simulation_dir = resolve_ti_inverse_inputs(
+            args.data_root,
+            args.task_id,
+            args.head_model_id,
+        )
+        setup_logging(str(Path(simulation_dir) / "logs"))
         validate_inverse_params(params_dict)
-        params = dict_to_inverse_params(params_dict)
+        (
+            montage,
+            current_a,
+            current_b,
+            roi_type,
+            roi_param,
+            target_threshold,
+            conductivity_config,
+            anisotropy,
+        ) = build_inverse_params(params_dict)
         run_ti_inverse(
-            dir_path=params.dir_path,
-            montage=params.montage,
-            current_A=params.current_A,
-            current_B=params.current_B,
-            roi_type=params.roi_type,
-            roi_param=params.roi_param,
-            target_threshold=params.target_threshold,
-            conductivity_config=params.conductivity_config,
-            anisotropy=params.anisotropy,
-            DTI_file_path=params.DTI_file_path,
-            n_workers=args.n_workers,
-            debug=args.debug,
+            head_model_id=args.head_model_id,
+            head_model_dir=params_dict["head_model_dir"],
+            output_dir=simulation_dir,
+            montage=montage,
+            current_A=current_a,
+            current_B=current_b,
+            roi_type=roi_type,
+            roi_param=roi_param,
+            target_threshold=target_threshold,
+            conductivity_config=conductivity_config,
+            anisotropy=anisotropy,
+            n_workers=N_WORKERS,
         )
     except (ValidationError, ValueError) as exc:
         logger.error("TI 逆向优化参数校验失败: %s", exc)

@@ -63,11 +63,9 @@ class ROIParam:
 class ModelParams:
     """头模生成参数"""
 
-    id: str
+    head_model_dir: str
     T1_file_path: str
-    dir_path: str
     T2_file_path: str | None = None
-    DTI_file_path: str | None = None
 
 
 @dataclass
@@ -82,8 +80,7 @@ class ElectrodeWithCurrent:
 class ForwardParams:
     """正向仿真参数"""
 
-    id: str
-    dir_path: str
+    head_model_dir: str
     T1_file_path: str
     montage: str
     electrode_A: list[ElectrodeWithCurrent]
@@ -97,8 +94,7 @@ class ForwardParams:
 class InverseParams:
     """逆向仿真参数"""
 
-    id: str
-    dir_path: str
+    head_model_dir: str
     T1_file_path: str
     montage: str
     current_A: list[float]

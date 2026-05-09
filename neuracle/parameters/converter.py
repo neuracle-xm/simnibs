@@ -26,24 +26,22 @@ from neuracle.parameters.schemas import (
     ModelParams,
     ROIParam,
 )
-from neuracle.storage.paths import DATA_ROOT
 
 logger = logging.getLogger(__name__)
 
 
-def _get_subject_dir(dir_path: str) -> Path:
+def _get_subject_dir(head_model_dir: str) -> Path:
     """获取 subject 目录的完整路径。"""
-    normalized = dir_path.replace("\\", "/").strip().strip("/")
-    path_obj = Path(normalized)
-    if path_obj.is_absolute() or ".." in path_obj.parts:
-        raise ValueError(f"非法 dir_path: {dir_path}")
-    return DATA_ROOT / normalized
+    path_obj = Path(head_model_dir)
+    if ".." in path_obj.parts:
+        raise ValueError(f"非法 head_model_dir: {head_model_dir}")
+    return path_obj
 
 
 def _get_t1_and_dti_path(data: dict) -> tuple[str, str | None]:
     """获取 T1 和 DTI 文件路径。"""
-    subject_dir = _get_subject_dir(data["dir_path"])
-    if data["dir_path"] == "m2m_ernie":
+    subject_dir = _get_subject_dir(data["head_model_dir"])
+    if subject_dir.name == "m2m_ernie":
         t1_file_path = str(subject_dir / "T1.nii.gz")
         dti_file_path = str(subject_dir / "DTI_coregT1_tensor.nii.gz")
     else:
@@ -59,7 +57,7 @@ def dict_to_model_params(data: dict) -> ModelParams:
     Parameters
     ----------
     data : dict
-        包含 T1_file_path、dir_path、T2_file_path、DTI_file_path 的字典
+        包含 T1_file_path、head_model_dir、T2_file_path 的字典
 
     Returns
     -------
@@ -67,11 +65,9 @@ def dict_to_model_params(data: dict) -> ModelParams:
         模型参数据类实例
     """
     return ModelParams(
-        id=data.get("id", ""),
+        head_model_dir=data["head_model_dir"],
         T1_file_path=data["T1_file_path"],
-        dir_path=data["dir_path"],
         T2_file_path=data.get("T2_file_path"),
-        DTI_file_path=data.get("DTI_file_path"),
     )
 
 
@@ -82,7 +78,7 @@ def dict_to_forward_params(data: dict) -> ForwardParams:
     Parameters
     ----------
     data : dict
-        包含 dir_path、T1_file_path、montage、electrode_A、electrode_B、
+        包含 head_model_dir、T1_file_path、montage、electrode_A、electrode_B、
         conductivity_config、anisotropy、DTI_file_path 的字典
 
     Returns
@@ -102,8 +98,7 @@ def dict_to_forward_params(data: dict) -> ForwardParams:
     t1_file_path, dti_file_path = _get_t1_and_dti_path(data)
 
     return ForwardParams(
-        id=data.get("id", ""),
-        dir_path=data["dir_path"],
+        head_model_dir=data["head_model_dir"],
         T1_file_path=t1_file_path,
         montage=data["montage"],
         electrode_A=electrode_a,
@@ -121,7 +116,7 @@ def dict_to_inverse_params(data: dict) -> InverseParams:
     Parameters
     ----------
     data : dict
-        包含 dir_path、T1_file_path、montage、current_A、current_B、
+        包含 head_model_dir、T1_file_path、montage、current_A、current_B、
         roi_type、roi_param、target_threshold、conductivity_config、
         anisotropy、DTI_file_path 的字典
 
@@ -146,8 +141,7 @@ def dict_to_inverse_params(data: dict) -> InverseParams:
     t1_file_path, dti_file_path = _get_t1_and_dti_path(data)
 
     return InverseParams(
-        id=data.get("id", ""),
-        dir_path=data["dir_path"],
+        head_model_dir=data["head_model_dir"],
         T1_file_path=t1_file_path,
         montage=data["montage"],
         current_A=data["current_A"],
