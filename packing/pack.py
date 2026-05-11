@@ -27,6 +27,69 @@ from pathlib import Path
 from setuptools_scm import ScmVersion, get_version
 
 
+def _env_python(env_prefix: str) -> str:
+    candidates = []
+
+    if sys.platform == "win32":
+        candidates = [
+            Path(env_prefix) / "python.exe",
+            Path(env_prefix) / "Scripts" / "python.exe",
+        ]
+    else:
+        candidates = [
+            Path(env_prefix) / "bin" / "python",
+        ]
+
+    for path in candidates:
+        if path.exists():
+            return str(path)
+
+    raise FileNotFoundError(
+        "Could not find python executable in cloned env. Tried:\n"
+        + "\n".join(str(p) for p in candidates)
+    )
+
+
+def _remove_pip_packages(env_prefix: str) -> None:
+    python_exe = _env_python(env_prefix)
+    pip_remove = [
+        "pyqt5",
+        "pyqt5-qt5",
+        "pyqt5-sip",
+        "cython",
+    ]
+    print("Using python:", python_exe)
+    subprocess.run(
+        [python_exe, "-m", "pip", "list"],
+        check=False,
+    )
+    subprocess.run(
+        [python_exe, "-m", "pip", "uninstall", "-y", *pip_remove],
+        check=False,
+    )
+
+
+def _remove_pyqt5_cython_after_unpack(packed_env_dir: str) -> None:
+    """解包后兜底删除"""
+    site = Path(packed_env_dir) / "Lib" / "site-packages"
+    patterns = [
+        "PyQt5",
+        "PyQt5-*",
+        "pyqt5*",
+        "Cython",
+        "Cython-*",
+        "cython.py",
+    ]
+    for pattern in patterns:
+        for path in site.glob(pattern):
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+                print(f"Removed dir: {path}")
+            elif path.exists():
+                path.unlink()
+                print(f"Removed file: {path}")
+
+
 def _shell_quote(value: str) -> str:
     return subprocess.list2cmdline([value])
 
@@ -283,6 +346,8 @@ def build(
             env_prefix = os.path.join(pack_dir, "simnibs_env_clone")
             _clone_existing_env(env_name, env_prefix)
             _replace_editable_simnibs_with_wheel(env_prefix, simnibs_wheel)
+            _remove_pip_packages(env_prefix)
+            _remove_unneeded_conda_packages(env_prefix)
             env_name = None
 
         print("Packing environment...")
@@ -305,7 +370,8 @@ def build(
             packed_env_dir,
         )
         os.remove(packed_env_file)
-
+        _remove_pyqt5_cython_after_unpack(packed_env_dir)
+        _remove_pdb_files(pack_dir)
         print("Patching unpacked environment")
         shutil.copy(
             os.path.join(simnibs_root_dir, "packing", "fix_entrypoints.py"),
@@ -433,6 +499,62 @@ def build(
         shutil.rmtree(pack_dir)
 
     # print(f"Created installer {installer_file}")
+
+
+def _remove_unneeded_conda_packages(env_prefix: str) -> None:
+    """Remove conda packages that are not needed in the final package."""
+    conda_remove = [
+        "conda-pack",
+        "freeglut",
+        "jupyterlab",
+        "libwebp",
+        "mock",
+        "pyopengl",
+        "pytest",
+        "tbb-devel",
+    ]
+
+    if conda_remove:
+        print(f"删除冗余的conda包:{conda_remove}")
+        subprocess.run(
+            f"conda remove -y -p {_shell_quote(env_prefix)} "
+            + " ".join(_shell_quote(p) for p in conda_remove),
+            check=True,
+            shell=True,
+        )
+
+
+def _remove_pdb_files(root_dir: str) -> None:
+    """
+    删除打包目录中的所有 .pdb 调试符号文件。
+
+    Parameters
+    ----------
+    root_dir : str
+        需要扫描的根目录
+    """
+    root = Path(root_dir)
+
+    removed_count = 0
+    removed_size = 0
+
+    for path in root.rglob("*.pdb"):
+        try:
+            size = path.stat().st_size
+
+            path.unlink()
+
+            removed_count += 1
+            removed_size += size
+
+            print(f"Removed: {path}")
+
+        except OSError as e:
+            print(f"Failed to remove {path}: {e}")
+
+    print(
+        f"Removed {removed_count} .pdb files, freed {removed_size / 1024 / 1024:.1f} MB"
+    )
 
 
 if __name__ == "__main__":
