@@ -2,7 +2,7 @@
 CHARM 步骤8: 导出 Niivue central 重建表面示例。
 
 演示如何从 CHARM 第 6 步生成的左右半球 central 重建表面中，
-合并并导出受试者目录下固定文件 `surface.gii`。
+合并并导出受试者目录下固定文件 `surface.gii.gz`。
 """
 
 from neuracle.charm.export_niivue_surfaces import export_niivue_surfaces

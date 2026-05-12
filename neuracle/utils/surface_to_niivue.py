@@ -2,7 +2,7 @@
 CHARM 重建表面导出为 Niivue 可用的 GIfTI。
 
 固定复用 CHARM 第 6 步生成的左右半球 central 表面，
-合并后写出为单一 `surface.gii` 文件，供 Niivue 加载。
+合并后写出为单一 `surface.gii.gz` 文件，供 Niivue 加载。
 """
 
 import logging
@@ -114,7 +114,7 @@ def export_surface_to_niivue_gifti(subject_dir: str) -> str:
     原理：
         1. 从 `surfaces/` 目录读取左右半球的 central 重建表面
         2. 合并左右半球
-        3. 在受试者目录内部写出固定文件 `surface.gii`
+        3. 在受试者目录内部写出固定文件 `surface.gii.gz`
 
     Parameters
     ----------
@@ -131,7 +131,7 @@ def export_surface_to_niivue_gifti(subject_dir: str) -> str:
     FileNotFoundError
         当目录或表面文件不存在时
     """
-    output_path = os.path.join(subject_dir, "surface.gii")
+    output_path = os.path.join(subject_dir, "surface.gii.gz")
     left_surface, right_surface = read_central_surfaces(subject_dir=subject_dir)
     merged_surface = join_hemisphere_surfaces(left_surface, right_surface)
     return write_niivue_surface_gifti(

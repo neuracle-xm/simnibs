@@ -7,7 +7,7 @@
 1. 直接使用 CHARM 第 6 步生成的皮层重建表面
 2. 作为 CHARM 第 8 步导出 Niivue 可直接加载的 `.gii`
 3. 当前实现固定使用 `central` 表面
-4. 输出文件固定写到受试者目录下，文件名固定为 `surface.gii`
+4. 输出文件固定写到受试者目录下，文件名固定为 `surface.gii.gz`
 
 ---
 
@@ -112,7 +112,7 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 1. 读取 `lh.central.gii`
 2. 读取 `rh.central.gii`
 3. 合并左右半球
-4. 输出单一文件 `surface.gii`
+4. 输出单一文件 `surface.gii.gz`
 
 ---
 
@@ -135,12 +135,12 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 
 固定输出文件为：
 
-- `m2m_{subid}/surface.gii`
+- `m2m_{subid}/surface.gii.gz`
 
 这里要明确：
 
-1. 输出格式固定为 `GIfTI (.gii)`
-2. 输出文件名固定为 `surface.gii`
+1. 输出格式固定为压缩 GIfTI (`.gii.gz`)
+2. 输出文件名固定为 `surface.gii.gz`
 3. 输出对象是左右半球合并后的单一 `central` 表面
 
 ---
@@ -172,7 +172,7 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 
 固定写出为：
 
-- `{subject_dir}/surface.gii`
+- `{subject_dir}/surface.gii.gz`
 
 ---
 
@@ -193,7 +193,7 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 1. 校验 `surfaces/` 目录存在
 2. 固定读取左右半球 `central`
 3. 合并左右半球
-4. 固定写出 `surface.gii`
+4. 固定写出 `surface.gii.gz`
 
 ### 7.2 底层接口
 
@@ -219,7 +219,7 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 4. `rh.central.gii` 不存在
 5. GIfTI 读取失败
 6. 左右半球合并失败
-7. `surface.gii` 写出失败
+7. `surface.gii.gz` 写出失败
 
 ---
 
@@ -227,7 +227,7 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 
 1. 能从 `m2m_{subid}/surfaces/` 成功读取 `lh.central.gii` 与 `rh.central.gii`
 2. 能合并左右半球
-3. 能在 `m2m_{subid}/surface.gii` 生成单一输出文件
+3. 能在 `m2m_{subid}/surface.gii.gz` 生成单一输出文件
 4. 输出文件可被 Niivue 直接加载
 5. 默认不依赖额外平滑步骤
 
@@ -240,6 +240,6 @@ Niivue 官方支持直接加载 `GIfTI (.gii)` mesh，因此不需要额外改�
 1. 基于 CHARM 重建表面
 2. 固定使用 `central`
 3. 作为 CHARM 第 8 步导出
-4. 输出到受试者目录下的固定文件 `surface.gii`
+4. 输出到受试者目录下的固定文件 `surface.gii.gz`
 
 这样可以最大限度减少前端接入复杂度，同时保留适合皮层显示的表面来源。
