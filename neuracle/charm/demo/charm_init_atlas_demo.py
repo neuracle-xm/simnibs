@@ -8,6 +8,7 @@ CHARM 步骤4: Atlas 初始仿射配准与颈部校正示例
 - T2_reg.nii.gz (可选)
 """
 
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.charm.init_atlas import init_atlas
 from neuracle.logger import setup_logging
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
@@ -34,12 +35,15 @@ def main():
     # 4. 可选进行颈部校正
     # 输出:
     # - segmentation/template_coregistered.nii.gz
-    init_atlas(
-        subject_dir=str(subject_dir),
-        use_transform=None,  # 可选：使用预先计算的变换矩阵
-        init_transform=None,  # 可选：初始变换矩阵
-        noneck=False,  # 设置为 True 跳过颈部校正
-    )
+    with simnibs_charm_file_logging(
+        str(subject_dir), filename="simnibs_charm_init_atlas.log"
+    ):
+        init_atlas(
+            subject_dir=str(subject_dir),
+            use_transform=None,  # 可选：使用预先计算的变换矩阵
+            init_transform=None,  # 可选：初始变换矩阵
+            noneck=False,  # 设置为 True 跳过颈部校正
+        )
 
     print("=" * 60)
     print("Atlas 仿射配准完成!")

@@ -6,6 +6,7 @@ CHARM 步骤2: T2 图像配准与准备示例
 数据来源: data/m2m_ernie/T2_reg.nii.gz
 """
 
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.charm.prepare_t2 import prepare_t2
 from neuracle.logger import setup_logging
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
@@ -33,13 +34,16 @@ def main():
     # 2. 去除单例维度
     # 3. 转换为 float32
     # 4. 保存到 subject_dir/T2_reg.nii.gz
-    prepare_t2(
-        subject_dir=str(subject_dir),
-        t2=str(t2_input),
-        register_t2=True,
-        force_qform=False,
-        force_sform=True,
-    )
+    with simnibs_charm_file_logging(
+        str(subject_dir), filename="simnibs_charm_prepare_t2.log"
+    ):
+        prepare_t2(
+            subject_dir=str(subject_dir),
+            t2=str(t2_input),
+            register_t2=True,
+            force_qform=False,
+            force_sform=True,
+        )
 
     print("=" * 60)
     print("T2 图像准备完成!")

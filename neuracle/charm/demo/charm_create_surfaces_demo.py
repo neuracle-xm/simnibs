@@ -8,6 +8,7 @@ CHARM 步骤6: 皮层表面重建示例
 - segmentation/norm_image.nii.gz
 """
 
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.charm.create_surfaces import create_surfaces
 from neuracle.logger import setup_logging
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
@@ -42,10 +43,13 @@ def main():
     # - surfaces/rh.sphere
     # - surfaces/lh.sphere.reg
     # - surfaces/rh.sphere.reg
-    create_surfaces(
-        subject_dir=str(subject_dir),
-        fs_dir=None,  # 可选：FreeSurfer subjects 目录
-    )
+    with simnibs_charm_file_logging(
+        str(subject_dir), filename="simnibs_charm_create_surfaces.log"
+    ):
+        create_surfaces(
+            subject_dir=str(subject_dir),
+            fs_dir=None,  # 可选：FreeSurfer subjects 目录
+        )
 
     print("=" * 60)
     print("皮层表面重建完成!")

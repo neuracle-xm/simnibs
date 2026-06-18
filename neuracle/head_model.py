@@ -30,6 +30,7 @@ from neuracle.charm import (
     prepare_t2,
     run_segmentation,
 )
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.logger import setup_logging
 from neuracle.parameters.converter import dict_to_model_params
 from neuracle.parameters.progress import (
@@ -49,6 +50,26 @@ logger = logging.getLogger(__name__)
 
 
 def generate_head_model(
+    head_model_dir: str,
+) -> None:
+    """
+    运行 CHARM 头模生成流程，并记录 SimNIBS 文件日志。
+
+    Parameters
+    ----------
+    head_model_dir : str
+        头模目录路径。
+
+    Returns
+    -------
+    None
+        无返回值。
+    """
+    with simnibs_charm_file_logging(head_model_dir):
+        _generate_head_model_impl(head_model_dir=head_model_dir)
+
+
+def _generate_head_model_impl(
     head_model_dir: str,
 ) -> None:
     """

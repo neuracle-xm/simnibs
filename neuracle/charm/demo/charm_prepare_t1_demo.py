@@ -6,6 +6,7 @@ CHARM 步骤1: T1 图像准备示例
 数据来源: data/m2m_ernie/T1.nii.gz
 """
 
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.charm.prepare_t1 import prepare_t1
 from neuracle.logger import setup_logging
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
@@ -32,12 +33,15 @@ def main():
     # 2. 去除单例维度
     # 3. 转换为 float32
     # 4. 保存到 subject_dir (使用 file_finder 的 reference_volume)
-    prepare_t1(
-        subject_dir=str(subject_dir),
-        t1=str(t1_input),
-        force_qform=False,
-        force_sform=False,
-    )
+    with simnibs_charm_file_logging(
+        str(subject_dir), filename="simnibs_charm_prepare_t1.log"
+    ):
+        prepare_t1(
+            subject_dir=str(subject_dir),
+            t1=str(t1_input),
+            force_qform=False,
+            force_sform=False,
+        )
 
     print("=" * 60)
     print("T1 图像准备完成!")

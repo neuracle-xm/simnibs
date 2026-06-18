@@ -8,6 +8,7 @@ CHARM 步骤3: 图像降噪示例
 - T2_reg.nii.gz (如果存在)
 """
 
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.charm.denoise import denoise_inputs
 from neuracle.logger import setup_logging
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
@@ -34,7 +35,10 @@ def main():
     # 输出:
     # - T1fs_denoised.nii.gz
     # - T2_reg_denoised.nii.gz (如果存在 T2)
-    denoise_inputs(subject_dir=str(subject_dir))
+    with simnibs_charm_file_logging(
+        str(subject_dir), filename="simnibs_charm_denoise.log"
+    ):
+        denoise_inputs(subject_dir=str(subject_dir))
 
     print("=" * 60)
     print("图像降噪完成!")

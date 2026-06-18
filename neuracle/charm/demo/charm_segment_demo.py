@@ -8,6 +8,7 @@ CHARM 步骤5: 体积与表面分割示例
 - T1fs.nii.gz / T2_reg.nii.gz (偏置校正输出)
 """
 
+from neuracle.charm.simnibs_logging import simnibs_charm_file_logging
 from neuracle.charm.segment import run_segmentation
 from neuracle.logger import setup_logging
 from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
@@ -37,10 +38,13 @@ def main():
     # - segmentation/tissue_labeling_upsampled_LUT.txt
     # - segmentation/norm_image.nii.gz
     # - segmentation/segmentation/BiasCorrectedT1.nii.gz
-    run_segmentation(
-        subject_dir=str(subject_dir),
-        debug=False,  # 设置为 True 会保留中间结果
-    )
+    with simnibs_charm_file_logging(
+        str(subject_dir), filename="simnibs_charm_segment.log"
+    ):
+        run_segmentation(
+            subject_dir=str(subject_dir),
+            debug=False,  # 设置为 True 会保留中间结果
+        )
 
     print("=" * 60)
     print("分割完成!")
