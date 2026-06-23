@@ -289,6 +289,22 @@ def _copy_neuracle_runtime_to_root(simnibs_root_dir: str, pack_dir: str) -> None
     )
 
 
+def _copy_license_to_root(simnibs_root_dir: str, pack_dir: str) -> None:
+    """
+    将仓库根目录的 LICENSE.txt 复制到打包根目录。
+
+    Parameters
+    ----------
+    simnibs_root_dir : str
+        仓库根目录
+    pack_dir : str
+        最终打包目录
+    """
+    source_license = Path(simnibs_root_dir) / "LICENSE.txt"
+    target_license = Path(pack_dir) / "LICENSE.txt"
+    shutil.copy(source_license, target_license)
+
+
 def build(
     env_name: str | None = None,
     simnibs_wheel: str | None = None,
@@ -378,6 +394,7 @@ def build(
             packed_env_dir,
         )
         _copy_neuracle_runtime_to_root(simnibs_root_dir, pack_dir)
+        _copy_license_to_root(simnibs_root_dir, pack_dir)
 
         # Create OS-specific installer
         if sys.platform == "win32":
