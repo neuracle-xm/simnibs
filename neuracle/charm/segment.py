@@ -170,12 +170,12 @@ def run_segmentation(
     nib.save(upsampled_tissues, sub_files.tissue_labeling_upsampled)
     upsampled_image.set_qform(affine_upsampled, qcode)
     upsampled_image.set_sform(affine_upsampled, scode)
-    nib.save(upsampled_tissues, sub_files.T1_upsampled)
+    nib.save(upsampled_image, sub_files.T1_upsampled)
     if len(bias_corrected_image_names) > 1:
         upsampled_image = nib.load(sub_files.T2_upsampled)
         upsampled_image.set_qform(affine_upsampled, qcode)
         upsampled_image.set_sform(affine_upsampled, scode)
-        nib.save(upsampled_tissues, sub_files.T2_upsampled)
+        nib.save(upsampled_image, sub_files.T2_upsampled)
         logger.info("T2 上采样图像已保存")
     fn_lut = sub_files.tissue_labeling_upsampled.rsplit(".", 2)[0] + "_LUT.txt"
     shutil.copyfile(file_finder.templates.final_tissues_LUT, fn_lut)
