@@ -273,8 +273,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         params_dict = resolve_head_model_inputs(args.data_root, args.task_id)
-        validate_model_params(params_dict)
         setup_logging(str(Path(params_dict["head_model_dir"]) / "logs"))
+        validate_model_params(params_dict)
         params = dict_to_model_params(params_dict)
         generate_head_model(
             head_model_dir=params.head_model_dir,

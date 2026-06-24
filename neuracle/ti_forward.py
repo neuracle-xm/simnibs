@@ -200,20 +200,13 @@ def run_ti_forward(
     logger.info("TI 正向仿真完成")
 
 
-def resolve_ti_forward_inputs(
+def resolve_ti_forward_dirs(
     data_root: str,
     task_id: str,
     head_model_id: str,
-) -> tuple[dict, str]:
+) -> tuple[str, str]:
     """
-    根据目录约定解析 TI 正向仿真输入参数。
-
-    原理
-    ----
-    头模文件和仿真参数分离存储：
-    - 头模相关文件位于 head_models
-    - 当前任务参数、日志和结果位于 simulations
-    该函数统一负责目录拼接、文件发现和 JSON 读取。
+    根据目录约定解析 TI 正向仿真目录。
 
     Parameters
     ----------
@@ -226,24 +219,55 @@ def resolve_ti_forward_inputs(
 
     Returns
     -------
+    tuple[str, str]
+        仿真目录、头模目录
+    """
+    root_dir = Path(data_root)
+    simulation_dir = root_dir / "simulations" / f"ti_forward_{task_id}"
+    head_model_dir = root_dir / "head_models" / f"m2m_{head_model_id}"
+    if not simulation_dir.is_dir():
+        raise FileNotFoundError(f"仿真目录不存在: {simulation_dir}")
+    return str(simulation_dir), str(head_model_dir)
+
+
+def load_ti_forward_params(
+    simulation_dir: str,
+    head_model_dir: str,
+) -> tuple[dict, str]:
+    """
+    根据已解析目录读取 TI 正向仿真输入参数。
+
+    原理
+    ----
+    头模文件和仿真参数分离存储：
+    - 头模相关文件位于 head_models
+    - 当前任务参数、日志和结果位于 simulations
+    该函数在日志初始化后执行头模目录检查和 JSON 读取，让失败原因可以写入任务日志。
+
+    Parameters
+    ----------
+    simulation_dir : str
+        仿真目录
+    head_model_dir : str
+        头模目录
+
+    Returns
+    -------
     tuple[dict, str]
         参数字典、仿真目录
 
     Raises
     ------
     FileNotFoundError
-        当目录或 params.json 不存在时抛出
+        当头模目录或 params.json 不存在时抛出
     ValueError
         当 params.json 顶层结构不是对象时抛出
     """
-    root_dir = Path(data_root)
-    simulation_dir = root_dir / "simulations" / f"ti_forward_{task_id}"
-    head_model_dir = root_dir / "head_models" / f"m2m_{head_model_id}"
-    params_path = simulation_dir / "params.json"
-    if not simulation_dir.is_dir():
-        raise FileNotFoundError(f"仿真目录不存在: {simulation_dir}")
-    if not head_model_dir.is_dir():
-        raise FileNotFoundError(f"头模目录不存在: {head_model_dir}")
+    simulation_dir_path = Path(simulation_dir)
+    head_model_dir_path = Path(head_model_dir)
+    params_path = simulation_dir_path / "params.json"
+    if not head_model_dir_path.is_dir():
+        raise FileNotFoundError(f"头模目录不存在: {head_model_dir_path}")
     if not params_path.exists():
         raise FileNotFoundError(f"参数文件不存在: {params_path}")
     with params_path.open("r", encoding="utf-8") as file_obj:
@@ -251,14 +275,14 @@ def resolve_ti_forward_inputs(
     if not isinstance(params_data, dict):
         raise ValueError("params.json 顶层必须是 JSON 对象")
     params_dict = {
-        "head_model_dir": str(head_model_dir),
+        "head_model_dir": str(head_model_dir_path),
         "montage": params_data.get("montage"),
         "electrode_A": params_data.get("electrode_A"),
         "electrode_B": params_data.get("electrode_B"),
         "conductivity_config": params_data.get("conductivity_config"),
         "anisotropy": params_data.get("anisotropy_type"),
     }
-    return params_dict, str(simulation_dir)
+    return params_dict, str(simulation_dir_path)
 
 
 def build_forward_params(
@@ -337,12 +361,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     try:
-        params_dict, simulation_dir = resolve_ti_forward_inputs(
+        simulation_dir, head_model_dir = resolve_ti_forward_dirs(
             args.data_root,
             args.task_id,
             args.head_model_id,
         )
         setup_logging(str(Path(simulation_dir) / "logs"))
+        params_dict, simulation_dir = load_ti_forward_params(
+            simulation_dir,
+            head_model_dir,
+        )
         validate_forward_params(params_dict)
         (
             montage,
