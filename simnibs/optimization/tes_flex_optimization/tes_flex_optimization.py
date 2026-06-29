@@ -1322,26 +1322,55 @@ class TesFlexOptimization:
         # run final simulation with real electrode including remeshing
         #########################################################################################################
         if self.run_final_electrode_simulation:
-            for i_channel_stim in range(self.n_channel_stim):
-                s = create_tdcs_session_from_array(
-                    electrode_array=self.electrode[i_channel_stim],
-                    fnamehead=self._mesh.fn,
-                    pathfem=os.path.join(
+            logger.info(
+                "Starting final electrode simulations for %s channels",
+                self.n_channel_stim,
+            )
+            try:
+                for i_channel_stim in range(self.n_channel_stim):
+                    pathfem = os.path.join(
                         self.output_folder, f"final_sim_{i_channel_stim}"
-                    ),
-                )
-                self.fn_final_sim.append(s.run()[0])
+                    )
+                    logger.info(
+                        "Running final electrode simulation for channel %s: %s",
+                        i_channel_stim,
+                        pathfem,
+                    )
+                    s = create_tdcs_session_from_array(
+                        electrode_array=self.electrode[i_channel_stim],
+                        fnamehead=self._mesh.fn,
+                        pathfem=pathfem,
+                    )
+                    result_files = s.run()
+                    logger.info(
+                        "Final electrode simulation finished for channel %s: %s",
+                        i_channel_stim,
+                        result_files,
+                    )
+                    self.fn_final_sim.append(result_files[0])
+            except Exception:
+                logger.exception("Final electrode simulation failed")
+                raise
                 
             # extract e-fields from FEM simulations, add extra data and show results
             base_file_name = os.path.splitext(os.path.basename(self.fn_mesh))[0]
             base_file_name += '_tes_flex_opt'
-            
-            fn_vis, m_head, m_surf = write_visualization(self.output_folder,
-                                                         base_file_name,
-                                                         self.roi, 
-                                                         self.fn_final_sim,
-                                                         self.e_postproc,
-                                                         self.goal)
+            logger.info(
+                "Creating final electrode visualizations: base_file_name=%s, fn_final_sim=%s",
+                base_file_name,
+                self.fn_final_sim,
+            )
+            try:
+                fn_vis, m_head, m_surf = write_visualization(self.output_folder,
+                                                             base_file_name,
+                                                             self.roi,
+                                                             self.fn_final_sim,
+                                                             self.e_postproc,
+                                                             self.goal)
+                logger.info("Final electrode visualizations created: %s", fn_vis)
+            except Exception:
+                logger.exception("Final electrode visualization failed")
+                raise
             
             # extract key metrics from m_head, m_surf and add to summary log
             logger.log(26, make_summary_text(m_surf, m_head))
@@ -1352,9 +1381,25 @@ class TesFlexOptimization:
         
         # Map electrodes to nearest positions in EEG net and run simulation if enabled
         #########################################################################################################
+        logger.info(
+            "Net electrode mapping stage: map_to_net_electrodes=%s, "
+            "run_mapped_electrodes_simulation=%s, net_electrode_file=%s",
+            self.map_to_net_electrodes,
+            self.run_mapped_electrodes_simulation,
+            self.net_electrode_file,
+        )
         if self.map_to_net_electrodes:
-            logger.info(f"Mapping optimized electrode positions to {self.net_electrode_file or 'default cap'}")
-            self.electrode_mapping = self.map_to_nearest_net_electrodes(self.net_electrode_file)
+            try:
+                logger.info(f"Mapping optimized electrode positions to {self.net_electrode_file or 'default cap'}")
+                self.electrode_mapping = self.map_to_nearest_net_electrodes(self.net_electrode_file)
+                logger.info(
+                    "Electrode mapping finished: mapped_labels=%s, distances=%s",
+                    self.electrode_mapping.get('mapped_labels'),
+                    self.electrode_mapping.get('distances'),
+                )
+            except Exception:
+                logger.exception("Net electrode mapping failed")
+                raise
             
             if self.run_mapped_electrodes_simulation:
                 logger.info("Running simulation with mapped electrodes...")
@@ -1367,6 +1412,7 @@ class TesFlexOptimization:
                 mapped_electrodes = []
                 for i_channel_stim in range(self.n_channel_stim):
                     mapped_electrode = copy.deepcopy(self.electrode[i_channel_stim])
+                    logger.info("Preparing mapped electrodes for channel %s", i_channel_stim)
                     
                     for i, (channel, array) in enumerate(self.electrode_mapping['channel_array_indices']):
                         if channel == i_channel_stim:
@@ -1391,26 +1437,54 @@ class TesFlexOptimization:
                     mapped_electrodes.append(mapped_electrode)
                 
                 for i_channel_stim in range(self.n_channel_stim):
-                    logger.info(f"Running simulation for mapped channel {i_channel_stim}...")
+                    pathfem = os.path.join(mapped_sim_folder, f"mapped_sim_{i_channel_stim}")
+                    logger.info(
+                        "Running simulation for mapped channel %s: %s",
+                        i_channel_stim,
+                        pathfem,
+                    )
                     s = create_tdcs_session_from_array(
                         electrode_array=mapped_electrodes[i_channel_stim],
                         fnamehead=self._mesh.fn,
-                        pathfem=os.path.join(mapped_sim_folder, f"mapped_sim_{i_channel_stim}")
+                        pathfem=pathfem
                     )
-                    self.fn_mapped_sim.append(s.run()[0])
+                    try:
+                        result_files = s.run()
+                    except Exception:
+                        logger.exception(
+                            "Mapped electrode simulation failed for channel %s",
+                            i_channel_stim,
+                        )
+                        raise
+                    logger.info(
+                        "Mapped electrode simulation finished for channel %s: %s",
+                        i_channel_stim,
+                        result_files,
+                    )
+                    self.fn_mapped_sim.append(result_files[0])
                 
                 base_file_name = os.path.splitext(os.path.basename(self.fn_mesh))[0]
                 base_file_name += '_tes_mapped_opt'
                 
-                logger.info("Creating visualizations for mapped electrode simulations...")
-                fn_vis_mapped, m_head_mapped, m_surf_mapped = write_visualization(
-                    mapped_sim_folder,
+                logger.info(
+                    "Creating visualizations for mapped electrode simulations: "
+                    "base_file_name=%s, fn_mapped_sim=%s",
                     base_file_name,
-                    self.roi, 
                     self.fn_mapped_sim,
-                    self.e_postproc,
-                    self.goal
                 )
+                try:
+                    fn_vis_mapped, m_head_mapped, m_surf_mapped = write_visualization(
+                        mapped_sim_folder,
+                        base_file_name,
+                        self.roi,
+                        self.fn_mapped_sim,
+                        self.e_postproc,
+                        self.goal
+                    )
+                    logger.info("Mapped electrode visualizations created: %s", fn_vis_mapped)
+                except Exception:
+                    logger.exception("Mapped electrode visualization failed")
+                    raise
                 
                 logger.log(26, "=" * 100)
                 logger.log(26, "RESULTS FOR SIMULATION WITH MAPPED ELECTRODES:")
@@ -2801,9 +2875,27 @@ def make_summary_text(m_surf, m_head, tissues_m_head=[ElementTags.GM]):
             idx = np.argwhere(m.field[r].value > 0) + 1
             for idx_f, f in enumerate(result_fields):
                 arr_medians[idx_f + 1, 0] = f
-                arr_medians[idx_f + 1, idx_r + 1] = (
-                    f"{m.field[f].get_percentiles(percentile=[50], roi=idx)[0]: .2e}"
-                )
+                if idx.size == 0:
+                    logger.warning(
+                        "Skipping median field summary for empty ROI field '%s' "
+                        "and result field '%s'",
+                        r,
+                        f,
+                    )
+                    arr_medians[idx_f + 1, idx_r + 1] = "n/a"
+                    continue
+                try:
+                    median_value = m.field[f].get_percentiles(percentile=[50], roi=idx)[0]
+                except IndexError:
+                    logger.warning(
+                        "Skipping median field summary for ROI field '%s' "
+                        "and result field '%s' because no weighted values were found",
+                        r,
+                        f,
+                    )
+                    arr_medians[idx_f + 1, idx_r + 1] = "n/a"
+                    continue
+                arr_medians[idx_f + 1, idx_r + 1] = f"{median_value: .2e}"
 
         # assemble summary text
         summary_text = "======================\n"
@@ -3021,5 +3113,3 @@ def check_electrode_distance(
         )
     else:
         return True, electrode_pos_valid
-
-
