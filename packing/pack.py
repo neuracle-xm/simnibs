@@ -305,6 +305,26 @@ def _copy_license_to_root(simnibs_root_dir: str, pack_dir: str) -> None:
     shutil.copy(source_license, target_license)
 
 
+def _write_commit_marker_to_root(simnibs_root_dir: str, pack_dir: str) -> None:
+    """
+    在打包根目录生成以当前 Git 提交号命名的标记文件。
+
+    Parameters
+    ----------
+    simnibs_root_dir : str
+        仓库根目录
+    pack_dir : str
+        最终打包目录
+    """
+    commit_hash = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=simnibs_root_dir,
+        text=True,
+    ).strip()
+    target_marker = Path(pack_dir) / f"{commit_hash}.txt"
+    target_marker.write_text(f"{commit_hash}\n", encoding="utf-8")
+
+
 def build(
     env_name: str | None = None,
     simnibs_wheel: str | None = None,
@@ -395,6 +415,7 @@ def build(
         )
         _copy_neuracle_runtime_to_root(simnibs_root_dir, pack_dir)
         _copy_license_to_root(simnibs_root_dir, pack_dir)
+        _write_commit_marker_to_root(simnibs_root_dir, pack_dir)
 
         # Create OS-specific installer
         if sys.platform == "win32":
