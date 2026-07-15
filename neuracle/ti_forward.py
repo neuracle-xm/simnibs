@@ -54,6 +54,7 @@ from neuracle.utils.constants import (
     EXIT_VALUE_ERROR,
     N_WORKERS,
 )
+from neuracle.utils.error_message import clear_error_message, write_error_message
 from neuracle.utils.find_nifty import find_optional_nifti_file
 from neuracle.utils.ti_export import export_ti_to_nifti
 
@@ -361,13 +362,16 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = build_arg_parser()
     args = parser.parse_args(argv)
+    task_dir = Path(args.data_root) / "simulations" / f"ti_forward_{args.task_id}"
+    log_dir = task_dir / "logs" if task_dir.is_dir() else None
     try:
         simulation_dir, head_model_dir = resolve_ti_forward_dirs(
             args.data_root,
             args.task_id,
             args.head_model_id,
         )
-        setup_logging(str(Path(simulation_dir) / "logs"))
+        log_dir = Path(simulation_dir) / "logs"
+        setup_logging(str(log_dir))
         params_dict, simulation_dir = load_ti_forward_params(
             simulation_dir,
             head_model_dir,
@@ -393,13 +397,21 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ValidationError as exc:
         logger.exception("TI 正向仿真参数校验失败: %s", exc)
+        if log_dir is not None:
+            write_error_message(log_dir, EXIT_INVALID_ARGS, str(exc))
         return EXIT_INVALID_ARGS
     except ValueError as exc:
         logger.exception("TI 正向仿真数值处理失败: %s", exc)
+        if log_dir is not None:
+            write_error_message(log_dir, EXIT_VALUE_ERROR, str(exc))
         return EXIT_VALUE_ERROR
-    except Exception:
-        logger.exception("TI 正向仿真执行失败")
+    except Exception as exc:
+        logger.exception("TI 正向仿真执行失败: %s", exc)
+        if log_dir is not None:
+            write_error_message(log_dir, EXIT_RUNTIME_ERROR, str(exc))
         return EXIT_RUNTIME_ERROR
+    if log_dir is not None:
+        clear_error_message(log_dir)
     return EXIT_SUCCESS
 
 

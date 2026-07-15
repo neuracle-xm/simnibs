@@ -33,6 +33,9 @@ EXIT_RUNTIME_ERROR = 1
 EXIT_INVALID_ARGS = 2
 EXIT_VALUE_ERROR = 3
 
+# 子进程结构化错误文件名
+ERROR_MESSAGE_FILENAME = "error_message.json"
+
 # 并行计算相关常量
 N_WORKERS = 8
 

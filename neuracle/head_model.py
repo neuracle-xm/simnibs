@@ -45,6 +45,7 @@ from neuracle.utils.constants import (
     EXIT_SUCCESS,
     EXIT_VALUE_ERROR,
 )
+from neuracle.utils.error_message import clear_error_message, write_error_message
 from neuracle.utils.find_nifty import find_optional_nifti_file
 
 logger = logging.getLogger("neuracle.head_model")
@@ -272,9 +273,12 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = build_arg_parser()
     args = parser.parse_args(argv)
+    task_dir = Path(args.data_root) / "head_models" / f"m2m_{args.task_id}"
+    log_dir = task_dir / "logs" if task_dir.is_dir() else None
     try:
         params_dict = resolve_head_model_inputs(args.data_root, args.task_id)
-        setup_logging(str(Path(params_dict["head_model_dir"]) / "logs"))
+        log_dir = Path(params_dict["head_model_dir"]) / "logs"
+        setup_logging(str(log_dir))
         validate_model_params(params_dict)
         params = dict_to_model_params(params_dict)
         generate_head_model(
@@ -282,13 +286,21 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ValidationError as exc:
         logger.exception("头模生成参数校验失败: %s", exc)
+        if log_dir is not None:
+            write_error_message(log_dir, EXIT_INVALID_ARGS, str(exc))
         return EXIT_INVALID_ARGS
     except ValueError as exc:
         logger.exception("头模生成数值处理失败: %s", exc)
+        if log_dir is not None:
+            write_error_message(log_dir, EXIT_VALUE_ERROR, str(exc))
         return EXIT_VALUE_ERROR
-    except Exception:
-        logger.exception("头模生成执行失败")
+    except Exception as exc:
+        logger.exception("头模生成执行失败: %s", exc)
+        if log_dir is not None:
+            write_error_message(log_dir, EXIT_RUNTIME_ERROR, str(exc))
         return EXIT_RUNTIME_ERROR
+    if log_dir is not None:
+        clear_error_message(log_dir)
     return EXIT_SUCCESS
 
 
