@@ -43,10 +43,11 @@ from neuracle.utils.constants import (
     EXIT_INVALID_ARGS,
     EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
+    EXIT_VALUE_ERROR,
 )
 from neuracle.utils.find_nifty import find_optional_nifti_file
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("neuracle.head_model")
 
 
 def generate_head_model(
@@ -280,8 +281,11 @@ def main(argv: list[str] | None = None) -> int:
             head_model_dir=params.head_model_dir,
         )
     except ValidationError as exc:
-        logger.error("头模生成参数校验失败: %s", exc)
+        logger.exception("头模生成参数校验失败: %s", exc)
         return EXIT_INVALID_ARGS
+    except ValueError as exc:
+        logger.exception("头模生成数值处理失败: %s", exc)
+        return EXIT_VALUE_ERROR
     except Exception:
         logger.exception("头模生成执行失败")
         return EXIT_RUNTIME_ERROR

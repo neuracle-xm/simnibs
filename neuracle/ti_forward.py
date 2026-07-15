@@ -51,12 +51,13 @@ from neuracle.utils.constants import (
     EXIT_INVALID_ARGS,
     EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
+    EXIT_VALUE_ERROR,
     N_WORKERS,
 )
 from neuracle.utils.find_nifty import find_optional_nifti_file
 from neuracle.utils.ti_export import export_ti_to_nifti
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("neuracle.ti_forward")
 
 
 def run_ti_forward(
@@ -390,9 +391,12 @@ def main(argv: list[str] | None = None) -> int:
             anisotropy=anisotropy,
             n_workers=N_WORKERS,
         )
-    except (ValidationError, ValueError) as exc:
-        logger.error("TI 正向仿真参数校验失败: %s", exc)
+    except ValidationError as exc:
+        logger.exception("TI 正向仿真参数校验失败: %s", exc)
         return EXIT_INVALID_ARGS
+    except ValueError as exc:
+        logger.exception("TI 正向仿真数值处理失败: %s", exc)
+        return EXIT_VALUE_ERROR
     except Exception:
         logger.exception("TI 正向仿真执行失败")
         return EXIT_RUNTIME_ERROR
