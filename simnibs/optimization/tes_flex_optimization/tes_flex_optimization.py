@@ -22,6 +22,7 @@ from simnibs import __version__
 from simnibs.mesh_tools import mesh_io, gmsh_view
 from simnibs.simulation.fem import get_dirichlet_node_index_cog
 from simnibs.simulation.onlinefem import FemTargetPointCloud, OnlineFEM
+from simnibs.simulation.sim_struct import SimuList
 from simnibs.utils import simnibs_logger
 from simnibs.utils.simnibs_logger import logger
 from simnibs.utils.region_of_interest import RegionOfInterest
@@ -115,6 +116,8 @@ class TesFlexOptimization:
            Note: This is required to get final e-fields for visualization
     anisotropy_type : str, optional, default: 'scalar'
         Specify type of anisotropy for simulation ('scalar', 'vn' or 'mc')
+    cond : list, optional, default: None
+        Tissue conductivities. Entries can be conductivity values or COND objects.
     disable_SPR_for_volume_roi : bool, optional, default: True
             Whether to use SPR interpolation for volume rois
 
@@ -219,6 +222,7 @@ class TesFlexOptimization:
 
         # FEM
         self.dirichlet_node = None
+        self.cond: list | None = None
         self.anisotropy_type = "scalar"
         self.solver_options = "pardiso"
         self._ofem = None
@@ -229,6 +233,31 @@ class TesFlexOptimization:
 
         if settings_dict:
             self.from_dict(settings_dict)
+
+    def _prepare_conductivity(self) -> mesh_io.ElementData | None:
+        """
+        Convert custom tissue conductivities to mesh element conductivity.
+
+        Returns
+        -------
+        mesh_io.ElementData | None
+            Element conductivity used by OnlineFEM, or None to use defaults.
+        """
+        if self.cond is None:
+            return None
+        simulation_list = SimuList(mesh=self._mesh)
+        if len(self.cond) > len(simulation_list.cond):
+            raise ValueError(
+                "Number of custom conductivities exceeds SimNIBS tissues"
+            )
+        for index, cond_value in enumerate(self.cond):
+            if hasattr(cond_value, "value"):
+                simulation_list.cond[index] = copy.deepcopy(cond_value)
+            else:
+                simulation_list.cond[index].value = cond_value
+        simulation_list.anisotropy_type = self.anisotropy_type
+        simulation_list.fn_tensor_nifti = self._ff_subject.tensor_file
+        return simulation_list.cond2elmdata()
 
     def _prepare(self):
         """
@@ -550,6 +579,7 @@ class TesFlexOptimization:
         )
 
         # prepare FEM
+        conductivity = self._prepare_conductivity()
         self._ofem = OnlineFEM(
             mesh=self._mesh,
             electrode=self.electrode,
@@ -562,6 +592,7 @@ class TesFlexOptimization:
             dataType=[1] * len(self._roi),
             dirichlet_node=self.dirichlet_node,
             cpus=self._n_cpu,
+            cond=conductivity,
         )
         self._prepared = True
 
@@ -1340,6 +1371,8 @@ class TesFlexOptimization:
                         electrode_array=self.electrode[i_channel_stim],
                         fnamehead=self._mesh.fn,
                         pathfem=pathfem,
+                        cond=self.cond,
+                        anisotropy_type=self.anisotropy_type,
                     )
                     result_files = s.run()
                     logger.info(
@@ -1446,7 +1479,9 @@ class TesFlexOptimization:
                     s = create_tdcs_session_from_array(
                         electrode_array=mapped_electrodes[i_channel_stim],
                         fnamehead=self._mesh.fn,
-                        pathfem=pathfem
+                        pathfem=pathfem,
+                        cond=self.cond,
+                        anisotropy_type=self.anisotropy_type,
                     )
                     try:
                         result_files = s.run()

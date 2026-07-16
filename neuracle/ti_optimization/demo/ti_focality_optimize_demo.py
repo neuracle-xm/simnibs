@@ -12,6 +12,8 @@ TI Focality Optimization Demo - 优化 focality
 - ROI 半径: 20mm
 - Non-ROI 半径: 25mm
 - Focality 阈值: [0.1, 0.2] V/m
+- 自定义电导率: WM 0.14 S/m, GM 0.30 S/m，其余使用标准值
+- 电导率各向异性类型: vn
 """
 
 from pathlib import Path
@@ -23,12 +25,13 @@ from neuracle.ti_optimization import (
     setup_electrodes_and_roi,
     setup_goal,
 )
-from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
+from neuracle.utils import cond_dict_to_list
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT, STANDARD_COND
 from neuracle.utils.ti_export import export_ti_to_nifti
 from simnibs.utils import file_finder
 
 
-def main():
+def main() -> None:
     """主函数"""
     # 启用日志
     setup_logging(str(PROJECT_ROOT / "log" / "ti_focality_optimize_demo"))
@@ -38,6 +41,9 @@ def main():
     output_dir = DATA_ROOT / "TI_focality_optimize_ernie"
     sub_files = file_finder.SubjectFiles(subpath=str(subject_dir))
     subid = sub_files.subid
+    conductivity_config = {**STANDARD_COND, "WM": 0.14, "GM": 0.30}
+    cond = cond_dict_to_list(conductivity_config)
+    anisotropy_type = "vn"
 
     print("=" * 60)
     print("TI Focality Optimization: 优化 focality")
@@ -51,6 +57,8 @@ def main():
         subject_dir=str(subject_dir),
         output_dir=str(output_dir),
         msh_file_path=sub_files.fnamehead,
+        anisotropy_type=anisotropy_type,
+        cond=cond,
     )
 
     # 2. 配置目标函数

@@ -10,6 +10,8 @@ TI Mean Optimization Demo - 最大化 ROI 内平均电场
 - 电极对2: ElectrodeArrayPair, 半径 10mm, 电流 2mA
 - ROI 中心: [-41.0, -13.0, 66.0] (subject space)
 - ROI 半径: 20mm
+- 自定义电导率: WM 0.14 S/m, GM 0.30 S/m，其余使用标准值
+- 电导率各向异性类型: vn
 """
 
 from neuracle.logger import setup_logging
@@ -19,12 +21,13 @@ from neuracle.ti_optimization import (
     setup_electrodes_and_roi,
     setup_goal,
 )
-from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT
+from neuracle.utils import cond_dict_to_list
+from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT, STANDARD_COND
 from neuracle.utils.ti_export import export_ti_to_nifti
 from simnibs.utils import file_finder
 
 
-def main():
+def main() -> None:
     """主函数"""
     # 启用日志
     setup_logging(str(PROJECT_ROOT / "log" / "ti_mean_optimize"))
@@ -34,6 +37,9 @@ def main():
     output_dir = str(DATA_ROOT / "TI_mean_optimize_ernie")
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     subid = sub_files.subid
+    conductivity_config = {**STANDARD_COND, "WM": 0.14, "GM": 0.30}
+    cond = cond_dict_to_list(conductivity_config)
+    anisotropy_type = "vn"
 
     print("=" * 60)
     print("TI Mean Optimization: 最大化 ROI 内平均电场")
@@ -47,6 +53,8 @@ def main():
         subject_dir=str(subject_dir),
         output_dir=str(output_dir),
         msh_file_path=sub_files.fnamehead,
+        anisotropy_type=anisotropy_type,
+        cond=cond,
     )
 
     # 2. 配置目标函数

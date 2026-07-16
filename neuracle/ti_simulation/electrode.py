@@ -29,6 +29,7 @@ Electrode 模块 - 电极对配置
     )
 """
 
+from copy import deepcopy
 import logging
 
 from simnibs import sim_struct
@@ -43,6 +44,8 @@ def setup_electrode_pair1(
     electrode_shape: str = "ellipse",
     electrode_dimensions: list[float] | None = None,
     electrode_thickness: float = 2.0,
+    cond: list | None = None,
+    anisotropy_type: str = "scalar",
 ) -> sim_struct.TDCSLIST:
     """
     配置第一个电极对
@@ -69,6 +72,10 @@ def setup_electrode_pair1(
         (default: [40, 40])
     electrode_thickness : float, optional
         电极厚度，单位 mm (default: 2.0)
+    cond : list, optional
+        自定义组织电导率列表；不提供时使用 SimNIBS 标准电导率
+    anisotropy_type : str, optional
+        电导率各向异性类型，写入当前 TDCSLIST (default: "scalar")
 
     Returns
     -------
@@ -91,6 +98,8 @@ def setup_electrode_pair1(
         electrode_shape=electrode_shape,
         electrode_dimensions=electrode_dimensions,
         electrode_thickness=electrode_thickness,
+        cond=cond,
+        anisotropy_type=anisotropy_type,
     )
     return tdcs1
 
@@ -102,6 +111,8 @@ def setup_electrode_pair2(
     electrode_shape: str = "ellipse",
     electrode_dimensions: list[float] | None = None,
     electrode_thickness: float = 2.0,
+    cond: list | None = None,
+    anisotropy_type: str = "scalar",
 ) -> sim_struct.TDCSLIST:
     """
     配置第二个电极对
@@ -129,6 +140,10 @@ def setup_electrode_pair2(
         (default: [40, 40])
     electrode_thickness : float, optional
         电极厚度，单位 mm (default: 2.0)
+    cond : list, optional
+        自定义组织电导率列表；不提供时使用 SimNIBS 标准电导率
+    anisotropy_type : str, optional
+        电导率各向异性类型，写入当前 TDCSLIST (default: "scalar")
 
     Returns
     -------
@@ -151,6 +166,8 @@ def setup_electrode_pair2(
         electrode_shape=electrode_shape,
         electrode_dimensions=electrode_dimensions,
         electrode_thickness=electrode_thickness,
+        cond=cond,
+        anisotropy_type=anisotropy_type,
     )
     return tdcs2
 
@@ -162,6 +179,8 @@ def _setup_electrode_pair(
     electrode_shape: str,
     electrode_dimensions: list[float],
     electrode_thickness: float,
+    cond: list | None,
+    anisotropy_type: str,
 ) -> sim_struct.TDCSLIST:
     """
     配置单个电极对（内部函数）
@@ -181,6 +200,10 @@ def _setup_electrode_pair(
         电极尺寸 [width, height]
     electrode_thickness : float
         电极厚度
+    cond : list, optional
+        自定义组织电导率列表；不提供时保留 TDCSLIST 的标准电导率
+    anisotropy_type : str
+        电导率各向异性类型
 
     Returns
     -------
@@ -188,6 +211,15 @@ def _setup_electrode_pair(
         配置好的 TDCS 列表对象
     """
     tdcs = session.add_tdcslist()
+    if cond is not None:
+        if len(cond) > len(tdcs.cond):
+            raise ValueError("自定义电导率数量超过 SimNIBS 支持的组织数量")
+        for index, conductivity in enumerate(cond):
+            if hasattr(conductivity, "value"):
+                tdcs.cond[index] = deepcopy(conductivity)
+            else:
+                tdcs.cond[index].value = conductivity
+    tdcs.anisotropy_type = anisotropy_type
 
     for i, elec_name in enumerate(electrode_pair):
         electrode = tdcs.add_electrode()

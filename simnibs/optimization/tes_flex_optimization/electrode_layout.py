@@ -1994,6 +1994,8 @@ def create_tdcs_session_from_array(
     rubber_size=None,
     sigma_rubber=None,
     sigma_saline=None,
+    cond: list | None = None,
+    anisotropy_type: str = "scalar",
 ):
     """
     Create a sim_struct.SESSION including a TDCSLIST object with ELECTRODE instances for regular TDCS
@@ -2008,6 +2010,10 @@ def create_tdcs_session_from_array(
         Path to headmodel .msh file
     pathfem : str
         Output folder of simulation data
+    cond : list | None, optional
+        Tissue conductivities. Entries can be conductivity values or COND objects.
+    anisotropy_type : str, optional
+        Conductivity anisotropy type: "scalar", "dir", "vn" or "mc".
     thickness : list of float [1-3]
         Can have up to 3 arguments. 1st argument is the lower part of the electrode, 2nd arrgument is the rubber;
         3rd is the upper part. Examples:
@@ -2045,6 +2051,17 @@ def create_tdcs_session_from_array(
 
     # Initialize a tDCS simulation
     tdcslist = s.add_tdcslist()
+    if cond is not None:
+        if len(cond) > len(tdcslist.cond):
+            raise ValueError(
+                "Number of custom conductivities exceeds SimNIBS tissues"
+            )
+        for index, cond_value in enumerate(cond):
+            if hasattr(cond_value, "value"):
+                tdcslist.cond[index] = copy.deepcopy(cond_value)
+            else:
+                tdcslist.cond[index].value = cond_value
+    tdcslist.anisotropy_type = anisotropy_type
 
     if sigma_rubber is not None:
         tdcslist.cond[99].value = sigma_rubber

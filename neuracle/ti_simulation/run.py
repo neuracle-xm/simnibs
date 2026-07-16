@@ -28,7 +28,6 @@ Run 模块 - TDCS 仿真执行
 """
 
 import logging
-import os
 
 from simnibs import run_simnibs, sim_struct
 
@@ -62,8 +61,8 @@ def run_tdcs_simulation(
     -------
     tuple[str, str]
         (mesh1_path, mesh2_path) - 两组电极仿真结果网格路径
-        - mesh1_path: 第一对电极仿真结果，如 {output_dir}/{subid}_TDCS_1_scalar.msh
-        - mesh2_path: 第二对电极仿真结果，如 {output_dir}/{subid}_TDCS_2_scalar.msh
+        - mesh1_path: 第一对电极仿真结果，由 SimNIBS 返回实际文件名
+        - mesh2_path: 第二对电极仿真结果，由 SimNIBS 返回实际文件名
 
     Raises
     ------
@@ -83,15 +82,15 @@ def run_tdcs_simulation(
     logger.info("仿真配置: subject_dir=%s, output_dir=%s", subject_dir, output_dir)
 
     try:
-        run_simnibs(session, cpus=n_workers)
+        result_meshes = run_simnibs(session, cpus=n_workers)
         logger.info("TDCS 仿真完成")
     except Exception as e:
         logger.error("TDCS 仿真执行失败: %s", str(e))
         raise RuntimeError(f"TDCS 仿真执行失败: {str(e)}") from e
 
-    base_name = os.path.splitext(os.path.basename(session.fnamehead))[0]
-    mesh1_path = os.path.join(output_dir, f"{base_name}_TDCS_1_scalar.msh")
-    mesh2_path = os.path.join(output_dir, f"{base_name}_TDCS_2_scalar.msh")
+    if len(result_meshes) != 2:
+        raise RuntimeError(f"TDCS 仿真结果数量异常: 预期 2 个，实际 {len(result_meshes)} 个")
+    mesh1_path, mesh2_path = result_meshes
 
     logger.info("TDCS 仿真结果路径: %s, %s", mesh1_path, mesh2_path)
     return mesh1_path, mesh2_path

@@ -143,14 +143,13 @@ def run_ti_forward(
     electrode_A_currents = [e.current_mA / 1000 for e in electrode_A]
     electrode_B_names = [e.name for e in electrode_B]
     electrode_B_currents = [e.current_mA / 1000 for e in electrode_B]
+    cond = cond_dict_to_list(conductivity_config)
 
     # ===== 步骤 1：会话初始化 =====
     S = setup_session(
         subject_dir=str(subject_dir),
         msh_file_path=str(mesh_path),
         output_dir=str(output_dir_path),
-        anisotropy_type=anisotropy,
-        cond=cond_dict_to_list(conductivity_config),
         fname_tensor=dti_file_path,
         eeg_cap=eeg_cap,
     )
@@ -161,6 +160,8 @@ def run_ti_forward(
         session=S,
         electrode_pair1=electrode_A_names,
         current1=electrode_A_currents,
+        cond=cond,
+        anisotropy_type=anisotropy,
     )
     logger.info("电极对 A 配置完成")
 
@@ -169,6 +170,8 @@ def run_ti_forward(
         session=S,
         electrode_pair2=electrode_B_names,
         current2=electrode_B_currents,
+        cond=cond,
+        anisotropy_type=anisotropy,
     )
     logger.info("电极对 B 配置完成")
 
