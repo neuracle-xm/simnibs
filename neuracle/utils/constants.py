@@ -42,6 +42,9 @@ N_WORKERS = 8
 # ROI 处理相关常量
 NON_ROI_THRESHOLD = 0.1
 
+# TI 正逆向仿真实心圆电极默认半径（mm）
+ELECTRODE_RADIUS = 6.0
+
 # 组织名称列表（与 SimNIBS tissue tag 顺序对应）
 CONDUCTIVITY_TISSUE_NAMES = [
     "WM",

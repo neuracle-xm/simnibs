@@ -20,6 +20,8 @@
 import logging
 from typing import Any
 
+from neuracle.utils.constants import ELECTRODE_RADIUS
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,6 +70,7 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     - electrode_B: 非空列表，元素为对象 {name: str, current_mA: number}
     - electrode_A 中 current_mA 总和必须为 0
     - electrode_B 中 current_mA 总和必须为 0
+    - electrode_radius: 大于 0 的数字，默认 6 mm
     - conductivity_config: 非空字典，值为浮点数
     - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
 
@@ -129,6 +132,14 @@ def validate_forward_params(params: dict[str, Any]) -> None:
         )
         raise ValidationError("electrode_B 电流总和必须为 0")
 
+    electrode_radius = params.get("electrode_radius", ELECTRODE_RADIUS)
+    if not isinstance(electrode_radius, (int, float)) or isinstance(
+        electrode_radius, bool
+    ):
+        raise ValidationError("electrode_radius 必须是数字")
+    if electrode_radius <= 0:
+        raise ValidationError("electrode_radius 必须大于 0")
+
     conductivity_config = params.get("conductivity_config")
     if not conductivity_config or not isinstance(conductivity_config, dict):
         logger.error("[conductivity_config] conductivity_config 必须是字典")
@@ -152,6 +163,7 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     - montage: 非空字符串
     - current_A: 非空列表，元素为浮点数，总和必须为 0
     - current_B: 非空列表，元素为浮点数，总和必须为 0
+    - electrode_radius: 大于 0 的数字，默认 6 mm
     - cond: 非空字典，值为浮点数
     - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
     - roi_type: 字符串，必须为 "atlas" 或 "mni_pos"
@@ -193,6 +205,14 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     if current_B and abs(sum(current_B)) > 1e-6:
         logger.error("[current_B] 电流总和必须为 0，当前为: %s", sum(current_B))
         raise ValidationError("current_B 电流总和必须为 0")
+
+    electrode_radius = params.get("electrode_radius", ELECTRODE_RADIUS)
+    if not isinstance(electrode_radius, (int, float)) or isinstance(
+        electrode_radius, bool
+    ):
+        raise ValidationError("electrode_radius 必须是数字")
+    if electrode_radius <= 0:
+        raise ValidationError("electrode_radius 必须大于 0")
 
     conductivity_config = params.get("conductivity_config")
     if not conductivity_config or not isinstance(conductivity_config, dict):

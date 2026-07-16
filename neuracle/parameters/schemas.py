@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
+from neuracle.utils.constants import ELECTRODE_RADIUS
+
 
 class AnisotropyType(str, Enum):
     """各向异性类型枚举
@@ -87,6 +89,7 @@ class ForwardParams:
     electrode_B: list[ElectrodeWithCurrent]
     conductivity_config: dict[str, float]
     anisotropy: AnisotropyType
+    electrode_radius: float = ELECTRODE_RADIUS
     DTI_file_path: str | None = None
 
 
@@ -104,4 +107,5 @@ class InverseParams:
     target_threshold: float
     conductivity_config: dict[str, float]
     anisotropy: AnisotropyType
+    electrode_radius: float = ELECTRODE_RADIUS
     DTI_file_path: str | None = None

@@ -26,6 +26,7 @@ from neuracle.parameters.schemas import (
     ModelParams,
     ROIParam,
 )
+from neuracle.utils.constants import ELECTRODE_RADIUS
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def dict_to_forward_params(data: dict) -> ForwardParams:
     ----------
     data : dict
         包含 head_model_dir、T1_file_path、montage、electrode_A、electrode_B、
-        conductivity_config、anisotropy、DTI_file_path 的字典
+        conductivity_config、anisotropy、电极半径、DTI_file_path 的字典
 
     Returns
     -------
@@ -105,6 +106,7 @@ def dict_to_forward_params(data: dict) -> ForwardParams:
         electrode_B=electrode_b,
         conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
+        electrode_radius=data.get("electrode_radius", ELECTRODE_RADIUS),
         DTI_file_path=dti_file_path,
     )
 
@@ -118,7 +120,7 @@ def dict_to_inverse_params(data: dict) -> InverseParams:
     data : dict
         包含 head_model_dir、T1_file_path、montage、current_A、current_B、
         roi_type、roi_param、target_threshold、conductivity_config、
-        anisotropy、DTI_file_path 的字典
+        anisotropy、电极半径、DTI_file_path 的字典
 
     Returns
     -------
@@ -151,5 +153,6 @@ def dict_to_inverse_params(data: dict) -> InverseParams:
         target_threshold=data["target_threshold"],
         conductivity_config=data["conductivity_config"],
         anisotropy=data["anisotropy"],
+        electrode_radius=data.get("electrode_radius", ELECTRODE_RADIUS),
         DTI_file_path=dti_file_path,
     )

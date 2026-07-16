@@ -6,8 +6,8 @@ TI Focality Optimization Demo - 优化 focality
 数据来源: data/m2m_ernie/
 
 默认配置：
-- 电极对1: ElectrodeArrayPair, 半径 10mm, 电流 2mA
-- 电极对2: ElectrodeArrayPair, 半径 10mm, 电流 2mA
+- 电极对1: ElectrodeArrayPair, 半径 6mm, 电流 2mA
+- 电极对2: ElectrodeArrayPair, 半径 6mm, 电流 2mA
 - ROI 中心: [-41.0, -13.0, 66.0] (subject space)
 - ROI 半径: 20mm
 - Non-ROI 半径: 25mm
@@ -26,7 +26,12 @@ from neuracle.ti_optimization import (
     setup_goal,
 )
 from neuracle.utils import cond_dict_to_list
-from neuracle.utils.constants import DATA_ROOT, PROJECT_ROOT, STANDARD_COND
+from neuracle.utils.constants import (
+    DATA_ROOT,
+    ELECTRODE_RADIUS,
+    PROJECT_ROOT,
+    STANDARD_COND,
+)
 from neuracle.utils.ti_export import export_ti_to_nifti
 from simnibs.utils import file_finder
 
@@ -38,7 +43,7 @@ def main() -> None:
 
     # 设置路径
     subject_dir = DATA_ROOT / "m2m_ernie"
-    output_dir = DATA_ROOT / "TI_focality_optimize_ernie"
+    output_dir = DATA_ROOT / "TI_focality_optimize_ernie_solid_circle"
     sub_files = file_finder.SubjectFiles(subpath=str(subject_dir))
     subid = sub_files.subid
     conductivity_config = {**STANDARD_COND, "WM": 0.14, "GM": 0.30}
@@ -50,6 +55,7 @@ def main() -> None:
     print("=" * 60)
     print(f"Subject directory: {subject_dir}")
     print(f"Output directory: {output_dir}")
+    print(f"Electrode radius: {ELECTRODE_RADIUS} mm")
 
     # 1. 初始化优化结构
     print("\n[1/5] 初始化优化结构...")
@@ -77,7 +83,7 @@ def main() -> None:
         mesh_file_path=sub_files.fnamehead,
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
-        electrode_radius=[10],
+        electrode_radius=[ELECTRODE_RADIUS],
         electrode_current1=[0.002, -0.002],
         electrode_current2=[0.002, -0.002],
         roi_center=[-41.0, -13.0, 66.0],

@@ -44,7 +44,7 @@ setup_electrodes_and_roi(
     roi_radius=20.0,
     electrode_pair1_center=[[0, 0]],
     electrode_pair2_center=[[0, 0]],
-    electrode_radius=[10],
+    electrode_radius=[6],
 )
 
 # 4. 运行优化
@@ -115,7 +115,7 @@ from neuracle.ti_optimization import (
 | `mesh_file_path` | 头模网格文件路径 | None |
 | `electrode_pair1_center` | 第一组电极阵列中心位置 | [[0, 0]] |
 | `electrode_pair2_center` | 第二组电极阵列中心位置 | [[0, 0]] |
-| `electrode_radius` | 电极半径 | [10] |
+| `electrode_radius` | 电极半径 | [6] |
 | `electrode_current1` | 第一组电极电流 | [0.002, -0.002] |
 | `electrode_current2` | 第二组电极电流 | [0.002, -0.002] |
 | `roi_center` | ROI 球形区域中心 | [-41.0, -13.0, 66.0] |

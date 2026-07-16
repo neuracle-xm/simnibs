@@ -8,7 +8,7 @@ TI Simulation Demo - Temporal Interference 正向仿真示例
 默认配置：
 - 电极对1: F5-P5, 电流 1mA
 - 电极对2: F6-P6, 电流 1mA
-- 电极形状: 椭圆 40x40 mm
+- 电极形状: 实心圆，半径 7 mm（非默认尺寸）
 - 电极厚度: 2 mm
 - 自定义电导率: WM 0.14 S/m, GM 0.30 S/m，其余使用标准值
 - 电导率各向异性类型: vn
@@ -36,18 +36,22 @@ def main() -> None:
 
     # 设置路径
     subject_dir = str(DATA_ROOT / "m2m_ernie")
-    output_dir = str(DATA_ROOT / "TI_ernie_cond_anisotropy")
+    output_dir = str(DATA_ROOT / "TI_ernie_cond_anisotropy_solid_circle")
     sub_files = file_finder.SubjectFiles(subpath=subject_dir)
     subid = sub_files.subid
     conductivity_config = {**STANDARD_COND, "WM": 0.14, "GM": 0.30}
     cond = cond_dict_to_list(conductivity_config)
     anisotropy_type = "vn"
+    electrode_radius = 7.0
 
     print("=" * 60)
     print("TI Simulation: Temporal Interference 正向仿真")
     print("=" * 60)
     print(f"Subject directory: {subject_dir}")
     print(f"Output directory: {output_dir}")
+    print(
+        f"Electrode dimensions: solid circle, radius {electrode_radius} mm"
+    )
 
     # 1. 配置会话
     print("\n[1/6] 配置会话参数...")
@@ -66,6 +70,7 @@ def main() -> None:
         current1=[0.001, -0.001],  # 1mA
         cond=cond,
         anisotropy_type=anisotropy_type,
+        electrode_radius=electrode_radius,
     )
 
     # 3. 配置第二个电极对
@@ -76,6 +81,7 @@ def main() -> None:
         current2=[0.001, -0.001],  # 1mA
         cond=cond,
         anisotropy_type=anisotropy_type,
+        electrode_radius=electrode_radius,
     )
 
     # 4. 运行 TDCS 仿真

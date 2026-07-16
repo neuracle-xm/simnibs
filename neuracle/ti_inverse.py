@@ -22,6 +22,7 @@ TI 逆向优化入口
         target_threshold=0.2,
         conductivity_config={"WM": 0.126, "GM": 0.275, ...},
         anisotropy=AnisotropyType.SCALAR,
+        electrode_radius=6.0,
     )
 """
 
@@ -59,6 +60,7 @@ from neuracle.utils import (
     find_montage_file,
 )
 from neuracle.utils.constants import (
+    ELECTRODE_RADIUS,
     EXIT_INVALID_ARGS,
     EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
@@ -85,6 +87,7 @@ def run_ti_inverse(
     conductivity_config: dict[str, float],
     anisotropy: AnisotropyType,
     n_workers: int = 8,
+    electrode_radius: float = ELECTRODE_RADIUS,
 ) -> None:
     """
     运行 TI 逆向优化，生成失败则抛出异常。
@@ -124,6 +127,8 @@ def run_ti_inverse(
         各向异性类型
     n_workers : int
         并行工作进程数
+    electrode_radius : float
+        实心圆电极半径，单位 mm
     """
     roi_info = (
         f"atlas={roi_param.atlas_param}"
@@ -135,7 +140,7 @@ def run_ti_inverse(
     logger.info(
         "开始 TI 逆向优化: head_model_id=%s, head_model_dir=%s, output_dir=%s, montage=%s, anisotropy=%s, "
         "current_A=%s, current_B=%s, roi_type=%s, roi=%s, "
-        "target_threshold=%s, conductivity=%s",
+        "target_threshold=%s, conductivity=%s, electrode_radius=%s",
         head_model_id,
         head_model_dir,
         output_dir,
@@ -147,6 +152,7 @@ def run_ti_inverse(
         roi_info,
         target_threshold,
         conductivity_config,
+        electrode_radius,
     )
 
     # ===== 步骤 0：初始化与检查 =====
@@ -219,6 +225,7 @@ def run_ti_inverse(
         mesh_file_path=mesh_path,
         electrode_current1=[c / 1000 for c in current_A],
         electrode_current2=[c / 1000 for c in current_B],
+        electrode_radius=[electrode_radius],
         roi_center=roi_center,
         roi_radius=roi_radius,
         roi_center_space=roi_center_space,
@@ -339,6 +346,7 @@ def load_ti_inverse_params(
         "target_threshold": params_data.get("target_threshold"),
         "conductivity_config": params_data.get("conductivity_config"),
         "anisotropy": params_data.get("anisotropy_type"),
+        "electrode_radius": params_data.get("electrode_radius", ELECTRODE_RADIUS),
     }
     return params_dict, str(simulation_dir_path)
 
@@ -354,6 +362,7 @@ def build_inverse_params(
     float,
     dict[str, float],
     AnisotropyType,
+    float,
 ]:
     """
     将已验证的参数字典转换为运行时参数。
@@ -365,8 +374,8 @@ def build_inverse_params(
 
     Returns
     -------
-    tuple[str, list[float], list[float], Literal["atlas", "mni_pos"], ROIParam, float, dict[str, float], AnisotropyType]
-        montage、电流组 A、电流组 B、ROI 类型、ROI 参数、目标阈值、电导率、各向异性
+    tuple[str, list[float], list[float], Literal["atlas", "mni_pos"], ROIParam, float, dict[str, float], AnisotropyType, float]
+        montage、电流组 A、电流组 B、ROI 类型、ROI 参数、目标阈值、电导率、各向异性、电极半径
     """
     roi_param_data = params_dict["roi_param"]
     roi_param = ROIParam()
@@ -389,6 +398,7 @@ def build_inverse_params(
         params_dict["target_threshold"],
         params_dict["conductivity_config"],
         AnisotropyType(params_dict["anisotropy"]),
+        params_dict.get("electrode_radius", ELECTRODE_RADIUS),
     )
 
 
@@ -432,6 +442,7 @@ def main(argv: list[str] | None = None) -> int:
             target_threshold,
             conductivity_config,
             anisotropy,
+            electrode_radius,
         ) = build_inverse_params(params_dict)
         run_ti_inverse(
             head_model_id=args.head_model_id,
@@ -445,6 +456,7 @@ def main(argv: list[str] | None = None) -> int:
             target_threshold=target_threshold,
             conductivity_config=conductivity_config,
             anisotropy=anisotropy,
+            electrode_radius=electrode_radius,
             n_workers=N_WORKERS,
         )
     except ValidationError as exc:

@@ -60,8 +60,8 @@ neuracle/
 | `electrode_pair1` | list[str] | 第一个电极对 [elec1_name, elec2_name]，如 ['F5', 'P5'] |
 | `current1` | list[float] | 第一组电极对电流列表 [anode_current, cathode_current]，单位 A |
 | `electrode_shape` | str | 电极形状 (default: "ellipse") |
-| `electrode_dimensions` | list[float] | 电极尺寸 [width, height] (default: [40, 40]) |
 | `electrode_thickness` | float | 电极厚度 (default: 2.0) |
+| `electrode_radius` | float | 实心圆电极半径，默认 6 mm |
 
 **返回值**：`sim_struct.TDCSLIST` - 配置好的 TDCS 列表对象
 
@@ -168,7 +168,7 @@ electrode = tdcs.add_electrode()
 electrode.channelnr = 1
 electrode.centre = electrode_pair[0]  # 如 'F5'
 electrode.shape = electrode_shape
-electrode.dimensions = electrode_dimensions
+electrode.dimensions = [2 * electrode_radius, 2 * electrode_radius]
 electrode.thickness = electrode_thickness
 ```
 
@@ -203,7 +203,7 @@ m2 = m2.crop_mesh(tags=tags_keep)
 **配置**：
 - 电极对1：F5-P5，电流 1mA
 - 电极对2：F6-P6，电流 1mA
-- 电极形状：椭圆 40x40 mm
+- 电极形状：实心圆，半径 7 mm（非默认尺寸）
 - 电极厚度：2 mm
 - n_workers: 24
 
@@ -212,4 +212,3 @@ m2 = m2.crop_mesh(tags=tags_keep)
 - `{output_dir}/model_TDCS_2_scalar.msh` - 第二对电极仿真结果
 - `{output_dir}/TI.msh` - TI 场可视化结果
 - `{output_dir}/TI.nii.gz` - TI 场 NIfTI 格式（通过 `export_ti_to_nifti` 导出）
-

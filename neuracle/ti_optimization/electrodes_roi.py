@@ -22,6 +22,8 @@ import logging
 from simnibs import opt_struct
 from simnibs.utils.mesh_element_properties import ElementTags
 
+from neuracle.utils.constants import ELECTRODE_RADIUS
+
 logger = logging.getLogger(__name__)
 
 
@@ -82,7 +84,7 @@ def setup_electrodes_and_roi(
     if electrode_pair2_center is None:
         electrode_pair2_center = [[0, 0]]
     if electrode_radius is None:
-        electrode_radius = [10]
+        electrode_radius = [ELECTRODE_RADIUS]
     if electrode_current1 is None:
         electrode_current1 = [0.002, -0.002]
     if electrode_current2 is None:

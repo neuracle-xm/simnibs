@@ -32,6 +32,7 @@ Electrode 模块 - 电极对配置
 from copy import deepcopy
 import logging
 
+from neuracle.utils.constants import ELECTRODE_RADIUS
 from simnibs import sim_struct
 
 logger = logging.getLogger(__name__)
@@ -42,10 +43,10 @@ def setup_electrode_pair1(
     electrode_pair1: list[str],
     current1: list[float],
     electrode_shape: str = "ellipse",
-    electrode_dimensions: list[float] | None = None,
     electrode_thickness: float = 2.0,
     cond: list | None = None,
     anisotropy_type: str = "scalar",
+    electrode_radius: float = ELECTRODE_RADIUS,
 ) -> sim_struct.TDCSLIST:
     """
     配置第一个电极对
@@ -63,19 +64,15 @@ def setup_electrode_pair1(
         第一组电极对电流列表 [anode_current, cathode_current]，单位 A
         通常设置为 [I, -I]，即阳极电流为正，阴极电流为负（大小相等方向相反）
     electrode_shape : str, optional
-        电极形状，支持："ellipse"（椭圆）、"rect"（矩形）、"custom"（自定义）
-        (default: "ellipse")
-    electrode_dimensions : list[float], optional
-        电极尺寸 [width, height]，单位 mm
-        对于椭圆形状，为 [长轴, 短轴]
-        对于矩形形状，为 [宽度, 高度]
-        (default: [40, 40])
+        电极形状 (default: "ellipse")
     electrode_thickness : float, optional
         电极厚度，单位 mm (default: 2.0)
     cond : list, optional
         自定义组织电导率列表；不提供时使用 SimNIBS 标准电导率
     anisotropy_type : str, optional
         电导率各向异性类型，写入当前 TDCSLIST (default: "scalar")
+    electrode_radius : float, optional
+        实心圆电极半径，单位 mm
 
     Returns
     -------
@@ -87,19 +84,16 @@ def setup_electrode_pair1(
     setup_electrode_pair2 : 配置第二个电极对
     setup_session : 创建 SimNIBS 会话
     """
-    if electrode_dimensions is None:
-        electrode_dimensions = [40, 40]
-
     logger.info("配置第一个电极对: %s", electrode_pair1)
     tdcs1 = _setup_electrode_pair(
         session=session,
         electrode_pair=electrode_pair1,
         currents=current1,
         electrode_shape=electrode_shape,
-        electrode_dimensions=electrode_dimensions,
         electrode_thickness=electrode_thickness,
         cond=cond,
         anisotropy_type=anisotropy_type,
+        electrode_radius=electrode_radius,
     )
     return tdcs1
 
@@ -109,10 +103,10 @@ def setup_electrode_pair2(
     electrode_pair2: list[str],
     current2: list[float],
     electrode_shape: str = "ellipse",
-    electrode_dimensions: list[float] | None = None,
     electrode_thickness: float = 2.0,
     cond: list | None = None,
     anisotropy_type: str = "scalar",
+    electrode_radius: float = ELECTRODE_RADIUS,
 ) -> sim_struct.TDCSLIST:
     """
     配置第二个电极对
@@ -131,19 +125,15 @@ def setup_electrode_pair2(
         第二组电极对电流列表 [anode_current, cathode_current]，单位 A
         通常设置为 [I, -I]，即阳极电流为正，阴极电流为负（大小相等方向相反）
     electrode_shape : str, optional
-        电极形状，支持："ellipse"（椭圆）、"rect"（矩形）、"custom"（自定义）
-        (default: "ellipse")
-    electrode_dimensions : list[float], optional
-        电极尺寸 [width, height]，单位 mm
-        对于椭圆形状，为 [长轴, 短轴]
-        对于矩形形状，为 [宽度, 高度]
-        (default: [40, 40])
+        电极形状 (default: "ellipse")
     electrode_thickness : float, optional
         电极厚度，单位 mm (default: 2.0)
     cond : list, optional
         自定义组织电导率列表；不提供时使用 SimNIBS 标准电导率
     anisotropy_type : str, optional
         电导率各向异性类型，写入当前 TDCSLIST (default: "scalar")
+    electrode_radius : float, optional
+        实心圆电极半径，单位 mm
 
     Returns
     -------
@@ -155,19 +145,16 @@ def setup_electrode_pair2(
     setup_electrode_pair1 : 配置第一个电极对
     setup_session : 创建 SimNIBS 会话
     """
-    if electrode_dimensions is None:
-        electrode_dimensions = [40, 40]
-
     logger.info("配置第二个电极对: %s", electrode_pair2)
     tdcs2 = _setup_electrode_pair(
         session=session,
         electrode_pair=electrode_pair2,
         currents=current2,
         electrode_shape=electrode_shape,
-        electrode_dimensions=electrode_dimensions,
         electrode_thickness=electrode_thickness,
         cond=cond,
         anisotropy_type=anisotropy_type,
+        electrode_radius=electrode_radius,
     )
     return tdcs2
 
@@ -177,10 +164,10 @@ def _setup_electrode_pair(
     electrode_pair: list[str],
     currents: list[float],
     electrode_shape: str,
-    electrode_dimensions: list[float],
     electrode_thickness: float,
     cond: list | None,
     anisotropy_type: str,
+    electrode_radius: float,
 ) -> sim_struct.TDCSLIST:
     """
     配置单个电极对（内部函数）
@@ -196,20 +183,22 @@ def _setup_electrode_pair(
         同一通道的多个电极电流会合并
     electrode_shape : str
         电极形状
-    electrode_dimensions : list[float]
-        电极尺寸 [width, height]
     electrode_thickness : float
         电极厚度
     cond : list, optional
         自定义组织电导率列表；不提供时保留 TDCSLIST 的标准电导率
     anisotropy_type : str
         电导率各向异性类型
+    electrode_radius : float
+        实心圆电极半径，单位 mm
 
     Returns
     -------
     TDCSLIST
         配置好的 TDCS 列表对象
     """
+    if electrode_radius <= 0:
+        raise ValueError("电极半径必须大于 0")
     tdcs = session.add_tdcslist()
     if cond is not None:
         if len(cond) > len(tdcs.cond):
@@ -226,7 +215,10 @@ def _setup_electrode_pair(
         electrode.channelnr = i + 1
         electrode.centre = elec_name
         electrode.shape = electrode_shape
-        electrode.dimensions = electrode_dimensions
+        electrode.dimensions = [
+            2 * electrode_radius,
+            2 * electrode_radius,
+        ]
         electrode.thickness = electrode_thickness
 
     tdcs.currents = currents

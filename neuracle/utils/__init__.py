@@ -25,6 +25,7 @@ from neuracle.utils.constants import (
     EEG10_10_UI_JURAK_2007,
     EEG10_20_EXTENDED_SPM12,
     EEG10_20_OKAMOTO_2004,
+    ELECTRODE_RADIUS,
     N_WORKERS,
     NEURACLE_DIR,
     NON_ROI_THRESHOLD,
@@ -83,6 +84,7 @@ def find_montage_file(dir_path: str, montage: str) -> str:
 __all__ = [
     "N_WORKERS",
     "NON_ROI_THRESHOLD",
+    "ELECTRODE_RADIUS",
     "PROJECT_ROOT",
     "NEURACLE_DIR",
     "DATA_ROOT",
