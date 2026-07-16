@@ -50,7 +50,7 @@ def setup_goal(
     e_postproc : str
         E-field 后处理方式 (default: "max_TI")
     focality_threshold : list[float], optional
-        focality 阈值
+        focality 阈值。传入两个值时顺序为 [Non-ROI 上限, ROI 下限]
     min_electrode_distance : float
         电极最小距离（mm）
     constrain_electrode_locations : bool
