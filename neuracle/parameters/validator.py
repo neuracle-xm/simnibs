@@ -20,7 +20,7 @@
 import logging
 from typing import Any
 
-from neuracle.utils.constants import ELECTRODE_RADIUS
+from neuracle.utils.constants import CONDUCTIVITY_TISSUE_NAMES, ELECTRODE_RADIUS
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,57 @@ class ValidationError(Exception):
     """验证失败异常，仅用于 raise 和 try...except 捕获"""
 
     pass
+
+
+def _validate_conductivity_config(params: dict[str, Any]) -> None:
+    """校验自定义电导率配置。
+
+    Parameters
+    ----------
+    params : dict[str, Any]
+        包含 conductivity_config 的入口参数字典。
+
+    Raises
+    ------
+    ValidationError
+        组织键不完整、包含未知组织或电导率不是数字时抛出。
+    """
+    conductivity_config = params.get("conductivity_config")
+    if not conductivity_config or not isinstance(conductivity_config, dict):
+        logger.error("[conductivity_config] conductivity_config 必须是非空字典")
+        raise ValidationError("conductivity_config 验证失败")
+    missing_tissues = [
+        tissue
+        for tissue in CONDUCTIVITY_TISSUE_NAMES
+        if tissue not in conductivity_config
+    ]
+    unknown_tissues = [
+        tissue
+        for tissue in conductivity_config
+        if tissue not in CONDUCTIVITY_TISSUE_NAMES
+    ]
+    if missing_tissues:
+        logger.error(
+            "[conductivity_config] 缺少组织电导率: %s",
+            ", ".join(missing_tissues),
+        )
+        raise ValidationError(
+            f"conductivity_config 缺少组织: {', '.join(missing_tissues)}"
+        )
+    if unknown_tissues:
+        logger.error(
+            "[conductivity_config] 包含未知组织: %s",
+            ", ".join(unknown_tissues),
+        )
+        raise ValidationError(
+            f"conductivity_config 包含未知组织: {', '.join(unknown_tissues)}"
+        )
+    if not all(
+        isinstance(value, (int, float))
+        for value in conductivity_config.values()
+    ):
+        logger.error("[conductivity_config] conductivity_config 值必须是数字")
+        raise ValidationError("conductivity_config 值必须是数字")
 
 
 def validate_model_params(params: dict[str, Any]) -> None:
@@ -71,7 +122,7 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     - electrode_A 中 current_mA 总和必须为 0
     - electrode_B 中 current_mA 总和必须为 0
     - electrode_radius: 大于 0 的数字，默认 6 mm
-    - conductivity_config: 非空字典，值为浮点数
+    - conductivity_config: 必须包含全部已定义组织，值为数字
     - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
 
     Raises
@@ -140,13 +191,7 @@ def validate_forward_params(params: dict[str, Any]) -> None:
     if electrode_radius <= 0:
         raise ValidationError("electrode_radius 必须大于 0")
 
-    conductivity_config = params.get("conductivity_config")
-    if not conductivity_config or not isinstance(conductivity_config, dict):
-        logger.error("[conductivity_config] conductivity_config 必须是字典")
-        raise ValidationError("conductivity_config 验证失败")
-    if not all(isinstance(v, (int, float)) for v in conductivity_config.values()):
-        logger.error("[conductivity_config] conductivity_config 值必须是数字")
-        raise ValidationError("conductivity_config 值必须是数字")
+    _validate_conductivity_config(params)
 
     anisotropy = params.get("anisotropy")
     if anisotropy not in ("scalar", "dir", "vn", "mc"):
@@ -161,10 +206,10 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     验证规则
     -------
     - montage: 非空字符串
-    - current_A: 非空列表，元素为浮点数，总和必须为 0
-    - current_B: 非空列表，元素为浮点数，总和必须为 0
+    - current_A: 包含两个数字的列表，顺序为正、负且总和必须为 0
+    - current_B: 包含两个数字的列表，顺序为正、负且总和必须为 0
     - electrode_radius: 大于 0 的数字，默认 6 mm
-    - cond: 非空字典，值为浮点数
+    - conductivity_config: 必须包含全部已定义组织，值为数字
     - anisotropy: 字符串，必须为 'scalar', 'dir', 'vn', 'mc' 之一
     - roi_type: 字符串，必须为 "atlas" 或 "mni_pos"
     - roi_param: 字典，根据 roi_type 验证对应参数
@@ -186,17 +231,29 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     if not current_A or not isinstance(current_A, list):
         logger.error("[current_A] current_A 必须是列表")
         raise ValidationError("current_A 验证失败")
-    if not all(isinstance(c, (int, float)) for c in current_A):
+    if len(current_A) != 2:
+        logger.error("[current_A] current_A 必须包含两个电流值")
+        raise ValidationError("current_A 必须包含两个电流值")
+    if not all(isinstance(current, (int, float)) for current in current_A):
         logger.error("[current_A] current_A 元素必须是数字")
         raise ValidationError("current_A 元素必须是数字")
+    if current_A[0] <= 0 or current_A[1] >= 0:
+        logger.error("[current_A] current_A 必须按正电流、负电流顺序传入")
+        raise ValidationError("current_A 必须按正电流、负电流顺序传入")
 
     current_B = params.get("current_B")
     if not current_B or not isinstance(current_B, list):
         logger.error("[current_B] current_B 必须是列表")
         raise ValidationError("current_B 验证失败")
-    if not all(isinstance(c, (int, float)) for c in current_B):
+    if len(current_B) != 2:
+        logger.error("[current_B] current_B 必须包含两个电流值")
+        raise ValidationError("current_B 必须包含两个电流值")
+    if not all(isinstance(current, (int, float)) for current in current_B):
         logger.error("[current_B] current_B 元素必须是数字")
         raise ValidationError("current_B 元素必须是数字")
+    if current_B[0] <= 0 or current_B[1] >= 0:
+        logger.error("[current_B] current_B 必须按正电流、负电流顺序传入")
+        raise ValidationError("current_B 必须按正电流、负电流顺序传入")
 
     if current_A and abs(sum(current_A)) > 1e-6:
         logger.error("[current_A] 电流总和必须为 0，当前为: %s", sum(current_A))
@@ -214,13 +271,7 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     if electrode_radius <= 0:
         raise ValidationError("electrode_radius 必须大于 0")
 
-    conductivity_config = params.get("conductivity_config")
-    if not conductivity_config or not isinstance(conductivity_config, dict):
-        logger.error("[conductivity_config] conductivity_config 必须是字典")
-        raise ValidationError("conductivity_config 验证失败")
-    if not all(isinstance(v, (int, float)) for v in conductivity_config.values()):
-        logger.error("[conductivity_config] conductivity_config 值必须是数字")
-        raise ValidationError("conductivity_config 值必须是数字")
+    _validate_conductivity_config(params)
 
     anisotropy = params.get("anisotropy")
     if anisotropy not in ("scalar", "dir", "vn", "mc"):

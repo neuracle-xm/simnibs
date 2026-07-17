@@ -9,7 +9,7 @@ TI (Temporal Interference) 优化模块基于 SimNIBS 的 TesFlexOptimization �
 | 目标函数 | 说明 |
 |---------|------|
 | `mean` | 最大化 ROI 内平均电场 |
-| `max` | 最小化 ROI 内最大电场 |
+| `max` | 最大化 ROI 内电场的 99.9 百分位 |
 | `focality` | 最大化 ROI 内 focality（聚焦度） |
 | `focality_inv` | 反向 focality 优化 |
 

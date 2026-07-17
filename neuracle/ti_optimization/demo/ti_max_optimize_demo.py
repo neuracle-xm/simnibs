@@ -1,5 +1,5 @@
 """
-TI Max Optimization Demo - 最小化 ROI 内最大电场
+TI Max Optimization Demo - 最大化 ROI 内电场的 99.9 百分位
 
 演示如何使用步骤函数执行 TI Max 优化。
 
@@ -49,7 +49,7 @@ def main() -> None:
     anisotropy_type = "vn"
 
     print("=" * 60)
-    print("TI Max Optimization: 最小化 ROI 内最大电场")
+    print("TI Max Optimization: 最大化 ROI 内电场的 99.9 百分位")
     print("=" * 60)
     print(f"Subject directory: {subject_dir}")
     print(f"Output directory: {output_dir}")

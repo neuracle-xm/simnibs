@@ -5,7 +5,7 @@ TI Optimization 模块 - Temporal Interference 逆向仿真优化
 
 目标函数说明：
     - mean: 最大化 ROI 内平均电场
-    - max: 最小化 ROI 内最大电场
+    - max: 最大化 ROI 内电场的 99.9 百分位
     - focality: 最大化 ROI 内 focality（聚焦度）
     - focality_inv: 反向 focality 优化
 
