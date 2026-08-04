@@ -6,19 +6,19 @@
     "elem_sizes": {
       "standard": {
         "range": [1.5, 7.0],
-        "slope": 1.0
+        "slope": 1.2
       },
       "1": {
-        "range": [1, 7],
-        "slope": 1.0
+        "range": [1.5, 8],
+        "slope": 1.2
       },
       "2": {
         "range": [1.2, 3.0],
         "slope": 1.0
       },
       "5": {
-        "range": [1, 10],
-        "slope": 0.6
+        "range": [2, 12],
+        "slope": 0.8
       }
     },
     "skin_facet_size": 3.0,
