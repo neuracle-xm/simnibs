@@ -24,6 +24,7 @@ CHARM 步骤5: 体积与表面分割
 import logging
 import os
 import shutil
+import warnings
 
 import nibabel as nib
 
@@ -104,18 +105,29 @@ def run_segmentation(
             input_images.append(sub_files.T2_reg)
             logger.info("使用原始 T2 图像: %s", sub_files.T2_reg)
     logger.info("正在估计参数。")
-    segment_parameters_and_inputs = charm_utils._estimate_parameters(
-        sub_files.segmentation_folder,
-        sub_files.template_coregistered,
-        atlas_path,
-        input_images,
-        segment_settings,
-        gmm_parameters,
-        visualizer,
-        parameter_filename=os.path.join(sub_files.segmentation_folder, "parameters.p")
-        if debug
-        else None,
-    )
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "error",
+                message=r"(divide by zero|invalid value) encountered in .*divide",
+                category=RuntimeWarning,
+            )
+            segment_parameters_and_inputs = charm_utils._estimate_parameters(
+                sub_files.segmentation_folder,
+                sub_files.template_coregistered,
+                atlas_path,
+                input_images,
+                segment_settings,
+                gmm_parameters,
+                visualizer,
+                parameter_filename=os.path.join(
+                    sub_files.segmentation_folder, "parameters.p"
+                )
+                if debug
+                else None,
+            )
+    except RuntimeWarning as exc:
+        raise ValueError(f"参数估计出现数值计算异常: {exc}") from exc
     bias_corrected_image_names = [sub_files.T1_bias_corrected]
     if len(input_images) > 1:
         bias_corrected_image_names.append(sub_files.T2_bias_corrected)
