@@ -69,6 +69,7 @@ from neuracle.utils.constants import (
 )
 from neuracle.utils.error_message import clear_error_message, write_error_message
 from neuracle.utils.find_nifty import find_optional_nifti_file
+from neuracle.utils.numerical_warnings import raise_divide_runtime_warnings
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger("neuracle.ti_inverse")
@@ -402,6 +403,7 @@ def build_inverse_params(
     )
 
 
+@raise_divide_runtime_warnings
 def main(argv: list[str] | None = None) -> int:
     """
     TI 逆向优化命令行入口。
@@ -464,7 +466,7 @@ def main(argv: list[str] | None = None) -> int:
         if log_dir is not None:
             write_error_message(log_dir, EXIT_INVALID_ARGS, str(exc))
         return EXIT_INVALID_ARGS
-    except ValueError as exc:
+    except (ValueError, ArithmeticError, RuntimeWarning) as exc:
         logger.exception("TI 逆向优化数值处理失败: %s", exc)
         if log_dir is not None:
             write_error_message(log_dir, EXIT_VALUE_ERROR, str(exc))
