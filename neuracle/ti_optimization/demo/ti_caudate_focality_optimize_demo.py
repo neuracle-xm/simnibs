@@ -1,15 +1,15 @@
 """
-TI Focality Optimization Demo - 优化 focality
+TI Caudate Focality Optimization Demo - 左侧尾状核 focality 优化
 
 演示如何使用步骤函数执行 TI Focality 优化。
 
-数据来源: data/m2m_ernie/
+数据来源: data/m2m_bed84e96-8da9-413f-81ed-b64e7aaa4cbd/
 
 默认配置：
 - 电极对1: ElectrodeArrayPair, 半径 6mm, 电流 2mA
 - 电极对2: ElectrodeArrayPair, 半径 6mm, 电流 2mA
-- ROI: Brainnetome 左侧海马 (rHipp_L + cHipp_L)
-- Non-ROI: Brainnetome 左侧杏仁核 (mAmyg_L + lAmyg_L)
+- ROI: Brainnetome 左侧尾状核 (vCa_L + dCa_L)
+- Non-ROI: Brainnetome 左侧 11 区内侧部 (A11m_L)
 - Focality 阈值: [0.1, 0.2] V/m
 - 电导率: SimNIBS 标准值
 - 电导率各向异性类型: scalar
@@ -38,30 +38,28 @@ from simnibs.utils import file_finder
 def main() -> None:
     """主函数"""
     # 启用日志
-    setup_logging(str(PROJECT_ROOT / "log" / "ti_focality_optimize_demo"))
+    setup_logging(str(PROJECT_ROOT / "log" / "ti_caudate_focality_optimize_demo"))
 
     # 设置路径
-    subject_dir = DATA_ROOT / "m2m_ernie"
+    subject_id = "bed84e96-8da9-413f-81ed-b64e7aaa4cbd"
+    subject_dir = DATA_ROOT / f"m2m_{subject_id}"
     run_id = uuid4().hex[:8]
-    output_dir = DATA_ROOT / f"TI_focality_optimize_ernie_{run_id}"
+    output_dir = DATA_ROOT / f"TI_caudate_focality_optimize_{subject_id}_{run_id}"
     roi_dir = (
         NEURACLE_DIR / "atlas" / "standardized" / "BN_Atlas_246_1mm" / "rois"
     )
     roi_mask_paths = [
-        roi_dir / "0215_rHipp_L.nii.gz",
-        roi_dir / "0217_cHipp_L.nii.gz",
+        roi_dir / "0219_vCa_L.nii.gz",
+        roi_dir / "0227_dCa_L.nii.gz",
     ]
-    # Violante et al. (2023) 以邻近的左侧杏仁核验证海马 TI 的空间特异性。
-    non_roi_mask_paths = [
-        roi_dir / "0211_mAmyg_L.nii.gz",
-        roi_dir / "0213_lAmyg_L.nii.gz",
-    ]
+    # Modak et al. (2024) 报道左侧尾状核 TI 在中部眶额皮层出现 off-target 激活。
+    non_roi_mask_path = roi_dir / "0047_A11m_L.nii.gz"
     sub_files = file_finder.SubjectFiles(subpath=str(subject_dir))
     subid = sub_files.subid
     anisotropy_type = "scalar"
 
     print("=" * 60)
-    print("TI Focality Optimization: 优化 focality")
+    print("TI Caudate Focality Optimization: 左侧尾状核 focality 优化")
     print("=" * 60)
     print(f"Subject directory: {subject_dir}")
     print(f"Output directory: {output_dir}")
@@ -93,11 +91,11 @@ def main() -> None:
         electrode_pair1_center=[[0, 0]],
         electrode_pair2_center=[[0, 0]],
         electrode_radius=[ELECTRODE_RADIUS],
-        electrode_current1=[0.003, -0.003],
-        electrode_current2=[0.001, -0.001],
+        electrode_current1=[0.002, -0.002],
+        electrode_current2=[0.002, -0.002],
         roi_mask_path=[str(path) for path in roi_mask_paths],
         roi_mask_space="mni",
-        non_roi_mask_path=[str(path) for path in non_roi_mask_paths],
+        non_roi_mask_path=str(non_roi_mask_path),
         non_roi_mask_space="mni",
     )
 
@@ -120,11 +118,11 @@ def main() -> None:
         output_dir=str(output_dir),
         reference=str(subject_dir / "T1.nii.gz"),
         field_name="max_TI",
-        prefix=f"{subid}_optimization",
+        prefix=f"{subid}_caudate_optimization",
     )
 
     print("=" * 60)
-    print("TI Focality 优化完成!")
+    print("TI 左侧尾状核 Focality 优化完成!")
     print(f"输出目录: {output_folder}")
     print(f"TI NIfTI 文件: {ti_nifti_path}")
     print("=" * 60)

@@ -39,10 +39,12 @@ def setup_electrodes_and_roi(
     roi_center: list[float] | None = None,
     roi_radius: float | None = None,
     roi_center_space: str = "subject",
-    roi_mask_path: str | None = None,
+    roi_mask_path: str | list[str] | None = None,
     roi_mask_space: str | None = None,
     non_roi_center: list[float] | None = None,
     non_roi_radius: float | None = None,
+    non_roi_mask_path: str | list[str] | None = None,
+    non_roi_mask_space: str | None = None,
 ) -> None:
     """
     配置电极对和 ROI
@@ -69,14 +71,18 @@ def setup_electrodes_and_roi(
         ROI 球形区域半径
     roi_center_space : str
         ROI 球形区域坐标空间，支持 "subject" 或 "mni"
-    roi_mask_path : str, optional
-        ROI mask 文件路径。提供后优先使用 mask ROI，而不是球形 ROI
+    roi_mask_path : str or list[str], optional
+        ROI mask 文件路径。提供多个路径时取各 mask 的并集
     roi_mask_space : str, optional
         ROI mask 所在坐标空间，支持 "subject" 或 "mni"
     non_roi_center : list[float], optional
         Non-ROI 球形区域中心
     non_roi_radius : float, optional
         Non-ROI 球形区域半径
+    non_roi_mask_path : str or list[str], optional
+        Non-ROI mask 文件路径。提供多个路径时取各 mask 的并集
+    non_roi_mask_space : str, optional
+        Non-ROI mask 所在坐标空间，支持 "subject" 或 "mni"
     """
     # 默认值
     if electrode_pair1_center is None:
@@ -117,8 +123,15 @@ def setup_electrodes_and_roi(
     roi.tissues = [ElementTags.WM, ElementTags.GM]  # 只保留白质和灰质
     if roi_mask_path:
         roi.mask_path = roi_mask_path
-        roi.mask_space = roi_mask_space or "mni"
-        roi.mask_value = 1
+        if isinstance(roi_mask_path, list):
+            roi.mask_space = [roi_mask_space or "mni"] * len(roi_mask_path)
+            roi.mask_value = [1] * len(roi_mask_path)
+            roi.mask_operator = ["intersection"] + ["union"] * (
+                len(roi_mask_path) - 1
+            )
+        else:
+            roi.mask_space = roi_mask_space or "mni"
+            roi.mask_value = 1
         logger.info("使用 atlas ROI mask: %s (space=%s)", roi_mask_path, roi.mask_space)
     else:
         roi.roi_sphere_center_space = roi_center_space
@@ -131,14 +144,32 @@ def setup_electrodes_and_roi(
             roi_center_space,
         )
 
-    # focality 目标的第二个 ROI 表示"除目标 ROI 外的其余体积"
+    # focality 目标的第二个 ROI 表示需要抑制电场的 Non-ROI
     if goal in ["focality", "focality_inv"]:
         non_roi = opt.add_roi()
         non_roi.method = "volume"
         non_roi.mesh = str(mesh_file_path)
         non_roi.subpath = opt.subpath
         non_roi.tissues = [ElementTags.WM, ElementTags.GM]  # 只保留白质和灰质
-        if roi_mask_path:
+        if non_roi_mask_path:
+            non_roi.mask_path = non_roi_mask_path
+            if isinstance(non_roi_mask_path, list):
+                non_roi.mask_space = [non_roi_mask_space or "mni"] * len(
+                    non_roi_mask_path
+                )
+                non_roi.mask_value = [1] * len(non_roi_mask_path)
+                non_roi.mask_operator = ["intersection"] + ["union"] * (
+                    len(non_roi_mask_path) - 1
+                )
+            else:
+                non_roi.mask_space = non_roi_mask_space or "mni"
+                non_roi.mask_value = 1
+            logger.info(
+                "配置 Non-ROI: 使用独立 atlas mask (mask=%s, space=%s)",
+                non_roi_mask_path,
+                non_roi.mask_space,
+            )
+        elif roi_mask_path:
             non_roi.mask_path = roi_mask_path
             non_roi.mask_space = roi_mask_space or "mni"
             non_roi.mask_value = 1
