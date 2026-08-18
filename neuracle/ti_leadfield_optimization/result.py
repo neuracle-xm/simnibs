@@ -1,7 +1,7 @@
 """
 Leadfield GA 优化结果的 JSON、CSV、MSH 和 NIfTI 导出。
 
-输出文件同时保留可机读指标和可视化电场，便于与 baseline 及直接 FEM
+输出文件同时保留 SimNIBS focality、诊断指标和可视化电场，便于与直接 FEM
 结果做一致性对照。
 """
 
@@ -29,6 +29,31 @@ from simnibs import ElementTags, mesh_io
 logger = logging.getLogger(__name__)
 
 
+def _json_default(value: Any) -> Any:
+    """把 NumPy 标量和数组转换为标准 JSON 类型。
+
+    Parameters
+    ----------
+    value : Any
+        标准 ``json`` encoder 无法处理的对象。
+
+    Returns
+    -------
+    Any
+        Python 标量或列表。
+
+    Raises
+    ------
+    TypeError
+        输入不是支持的 NumPy 类型时抛出。
+    """
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def fitness_metrics_to_dict(metrics: FitnessMetrics) -> dict[str, Any]:
     """将适应度 dataclass 转换为稳定的 JSON 字段。
 
@@ -40,17 +65,18 @@ def fitness_metrics_to_dict(metrics: FitnessMetrics) -> dict[str, Any]:
     Returns
     -------
     dict[str, Any]
-        包含 objective、ROI/Rest 指标、惩罚和电流的字典。
+        包含 focality、ROI/Rest 诊断指标和电流的字典。
     """
     return {
         "objective": metrics.objective,
         "score": metrics.score,
+        "roc_distance": metrics.roc_distance,
+        "roi_sensitivity": metrics.roi_sensitivity,
+        "non_roi_false_positive_rate": metrics.non_roi_false_positive_rate,
         "roi_rest_ratio": metrics.roi_rest_ratio,
         "roi_mean_v_per_m": metrics.roi_mean_v_per_m,
         "rest_mean_v_per_m": metrics.rest_mean_v_per_m,
         "roi_max_v_per_m": metrics.roi_max_v_per_m,
-        "penalty": metrics.penalty,
-        "threshold_satisfied": metrics.threshold_satisfied,
         "currents_mA": {
             "pair_A": metrics.currents.current_a_ma,
             "pair_B": metrics.currents.current_b_ma,
@@ -73,46 +99,16 @@ def _write_json(path: Path, payload: dict[str, Any]) -> Path:
     pathlib.Path
         已写入的 JSON 路径。
     """
+    serialized = json.dumps(
+        payload,
+        ensure_ascii=False,
+        indent=2,
+        default=_json_default,
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as stream:
-        json.dump(payload, stream, ensure_ascii=False, indent=2)
+        stream.write(serialized)
     return path
-
-
-def write_baseline_metrics(
-    path: str | Path,
-    electrode_names: tuple[str, str, str, str],
-    metrics: FitnessMetrics,
-) -> Path:
-    """写入 GA 运行前的论文 baseline 电极、电流和指标。
-
-    Parameters
-    ----------
-    path : str or pathlib.Path
-        ``baseline_metrics.json`` 路径。
-    electrode_names : tuple[str, str, str, str]
-        Baseline A+、A-、B+、B- 电极名称。
-    metrics : FitnessMetrics
-        Baseline leadfield 指标。
-
-    Returns
-    -------
-    pathlib.Path
-        已写入的 JSON 路径。
-    """
-    payload = {
-        "label": "paper_baseline",
-        "electrode_A": [
-            {"name": electrode_names[0], "current_mA": metrics.currents.current_a_ma},
-            {"name": electrode_names[1], "current_mA": -metrics.currents.current_a_ma},
-        ],
-        "electrode_B": [
-            {"name": electrode_names[2], "current_mA": metrics.currents.current_b_ma},
-            {"name": electrode_names[3], "current_mA": -metrics.currents.current_b_ma},
-        ],
-        "metrics": fitness_metrics_to_dict(metrics),
-    }
-    return _write_json(Path(path), payload)
 
 
 def _sha256_file(path: Path) -> str:
@@ -180,7 +176,13 @@ def write_optimization_result(
             "minimum_per_pair_mA": settings.current_min_ma,
             "maximum_per_pair_mA": settings.current_max_ma,
             "step_mA": settings.current_step_ma,
-            "sum_mA": settings.current_sum_ma,
+            "independent_per_pair": True,
+            "sum_constraint_mA": None,
+        },
+        "objective": {
+            "name": "simnibs_focality",
+            "non_roi_threshold_v_per_m": settings.non_roi_threshold_v_per_m,
+            "roi_threshold_v_per_m": settings.roi_threshold_v_per_m,
         },
         "metrics": fitness_metrics_to_dict(result.metrics),
         "ga": {
@@ -192,6 +194,15 @@ def write_optimization_result(
             "crossover_probability": settings.crossover_probability,
             "parents_portion": settings.parents_portion,
             "crossover_type": settings.crossover_type,
+            "max_iteration_without_improv": settings.max_iteration_without_improv,
+            "genes": [
+                "electrode_A_positive",
+                "electrode_A_negative",
+                "electrode_B_positive",
+                "electrode_B_negative",
+                "current_A_tick",
+                "current_B_tick",
+            ],
         },
         "leadfield": {
             "path": str(leadfield.path.resolve()),
@@ -318,7 +329,7 @@ def export_result_nifti(
 
 
 def write_comparison(path: str | Path, payload: dict[str, Any]) -> Path:
-    """写入 baseline、leadfield 最优解和直接 FEM 的指标对照。
+    """写入 leadfield 最优解和直接 FEM 的指标对照。
 
     Parameters
     ----------

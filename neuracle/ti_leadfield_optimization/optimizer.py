@@ -1,8 +1,8 @@
 """
-``geneticalgorithm`` 适配层。
+``geneticalgorithm`` 六基因适配层。
 
-该模块保持论文的四整数基因和 GA 参数，重复电极组合直接返回
-大惩罚，合法染色体交给 ``LeadfieldFitnessEvaluator`` 枚举电流。
+染色体同时搜索四个固定 montage 电极和两路独立电流 tick，避免在每个电极候选
+内部枚举电流笛卡尔积。等价的电极方向和通道交换使用同一个 objective 缓存键。
 """
 
 import logging
@@ -12,6 +12,7 @@ import numpy as np
 
 from neuracle.ti_leadfield_optimization.fitness import LeadfieldFitnessEvaluator
 from neuracle.ti_leadfield_optimization.models import (
+    CurrentPair,
     ElectrodeChromosome,
     GASettings,
     LeadfieldGAResult,
@@ -28,49 +29,151 @@ else:
 logger = logging.getLogger(__name__)
 
 
+def _current_tick_bounds(settings: GASettings) -> tuple[int, int]:
+    """将两路独立电流范围转换为 GA 整数 tick 边界。
+
+    Parameters
+    ----------
+    settings : GASettings
+        电流上下限和离散步长。
+
+    Returns
+    -------
+    tuple[int, int]
+        闭区间 ``(minimum_tick, maximum_tick)``。
+
+    Raises
+    ------
+    ValueError
+        电流范围非法或不能由步长精确表示时抛出。
+    """
+    if settings.current_step_ma <= 0 or settings.current_min_ma <= 0:
+        raise ValueError("电流下限和步长必须为正数")
+    if settings.current_max_ma < settings.current_min_ma:
+        raise ValueError("电流上限不能低于下限")
+    minimum_tick = round(settings.current_min_ma / settings.current_step_ma)
+    maximum_tick = round(settings.current_max_ma / settings.current_step_ma)
+    if not np.isclose(settings.current_min_ma, minimum_tick * settings.current_step_ma):
+        raise ValueError("电流下限必须能被步长精确表示")
+    if not np.isclose(settings.current_max_ma, maximum_tick * settings.current_step_ma):
+        raise ValueError("电流上限必须能被步长精确表示")
+    return minimum_tick, maximum_tick
+
+
+def _decode_candidate(
+    values: np.ndarray,
+    settings: GASettings,
+) -> tuple[ElectrodeChromosome, CurrentPair]:
+    """将六个整数基因解码为四电极和两路电流。
+
+    Parameters
+    ----------
+    values : numpy.ndarray
+        ``(A+, A-, B+, B-, current_A_tick, current_B_tick)``。
+    settings : GASettings
+        电流步长配置。
+
+    Returns
+    -------
+    tuple[ElectrodeChromosome, CurrentPair]
+        解码后的四电极染色体和独立电流。
+
+    Raises
+    ------
+    ValueError
+        基因数量不是六个时抛出。
+    """
+    genes = tuple(int(value) for value in np.rint(values))
+    if len(genes) != 6:
+        raise ValueError(f"GA 候选必须包含六个整数基因，实际 {len(genes)}")
+    chromosome = ElectrodeChromosome(genes[:4])
+    currents = CurrentPair(
+        current_a_ma=round(genes[4] * settings.current_step_ma, 10),
+        current_b_ma=round(genes[5] * settings.current_step_ma, 10),
+    )
+    return chromosome, currents
+
+
 class _GAObjective:
-    """将 NumPy 染色体转换为 leadfield 适应度并处理重复电极惩罚。"""
+    """解码六基因候选、处理重复电极并缓存等价 focality。"""
 
     def __init__(
         self,
         evaluator: LeadfieldFitnessEvaluator,
-        duplicate_penalty: float,
+        settings: GASettings,
     ) -> None:
-        """保存适应度计算器和论文重复电极惩罚基值。
+        """保存适应度计算器、电流步长和 objective 缓存。
 
         Parameters
         ----------
         evaluator : LeadfieldFitnessEvaluator
-            负责合法染色体电流枚举的计算器。
-        duplicate_penalty : float
-            四电极不唯一时的惩罚基值。
+            负责 SimNIBS focality 计算的 evaluator。
+        settings : GASettings
+            电流步长和重复电极惩罚配置。
         """
         self.evaluator = evaluator
-        self.duplicate_penalty = duplicate_penalty
+        self.settings = settings
+        self.objective_cache: dict[tuple[int, int, int, int, int, int], float] = {}
+        self.cache_hits = 0
+
+    @staticmethod
+    def _canonical_key(genes: tuple[int, ...]) -> tuple[int, int, int, int, int, int]:
+        """把方向交换和 A/B 通道交换的等价解归一到同一缓存键。
+
+        Parameters
+        ----------
+        genes : tuple[int, ...]
+            六个整数基因。
+
+        Returns
+        -------
+        tuple[int, int, int, int, int, int]
+            规范化后的两组 ``(低索引, 高索引, 电流 tick)``。
+
+        Notes
+        -----
+        max_TI 对单个电极对的正负方向反转不变；同时交换 A/B 电场及对应电流也
+        不改变结果，因此这些候选可以安全复用 objective。
+        """
+        channel_a = (min(genes[0], genes[1]), max(genes[0], genes[1]), genes[4])
+        channel_b = (min(genes[2], genes[3]), max(genes[2], genes[3]), genes[5])
+        first, second = sorted((channel_a, channel_b))
+        return first[0], first[1], second[0], second[1], first[2], second[2]
 
     def __call__(self, values: np.ndarray) -> float:
-        """返回 ``geneticalgorithm`` 需要最小化的标量 objective。
+        """返回 ``geneticalgorithm`` 需要最小化的 focality objective。
 
         Parameters
         ----------
         values : numpy.ndarray
-            GA 产生的四个 montage 整数索引。
+            GA 产生的六个整数基因。
 
         Returns
         -------
         float
-            重复电极惩罚或合法染色体的负 score。
+            重复电极惩罚或 SimNIBS focality objective。
         """
-        indices = tuple(int(value) for value in np.rint(values))
-        unique_count = len(set(indices))
+        genes = tuple(int(value) for value in np.rint(values))
+        electrode_indices = genes[:4]
+        unique_count = len(set(electrode_indices))
         if unique_count != 4:
-            return self.duplicate_penalty + 100.0 * abs(unique_count - 4) ** 2
-        chromosome = ElectrodeChromosome(indices)
-        return self.evaluator.evaluate(chromosome).objective
+            return (
+                self.settings.duplicate_electrode_penalty
+                + 100.0 * abs(unique_count - 4) ** 2
+            )
+        key = self._canonical_key(genes)
+        cached = self.objective_cache.get(key)
+        if cached is not None:
+            self.cache_hits += 1
+            return cached
+        chromosome, currents = _decode_candidate(np.asarray(genes), self.settings)
+        objective = self.evaluator.evaluate_objective(chromosome, currents)
+        self.objective_cache[key] = objective
+        return objective
 
 
 def _require_genetic_algorithm() -> Any:
-    """获取 GA 类，缺少 demo 依赖时给出明确安装指引。
+    """获取 GA 类，缺少依赖时给出明确安装指引。
 
     Returns
     -------
@@ -93,24 +196,26 @@ def run_genetic_optimization(
     evaluator: LeadfieldFitnessEvaluator,
     settings: GASettings,
 ) -> LeadfieldGAResult:
-    """使用论文参数运行四电极 ``geneticalgorithm`` 优化。
+    """用六基因 GA 同时优化四个电极和两路独立电流。
 
     Parameters
     ----------
     evaluator : LeadfieldFitnessEvaluator
-        已绑定 leadfield、ROI 和合法电流的适应度计算器。
+        已绑定 leadfield、ROI 和 SimNIBS focality 阈值的 evaluator。
     settings : GASettings
-        论文 GA 参数、随机种子和惩罚设置。
+        GA 参数、独立电流范围、步长和随机种子。
 
     Returns
     -------
     LeadfieldGAResult
-        最优四电极、内部枚举得到的电流和收敛曲线。
+        最优四电极、两路电流、完整 focality 指标和收敛曲线。
 
     Raises
     ------
+    ValueError
+        GA、电流或 montage 参数非法时抛出。
     RuntimeError
-        GA 返回非法染色体或无法在缓存中找到最优指标时抛出。
+        GA 返回非法六基因候选时抛出。
     """
     genetic_algorithm = _require_genetic_algorithm()
     electrode_count = len(evaluator.leadfield.electrode_names)
@@ -128,6 +233,7 @@ def run_genetic_optimization(
         raise ValueError("GA 概率和比例参数必须在 [0, 1] 范围内")
     if settings.function_timeout_seconds <= 0:
         raise ValueError("GA function_timeout_seconds 必须大于 0")
+    minimum_tick, maximum_tick = _current_tick_bounds(settings)
     algorithm_parameters = {
         "max_num_iteration": settings.max_num_iteration,
         "population_size": settings.population_size,
@@ -138,15 +244,20 @@ def run_genetic_optimization(
         "crossover_type": settings.crossover_type,
         "max_iteration_without_improv": settings.max_iteration_without_improv,
     }
-    objective = _GAObjective(evaluator, settings.duplicate_electrode_penalty)
+    objective = _GAObjective(evaluator, settings)
+    boundaries = np.array(
+        [[0, electrode_count - 1]] * 4
+        + [[minimum_tick, maximum_tick], [minimum_tick, maximum_tick]],
+        dtype=np.int64,
+    )
     random_state = np.random.get_state()
     np.random.seed(settings.random_seed)
     try:
         optimizer = genetic_algorithm(
             function=objective,
-            dimension=4,
+            dimension=6,
             variable_type="int",
-            variable_boundaries=np.array([[0, electrode_count - 1]] * 4),
+            variable_boundaries=boundaries,
             algorithm_parameters=algorithm_parameters,
             function_timeout=settings.function_timeout_seconds,
             convergence_curve=False,
@@ -155,22 +266,31 @@ def run_genetic_optimization(
         optimizer.run()
     finally:
         np.random.set_state(random_state)
-    output = optimizer.output_dict
-    indices = tuple(int(value) for value in np.rint(output["variable"]))
+    chromosome, currents = _decode_candidate(
+        optimizer.output_dict["variable"], settings
+    )
+    indices = chromosome.electrode_indices
     if len(indices) != 4 or len(set(indices)) != 4:
-        raise RuntimeError(f"GA 返回非法四电极染色体: {indices}")
-    chromosome = ElectrodeChromosome(indices)
-    metrics = evaluator.evaluation_cache.get(indices)
-    if metrics is None:
-        metrics = evaluator.evaluate(chromosome)
+        raise RuntimeError(f"GA 返回非法四电极候选: {indices}")
+    minimum_current = minimum_tick * settings.current_step_ma
+    maximum_current = maximum_tick * settings.current_step_ma
+    if any(
+        current < minimum_current or current > maximum_current
+        for current in (currents.current_a_ma, currents.current_b_ma)
+    ):
+        raise RuntimeError(f"GA 返回超出范围的电流: {currents}")
+    metrics = evaluator.evaluate_current_pair(chromosome, currents)
     names = evaluator.electrode_names(chromosome)
     convergence = tuple(float(value) for value in optimizer.report)
     logger.info(
-        "GA 优化完成: electrodes=%s, currents=(%s, %s), score=%s",
+        "GA 优化完成: electrodes=%s, currents=(%s, %s), focality_score=%s, "
+        "unique_evaluations=%s, cache_hits=%s",
         names,
-        metrics.currents.current_a_ma,
-        metrics.currents.current_b_ma,
+        currents.current_a_ma,
+        currents.current_b_ma,
         metrics.score,
+        len(objective.objective_cache),
+        objective.cache_hits,
     )
     return LeadfieldGAResult(
         chromosome=chromosome,

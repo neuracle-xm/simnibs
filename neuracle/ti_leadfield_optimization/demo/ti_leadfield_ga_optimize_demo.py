@@ -1,18 +1,20 @@
 """
-使用现有 ernie 头模复现论文的 leadfield-based TI 遗传算法优化。
+使用现有 ernie 头模运行工程化 leadfield-based TI 遗传算法优化。
 
 运行方式：
 ``conda run -n simnibs_env python -m``
 ``neuracle.ti_leadfield_optimization.demo.ti_leadfield_ga_optimize_demo``
 
-Demo 会首先生成或复用 WM/GM volumetric TDCS leadfield，计算论文 baseline，
-再使用 ``geneticalgorithm==1.0.2`` 优化四个 montage 电极和两路电流。
-最后导出 JSON/CSV/MSH/NIfTI，并对 baseline 和最优解各运行一次直接 FEM。
+Demo 会首先生成或复用 NSN 10-10 montage 的 WM/GM volumetric TDCS leadfield，
+再使用 ``geneticalgorithm==1.0.2`` 同时优化四个电极和两路独立电流。
+目标函数使用 SimNIBS TES 逆向优化的 focality，最后导出 JSON/CSV/MSH/NIfTI，
+并对最优解运行一次直接 FEM。
 运行前需在 ``simnibs_env`` 安装 ``geneticalgorithm==1.0.2``。
 """
 
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -22,13 +24,12 @@ from neuracle.logger import setup_logging
 from neuracle.parameters.schemas import AnisotropyType, ElectrodeWithCurrent
 from neuracle.ti_forward import run_ti_forward
 from neuracle.ti_leadfield_optimization import (
-    ElectrodeChromosome,
     LeadfieldFitnessEvaluator,
     LeadfieldGADemoConfig,
     build_atlas_region_masks,
+    calculate_focality_metrics,
     calculate_region_metrics,
     ensure_leadfield,
-    generate_current_pairs,
     load_leadfield,
     run_genetic_optimization,
 )
@@ -36,7 +37,6 @@ from neuracle.ti_leadfield_optimization.models import FitnessMetrics
 from neuracle.ti_leadfield_optimization.result import (
     export_result_nifti,
     fitness_metrics_to_dict,
-    write_baseline_metrics,
     write_comparison,
     write_convergence_csv,
     write_optimization_result,
@@ -51,6 +51,80 @@ from neuracle.utils.constants import (
 from simnibs import mesh_io
 
 logger = logging.getLogger(__name__)
+LOG_DIRECTORY_NAME = "ti_leadfield_ga_nsn_10_10_optimize_demo"
+
+
+def _format_elapsed(seconds: float) -> str:
+    """把单调时钟测得的耗时格式化为时分秒和总秒数。
+
+    Parameters
+    ----------
+    seconds : float
+        ``time.perf_counter`` 测得的秒数。
+
+    Returns
+    -------
+    str
+        ``HH:MM:SS.mmm (N.NNN s)`` 格式的耗时。
+    """
+    milliseconds = round(max(seconds, 0.0) * 1000.0)
+    hours, remainder = divmod(milliseconds, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    whole_seconds, milliseconds = divmod(remainder, 1000)
+    return (
+        f"{hours:02d}:{minutes:02d}:{whole_seconds:02d}.{milliseconds:03d} "
+        f"({seconds:.3f} s)"
+    )
+
+
+def _log_stage_elapsed(
+    stage: str,
+    stage_started_at: float,
+    run_started_at: float,
+) -> None:
+    """记录阶段耗时和从本次运行开始计算的累计耗时。
+
+    Parameters
+    ----------
+    stage : str
+        阶段名称，例如 ``[1/7] leadfield``。
+    stage_started_at : float
+        阶段开始时的 ``time.perf_counter`` 值。
+    run_started_at : float
+        整次运行开始时的 ``time.perf_counter`` 值。
+
+    Returns
+    -------
+    None
+        耗时写入模块 logger。
+    """
+    completed_at = time.perf_counter()
+    logger.info(
+        "%s 完成: stage_elapsed=%s, total_elapsed=%s",
+        stage,
+        _format_elapsed(completed_at - stage_started_at),
+        _format_elapsed(completed_at - run_started_at),
+    )
+
+
+def _setup_demo_logging() -> None:
+    """配置 NSN demo 日志并处理 ``python -m`` 的 ``__main__`` logger。
+
+    Returns
+    -------
+    None
+        日志写入 NSN demo 专用目录。
+
+    Notes
+    -----
+    使用 ``python -m`` 时模块 logger 名称会变成 ``__main__``，不会继承
+    ``setup_logging`` 配置的 ``neuracle`` handlers。此处将入口 logger 重新绑定
+    为已配置的子 logger，确保阶段耗时、总耗时和失败前日志都能写入文件。
+    """
+    global logger
+    setup_logging(str(PROJECT_ROOT / "log" / LOG_DIRECTORY_NAME))
+    if logger.name == "__main__":
+        logger = logging.getLogger("neuracle").getChild(Path(__file__).stem)
 
 
 def _build_demo_config() -> LeadfieldGADemoConfig:
@@ -66,7 +140,7 @@ def _build_demo_config() -> LeadfieldGADemoConfig:
     ROI 是 ``rHipp_R`` 和 ``cHipp_R`` 的并集，即 Brainnetome atlas 中的完整右海马。
     """
     subject_dir = DATA_ROOT / "m2m_ernie"
-    output_root = DATA_ROOT / "ti_leadfield_ga_ernie"
+    output_root = DATA_ROOT / "ti_leadfield_ga_ernie_nsn_10_10"
     atlas_root = (
         PROJECT_ROOT
         / "neuracle"
@@ -80,7 +154,7 @@ def _build_demo_config() -> LeadfieldGADemoConfig:
         head_model_dir=subject_dir,
         mesh_path=subject_dir / "ernie.msh",
         t1_path=subject_dir / "T1.nii.gz",
-        montage_path=(subject_dir / "eeg_positions" / "EEG10-10_UI_Jurak_2007.csv"),
+        montage_path=(subject_dir / "eeg_positions" / "EEG10-10_NSN.csv"),
         atlas_mask_paths=(
             atlas_root / "0216_rHipp_R.nii.gz",
             atlas_root / "0218_cHipp_R.nii.gz",
@@ -115,7 +189,7 @@ def _validate_demo_config(config: LeadfieldGADemoConfig) -> None:
     FileNotFoundError
         头模、T1、montage 或 atlas mask 不存在时抛出。
     ValueError
-        电极几何、并行数或 baseline 电流不合法时抛出。
+        电极几何、并行数、电流范围或 focality 阈值不合法时抛出。
     """
     required_paths = [
         config.head_model_dir,
@@ -131,43 +205,19 @@ def _validate_demo_config(config: LeadfieldGADemoConfig) -> None:
         raise ValueError("电极半径和厚度必须大于 0")
     if config.n_workers < 1:
         raise ValueError("n_workers 必须大于等于 1")
-    baseline_total = (
-        config.baseline_currents.current_a_ma + config.baseline_currents.current_b_ma
-    )
-    if not np.isclose(baseline_total, config.ga.current_sum_ma):
-        raise ValueError("baseline 两路电流之和必须为 2 mA")
-
-
-def _chromosome_from_names(
-    electrode_names: tuple[str, ...],
-    selected_names: tuple[str, str, str, str],
-) -> ElectrodeChromosome:
-    """将 baseline montage 名称转换为与 leadfield 顺序对齐的染色体。
-
-    Parameters
-    ----------
-    electrode_names : tuple[str, ...]
-        Leadfield 中的完整 montage 电极顺序。
-    selected_names : tuple[str, str, str, str]
-        A+、A-、B+、B- 名称。
-
-    Returns
-    -------
-    ElectrodeChromosome
-        四个整数 montage 索引。
-
-    Raises
-    ------
-    ValueError
-        Baseline 电极重复或不在 montage 中时抛出。
-    """
-    if len(set(selected_names)) != 4:
-        raise ValueError("baseline 必须使用四个互不重复的电极")
-    missing = [name for name in selected_names if name not in electrode_names]
-    if missing:
-        raise ValueError(f"baseline 电极不在固定 montage 中: {missing}")
-    indices = tuple(electrode_names.index(name) for name in selected_names)
-    return ElectrodeChromosome(indices)
+    ga = config.ga
+    if ga.current_step_ma <= 0 or ga.current_min_ma <= 0:
+        raise ValueError("两路电流下限和步长必须为正数")
+    if ga.current_max_ma < ga.current_min_ma:
+        raise ValueError("两路电流上限不能低于下限")
+    current_bounds = (ga.current_min_ma, ga.current_max_ma)
+    if any(
+        not np.isclose(value, round(value / ga.current_step_ma) * ga.current_step_ma)
+        for value in current_bounds
+    ):
+        raise ValueError("电流上下限必须能被步长精确表示")
+    if ga.non_roi_threshold_v_per_m > ga.roi_threshold_v_per_m:
+        raise ValueError("focality 非 ROI 阈值不能高于 ROI 阈值")
 
 
 def _find_ti_mesh(output_dir: Path) -> Path | None:
@@ -284,7 +334,7 @@ def _direct_fem_metrics(
     Returns
     -------
     dict[str, float]
-        ROI 均值、Rest 均值、ratio 和 ROI 最大值。
+        SimNIBS focality、ROI 均值、Rest 均值、ratio 和 ROI 最大值。
     """
     mesh = mesh_io.read_msh(str(ti_mesh_path))
     if "max_TI" not in mesh.field:
@@ -299,7 +349,20 @@ def _direct_fem_metrics(
         max_ti,
         region_masks,
     )
+    objective, score, roc_distance, roi_sensitivity, false_positive_rate = (
+        calculate_focality_metrics(
+            max_ti,
+            region_masks,
+            config.ga.non_roi_threshold_v_per_m,
+            config.ga.roi_threshold_v_per_m,
+        )
+    )
     return {
+        "objective": objective,
+        "score": score,
+        "roc_distance": roc_distance,
+        "roi_sensitivity": roi_sensitivity,
+        "non_roi_false_positive_rate": false_positive_rate,
         "roi_mean_v_per_m": roi_mean,
         "rest_mean_v_per_m": rest_mean,
         "roi_rest_ratio": ratio,
@@ -328,23 +391,17 @@ def _relative_error(reference: float, actual: float) -> float:
 
 def _comparison_payload(
     config: LeadfieldGADemoConfig,
-    baseline_metrics: FitnessMetrics,
     optimized_metrics: FitnessMetrics,
-    direct_baseline: dict[str, float] | None,
     direct_optimized: dict[str, float] | None,
 ) -> dict[str, Any]:
-    """组装 leadfield 效果提升、阈值和直接 FEM 一致性验收结果。
+    """组装最优解的 leadfield 与直接 FEM focality 一致性结果。
 
     Parameters
     ----------
     config : LeadfieldGADemoConfig
-        阈值及是否执行直接 FEM 的配置。
-    baseline_metrics : FitnessMetrics
-        论文 baseline 的 leadfield 指标。
+        Focality 阈值及是否执行直接 FEM 的配置。
     optimized_metrics : FitnessMetrics
         GA 最优解的 leadfield 指标。
-    direct_baseline : dict[str, float] or None
-        Baseline 直接 FEM 指标。
     direct_optimized : dict[str, float] or None
         最优解直接 FEM 指标。
 
@@ -353,116 +410,96 @@ def _comparison_payload(
     dict[str, Any]
         可直接写入 ``comparison.json`` 的对照内容。
     """
-    optimized_improves_leadfield = optimized_metrics.score > baseline_metrics.score
-    threshold_satisfied = (
-        optimized_metrics.roi_max_v_per_m >= config.ga.target_threshold_v_per_m
-    )
-    validation = {
-        "optimized_score_above_baseline": optimized_improves_leadfield,
-        "optimized_threshold_satisfied": threshold_satisfied,
-    }
+    validation: dict[str, bool] = {}
     payload: dict[str, Any] = {
-        "leadfield": {
-            "baseline": fitness_metrics_to_dict(baseline_metrics),
-            "optimized": fitness_metrics_to_dict(optimized_metrics),
+        "objective": {
+            "name": "simnibs_focality",
+            "non_roi_threshold_v_per_m": config.ga.non_roi_threshold_v_per_m,
+            "roi_threshold_v_per_m": config.ga.roi_threshold_v_per_m,
         },
+        "leadfield": {"optimized": fitness_metrics_to_dict(optimized_metrics)},
         "direct_fem": None,
         "validation": validation,
     }
-    if direct_baseline is not None and direct_optimized is not None:
+    if direct_optimized is not None:
         metric_names = (
+            "score",
+            "roc_distance",
+            "roi_sensitivity",
+            "non_roi_false_positive_rate",
             "roi_mean_v_per_m",
             "rest_mean_v_per_m",
             "roi_rest_ratio",
             "roi_max_v_per_m",
         )
-        baseline_leadfield = fitness_metrics_to_dict(baseline_metrics)
         optimized_leadfield = fitness_metrics_to_dict(optimized_metrics)
         errors = {
-            "baseline": {
-                name: _relative_error(baseline_leadfield[name], direct_baseline[name])
-                for name in metric_names
-            },
-            "optimized": {
-                name: _relative_error(optimized_leadfield[name], direct_optimized[name])
-                for name in metric_names
-            },
+            name: _relative_error(optimized_leadfield[name], direct_optimized[name])
+            for name in metric_names
         }
-        max_relative_error = max(
-            value for case_errors in errors.values() for value in case_errors.values()
-        )
-        direct_improves = (
-            direct_optimized["roi_rest_ratio"] > direct_baseline["roi_rest_ratio"]
-        )
-        validation["direct_fem_ratio_above_baseline"] = direct_improves
-        validation["leadfield_fem_relative_error_within_5_percent"] = (
-            max_relative_error <= 0.05
+        focality_score_error = errors["score"]
+        validation["leadfield_fem_focality_score_relative_error_within_5_percent"] = (
+            bool(focality_score_error <= 0.05)
         )
         payload["direct_fem"] = {
-            "baseline": direct_baseline,
             "optimized": direct_optimized,
             "relative_error": errors,
-            "maximum_relative_error": max_relative_error,
+            "focality_score_relative_error": focality_score_error,
         }
-    validation["passed"] = all(validation.values())
+    validation["passed"] = all(validation.values()) if validation else True
     return payload
 
 
-def main() -> None:
-    """执行 ernie leadfield GA demo 并以 baseline 和直接 FEM 验证效果。
+def _run_demo(config: LeadfieldGADemoConfig, run_started_at: float) -> Path:
+    """执行各计算阶段并记录阶段实际耗时。
+
+    Parameters
+    ----------
+    config : LeadfieldGADemoConfig
+        已验证的 NSN 10-10 leadfield GA 配置。
+    run_started_at : float
+        整次运行开始时的 ``time.perf_counter`` 值。
 
     Returns
     -------
-    None
-        结果写入 ``data/ti_leadfield_ga_ernie``，验收失败时抛出异常。
+    pathlib.Path
+        最终 ``comparison.json`` 路径。
 
-    Notes
-    -----
-    该函数是新算法的唯一运行入口；不修改或调用现有 ``ti_inverse``。
+    Raises
+    ------
+    RuntimeError
+        Leadfield、GA、直接 FEM 或最终验证失败时抛出。
     """
-    setup_logging(str(PROJECT_ROOT / "log" / "ti_leadfield_ga_optimize_demo"))
-    config = _build_demo_config()
-    _validate_demo_config(config)
     config.result_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("[1/8] 生成或复用 volumetric TDCS leadfield")
+    stage_started_at = time.perf_counter()
+    logger.info("[1/7] 生成或复用 NSN 10-10 volumetric TDCS leadfield")
     leadfield_path = ensure_leadfield(config)
-    logger.info("[2/8] 一次性加载完整 float64 leadfield")
+    _log_stage_elapsed("[1/7] leadfield", stage_started_at, run_started_at)
+    stage_started_at = time.perf_counter()
+    logger.info("[2/7] 一次性加载完整 float64 leadfield")
     leadfield = load_leadfield(leadfield_path)
-    logger.info("[3/8] 构建完整右海马 ROI 与 Rest")
+    _log_stage_elapsed("[2/7] 加载 leadfield", stage_started_at, run_started_at)
+    stage_started_at = time.perf_counter()
+    logger.info("[3/7] 构建完整右海马 ROI 与非 ROI")
     region_masks = build_atlas_region_masks(
         leadfield.mesh,
         config.head_model_dir,
         config.atlas_mask_paths,
     )
-    current_pairs = generate_current_pairs(
-        minimum_ma=config.ga.current_min_ma,
-        maximum_ma=config.ga.current_max_ma,
-        step_ma=config.ga.current_step_ma,
-        total_ma=config.ga.current_sum_ma,
-    )
-    if len(current_pairs) != 21:
-        raise ValueError(f"论文电流组合应为 21 组，实际 {len(current_pairs)}")
     evaluator = LeadfieldFitnessEvaluator(
         leadfield,
         region_masks,
-        current_pairs,
-        config.ga.target_threshold_v_per_m,
+        config.ga.non_roi_threshold_v_per_m,
+        config.ga.roi_threshold_v_per_m,
     )
-    logger.info("[4/8] 计算论文 baseline，不参与 GA 初始化")
-    baseline_chromosome = _chromosome_from_names(
-        leadfield.electrode_names,
-        config.baseline_electrodes,
+    _log_stage_elapsed("[3/7] 构建 ROI", stage_started_at, run_started_at)
+    stage_started_at = time.perf_counter()
+    logger.info(
+        "[4/7] 运行六基因 GA: currents=%s-%s mA, step=%s mA, no_sum_constraint",
+        config.ga.current_min_ma,
+        config.ga.current_max_ma,
+        config.ga.current_step_ma,
     )
-    baseline_metrics = evaluator.evaluate_current_pair(
-        baseline_chromosome,
-        config.baseline_currents,
-    )
-    write_baseline_metrics(
-        config.result_dir / "baseline_metrics.json",
-        config.baseline_electrodes,
-        baseline_metrics,
-    )
-    logger.info("[5/8] 运行 geneticalgorithm 四电极优化")
     optimized = run_genetic_optimization(evaluator, config.ga)
     write_optimization_result(
         config.result_dir / "optimization_result.json",
@@ -475,7 +512,9 @@ def main() -> None:
         config.result_dir / "convergence.csv",
         optimized.convergence,
     )
-    logger.info("[6/8] 重建并导出最优 TI 电场")
+    _log_stage_elapsed("[4/7] 六基因 GA", stage_started_at, run_started_at)
+    stage_started_at = time.perf_counter()
+    logger.info("[5/7] 重建并导出最优 TI 电场")
     field_a, field_b, max_ti = evaluator.reconstruct_fields(
         optimized.chromosome,
         optimized.metrics.currents,
@@ -492,42 +531,69 @@ def main() -> None:
         result_mesh_path,
         config.result_dir,
         config.t1_path,
-        "ernie_leadfield_ga",
+        "ernie_nsn_10_10_leadfield_ga",
     )
-    direct_baseline = None
+    _log_stage_elapsed("[5/7] 重建与导出", stage_started_at, run_started_at)
+    stage_started_at = time.perf_counter()
     direct_optimized = None
     if config.run_direct_fem_validation:
-        logger.info("[7/8] 对 baseline 和最优解运行直接 FEM 对照")
+        logger.info("[6/7] 对最优解运行直接 FEM 对照")
         validation_dir = config.result_dir / "final_validation"
-        baseline_mesh = _run_direct_fem_case(
-            config,
-            validation_dir / "baseline",
-            config.baseline_electrodes,
-            baseline_metrics,
-        )
         optimized_mesh = _run_direct_fem_case(
             config,
             validation_dir / "optimized",
             optimized.electrode_names,
             optimized.metrics,
         )
-        direct_baseline = _direct_fem_metrics(config, baseline_mesh)
         direct_optimized = _direct_fem_metrics(config, optimized_mesh)
-    logger.info("[8/8] 写入效果对照并执行验收")
+    else:
+        logger.info("[6/7] 已禁用直接 FEM 对照")
+    _log_stage_elapsed("[6/7] 直接 FEM 对照", stage_started_at, run_started_at)
+    stage_started_at = time.perf_counter()
+    logger.info("[7/7] 写入 focality 对照并执行验收")
     comparison = _comparison_payload(
         config,
-        baseline_metrics,
         optimized.metrics,
-        direct_baseline,
         direct_optimized,
     )
     comparison_path = write_comparison(
         config.result_dir / "final_validation" / "comparison.json",
         comparison,
     )
+    _log_stage_elapsed("[7/7] 结果验收", stage_started_at, run_started_at)
     if not comparison["validation"]["passed"]:
         raise RuntimeError(f"leadfield GA demo 效果验证未通过: {comparison_path}")
     logger.info("leadfield GA demo 效果验证通过: %s", comparison_path)
+    return comparison_path
+
+
+def main() -> None:
+    """执行 NSN 10-10 leadfield GA demo 并记录总实际耗时。
+
+    Returns
+    -------
+    None
+        结果写入 ``data/ti_leadfield_ga_ernie_nsn_10_10``，验收失败时抛出异常。
+
+    Notes
+    -----
+    该函数是新算法的唯一运行入口；不修改或调用现有 ``ti_inverse``。
+    """
+    _setup_demo_logging()
+    run_started_at = time.perf_counter()
+    logger.info("本次 NSN 10-10 leadfield GA 运行开始")
+    try:
+        config = _build_demo_config()
+        _validate_demo_config(config)
+        _run_demo(config, run_started_at)
+    finally:
+        total_seconds = time.perf_counter() - run_started_at
+        logger.info(
+            "本次 NSN 10-10 leadfield GA 总运行耗时: total_elapsed=%s, "
+            "total_elapsed_seconds=%.3f",
+            _format_elapsed(total_seconds),
+            total_seconds,
+        )
 
 
 if __name__ == "__main__":

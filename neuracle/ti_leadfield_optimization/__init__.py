@@ -1,14 +1,15 @@
 """
 Leadfield-based TI 遗传算法优化模块。
 
-模块不接入现有 ``ti_inverse`` 入口，只供同目录下的 demo 进行论文
-方法复现和效果验证。
+模块不接入现有 ``ti_inverse`` 入口，只供同目录下的 demo 进行固定 montage
+leadfield GA 优化和直接 FEM 验证。
 """
 
 from neuracle.ti_leadfield_optimization.fitness import (
     LeadfieldFitnessEvaluator,
+    calculate_focality_metrics,
+    calculate_focality_objective,
     calculate_region_metrics,
-    generate_current_pairs,
 )
 from neuracle.ti_leadfield_optimization.leadfield import (
     ensure_leadfield,
@@ -38,9 +39,10 @@ __all__ = [
     "LeadfieldGAResult",
     "RegionMasks",
     "build_atlas_region_masks",
+    "calculate_focality_metrics",
+    "calculate_focality_objective",
     "calculate_region_metrics",
     "ensure_leadfield",
-    "generate_current_pairs",
     "load_leadfield",
     "run_genetic_optimization",
 ]

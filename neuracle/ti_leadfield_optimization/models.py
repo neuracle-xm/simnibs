@@ -32,17 +32,18 @@ class ElectrodeChromosome:
 
 @dataclass(frozen=True)
 class FitnessMetrics:
-    """单个电极染色体及其最佳电流的适应度指标。"""
+    """单个六基因染色体的 SimNIBS focality 及诊断指标。"""
 
     objective: float
     score: float
+    roc_distance: float
+    roi_sensitivity: float
+    non_roi_false_positive_rate: float
     roi_rest_ratio: float
     roi_mean_v_per_m: float
     rest_mean_v_per_m: float
     roi_max_v_per_m: float
-    penalty: float
     currents: CurrentPair
-    threshold_satisfied: bool
 
 
 @dataclass(frozen=True)
@@ -81,22 +82,22 @@ class LeadfieldData:
 
 @dataclass(frozen=True)
 class GASettings:
-    """论文遗传算法及电流搜索参数。"""
+    """工程化遗传算法、独立电流搜索及 focality 参数。"""
 
-    max_num_iteration: int = 25
-    population_size: int = 100
-    mutation_probability: float = 0.4
-    elit_ratio: float = 0.01
+    max_num_iteration: int = 20
+    population_size: int = 64
+    mutation_probability: float = 0.2
+    elit_ratio: float = 0.05
     crossover_probability: float = 0.5
-    parents_portion: float = 0.1
+    parents_portion: float = 0.3
     crossover_type: str = "uniform"
-    max_iteration_without_improv: int | None = None
+    max_iteration_without_improv: int | None = 6
     function_timeout_seconds: float = 120.0
-    current_min_ma: float = 0.5
-    current_max_ma: float = 1.5
+    current_min_ma: float = 0.05
+    current_max_ma: float = 4.0
     current_step_ma: float = 0.05
-    current_sum_ma: float = 2.0
-    target_threshold_v_per_m: float = 0.2
+    non_roi_threshold_v_per_m: float = 0.1
+    roi_threshold_v_per_m: float = 0.2
     random_seed: int = 20220815
     duplicate_electrode_penalty: float = 10000.0
 
@@ -120,6 +121,4 @@ class LeadfieldGADemoConfig:
     electrode_thickness_mm: float = 2.0
     n_workers: int = 8
     ga: GASettings = field(default_factory=GASettings)
-    baseline_electrodes: tuple[str, str, str, str] = ("PO7", "F7", "P8", "FC6")
-    baseline_currents: CurrentPair = CurrentPair(1.25, 0.75)
     run_direct_fem_validation: bool = True
