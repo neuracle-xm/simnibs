@@ -462,13 +462,13 @@ class LeadfieldFitnessEvaluator:
         Raises
         ------
         ValueError
-            电极重复或电流不是有限正数时抛出。
+            电极重复或电流不是有限非负数时抛出。
         """
         if len(set(chromosome.electrode_indices)) != 4:
             raise ValueError("适应度计算只接受四个互不重复的电极")
         current_values = (currents.current_a_ma, currents.current_b_ma)
-        if any(not np.isfinite(value) or value <= 0 for value in current_values):
-            raise ValueError("两路电流必须为有限正数")
+        if any(not np.isfinite(value) or value < 0 for value in current_values):
+            raise ValueError("两路电流必须为有限非负数")
         names = self.electrode_names(chromosome)
         unit_field_a = self._unit_pair_field(names[0], names[1])
         unit_field_b = self._unit_pair_field(names[2], names[3])

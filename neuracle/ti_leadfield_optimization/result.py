@@ -252,7 +252,7 @@ def write_result_mesh(
     field_b: npt.NDArray[np.float64],
     max_ti: npt.NDArray[np.float64],
 ) -> Path:
-    """将最优两路电场、max_TI 和 ROI/Rest mask 写入 element-data mesh。
+    """将最优两路电场、max_TI 和 ROI/non-ROI mask 写入 element-data mesh。
 
     Parameters
     ----------
@@ -261,7 +261,7 @@ def write_result_mesh(
     leadfield : LeadfieldData
         提供对齐后的 WM/GM mesh。
     region_masks : RegionMasks
-        ROI 和 Rest element mask。
+        ROI 和 non-ROI/Rest element mask。
     field_a : numpy.ndarray
         A 电极对电场向量。
     field_b : numpy.ndarray
@@ -284,6 +284,10 @@ def write_result_mesh(
     mesh.add_element_field(max_ti, "max_TI")
     mesh.add_element_field(region_masks.roi_mask.astype(np.float64), "ROI_mask")
     mesh.add_element_field(region_masks.rest_mask.astype(np.float64), "Rest_mask")
+    mesh.add_element_field(
+        region_masks.rest_mask.astype(np.float64),
+        "non_ROI_mask",
+    )
     mesh_io.write_msh(mesh, str(mesh_path))
     view = mesh.view(
         visible_tags=[ElementTags.WM, ElementTags.GM],

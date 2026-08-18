@@ -26,7 +26,11 @@ from neuracle.ti_leadfield_optimization.models import (
     RegionMasks,
 )
 from neuracle.ti_leadfield_optimization.optimizer import run_genetic_optimization
-from neuracle.ti_leadfield_optimization.roi import build_atlas_region_masks
+from neuracle.ti_leadfield_optimization.roi import (
+    build_atlas_roi_non_roi_masks,
+    build_atlas_region_masks,
+    build_mni_sphere_region_masks,
+)
 
 __all__ = [
     "CurrentPair",
@@ -38,7 +42,9 @@ __all__ = [
     "LeadfieldGADemoConfig",
     "LeadfieldGAResult",
     "RegionMasks",
+    "build_atlas_roi_non_roi_masks",
     "build_atlas_region_masks",
+    "build_mni_sphere_region_masks",
     "calculate_focality_metrics",
     "calculate_focality_objective",
     "calculate_region_metrics",

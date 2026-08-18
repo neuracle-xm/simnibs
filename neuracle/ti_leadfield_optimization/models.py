@@ -59,7 +59,7 @@ class LeadfieldGAResult:
 
 @dataclass(frozen=True)
 class RegionMasks:
-    """与 leadfield element 顺序一致的 ROI、Rest mask 和体积权重。"""
+    """与 leadfield element 顺序一致的 ROI、non-ROI/Rest mask 和体积权重。"""
 
     roi_mask: npt.NDArray[np.bool_]
     rest_mask: npt.NDArray[np.bool_]
@@ -84,16 +84,16 @@ class LeadfieldData:
 class GASettings:
     """工程化遗传算法、独立电流搜索及 focality 参数。"""
 
-    max_num_iteration: int = 20
-    population_size: int = 64
+    max_num_iteration: int = 30
+    population_size: int = 80
     mutation_probability: float = 0.2
     elit_ratio: float = 0.05
     crossover_probability: float = 0.5
     parents_portion: float = 0.3
     crossover_type: str = "uniform"
-    max_iteration_without_improv: int | None = 6
+    max_iteration_without_improv: int | None = 10
     function_timeout_seconds: float = 120.0
-    current_min_ma: float = 0.05
+    current_min_ma: float = 0.0
     current_max_ma: float = 4.0
     current_step_ma: float = 0.05
     non_roi_threshold_v_per_m: float = 0.1
@@ -104,14 +104,15 @@ class GASettings:
 
 @dataclass(frozen=True)
 class LeadfieldGADemoConfig:
-    """基于现有头模和 atlas 数据运行验证 demo 的配置。"""
+    """基于现有头模和独立 atlas ROI/non-ROI 运行验证 demo 的配置。"""
 
     head_model_id: str
     head_model_dir: Path
     mesh_path: Path
     t1_path: Path
     montage_path: Path
-    atlas_mask_paths: tuple[Path, ...]
+    roi_mask_paths: tuple[Path, ...]
+    non_roi_mask_paths: tuple[Path, ...]
     leadfield_dir: Path
     result_dir: Path
     conductivity_config: dict[str, float]

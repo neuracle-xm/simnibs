@@ -26,7 +26,7 @@ from neuracle.ti_forward import run_ti_forward
 from neuracle.ti_leadfield_optimization import (
     LeadfieldFitnessEvaluator,
     LeadfieldGADemoConfig,
-    build_atlas_region_masks,
+    build_atlas_roi_non_roi_masks,
     calculate_focality_metrics,
     calculate_region_metrics,
     ensure_leadfield,
@@ -51,7 +51,9 @@ from neuracle.utils.constants import (
 from simnibs import mesh_io
 
 logger = logging.getLogger(__name__)
-LOG_DIRECTORY_NAME = "ti_leadfield_ga_nsn_10_10_optimize_demo"
+LOG_DIRECTORY_NAME = (
+    "ti_leadfield_ga_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_demo"
+)
 
 
 def _format_elapsed(seconds: float) -> str:
@@ -128,7 +130,7 @@ def _setup_demo_logging() -> None:
 
 
 def _build_demo_config() -> LeadfieldGADemoConfig:
-    """使用仓库现有 ernie、10-10 montage 和 Brainnetome 右海马构建 demo 配置。
+    """使用 ernie、10-10 montage 和独立 atlas ROI/non-ROI 构建配置。
 
     Returns
     -------
@@ -137,17 +139,18 @@ def _build_demo_config() -> LeadfieldGADemoConfig:
 
     Notes
     -----
-    ROI 是 ``rHipp_R`` 和 ``cHipp_R`` 的并集，即 Brainnetome atlas 中的完整右海马。
+    ROI 是 Brainnetome 完整右海马，non-ROI 是完整右杏仁核。两个解剖区域均由
+    嘴侧/尾侧或内侧/外侧子区取并集，避免把单个子区误称为完整结构。
     """
     subject_dir = DATA_ROOT / "m2m_ernie"
-    output_root = DATA_ROOT / "ti_leadfield_ga_ernie_nsn_10_10"
-    atlas_root = (
-        PROJECT_ROOT
-        / "neuracle"
-        / "atlas"
-        / "standardized"
-        / "BN_Atlas_246_1mm"
-        / "rois"
+    atlas_roi_dir = (
+        PROJECT_ROOT / "neuracle" / "atlas" / "standardized"
+        / "BN_Atlas_246_1mm" / "rois"
+    )
+    leadfield_root = DATA_ROOT / "ti_leadfield_ga_ernie_nsn_10_10"
+    output_root = (
+        DATA_ROOT
+        / "ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala"
     )
     return LeadfieldGADemoConfig(
         head_model_id="ernie",
@@ -155,11 +158,15 @@ def _build_demo_config() -> LeadfieldGADemoConfig:
         mesh_path=subject_dir / "ernie.msh",
         t1_path=subject_dir / "T1.nii.gz",
         montage_path=(subject_dir / "eeg_positions" / "EEG10-10_NSN.csv"),
-        atlas_mask_paths=(
-            atlas_root / "0216_rHipp_R.nii.gz",
-            atlas_root / "0218_cHipp_R.nii.gz",
+        roi_mask_paths=(
+            atlas_roi_dir / "0216_rHipp_R.nii.gz",
+            atlas_roi_dir / "0218_cHipp_R.nii.gz",
         ),
-        leadfield_dir=output_root / "leadfield",
+        non_roi_mask_paths=(
+            atlas_roi_dir / "0212_mAmyg_R.nii.gz",
+            atlas_roi_dir / "0214_lAmyg_R.nii.gz",
+        ),
+        leadfield_dir=leadfield_root / "leadfield",
         result_dir=output_root / "results",
         conductivity_config=dict(STANDARD_COND),
         anisotropy_type="scalar",
@@ -187,7 +194,7 @@ def _validate_demo_config(config: LeadfieldGADemoConfig) -> None:
     Raises
     ------
     FileNotFoundError
-        头模、T1、montage 或 atlas mask 不存在时抛出。
+        头模、T1 或 montage 不存在时抛出。
     ValueError
         电极几何、并行数、电流范围或 focality 阈值不合法时抛出。
     """
@@ -196,7 +203,8 @@ def _validate_demo_config(config: LeadfieldGADemoConfig) -> None:
         config.mesh_path,
         config.t1_path,
         config.montage_path,
-        *config.atlas_mask_paths,
+        *config.roi_mask_paths,
+        *config.non_roi_mask_paths,
     ]
     for path in required_paths:
         if not path.exists():
@@ -205,9 +213,13 @@ def _validate_demo_config(config: LeadfieldGADemoConfig) -> None:
         raise ValueError("电极半径和厚度必须大于 0")
     if config.n_workers < 1:
         raise ValueError("n_workers 必须大于等于 1")
+    if not config.roi_mask_paths:
+        raise ValueError("至少需要一个 atlas ROI mask")
+    if not config.non_roi_mask_paths:
+        raise ValueError("至少需要一个 atlas non-ROI mask")
     ga = config.ga
-    if ga.current_step_ma <= 0 or ga.current_min_ma <= 0:
-        raise ValueError("两路电流下限和步长必须为正数")
+    if ga.current_step_ma <= 0 or ga.current_min_ma < 0:
+        raise ValueError("两路电流下限不能为负数，步长必须为正数")
     if ga.current_max_ma < ga.current_min_ma:
         raise ValueError("两路电流上限不能低于下限")
     current_bounds = (ga.current_min_ma, ga.current_max_ma)
@@ -322,28 +334,29 @@ def _direct_fem_metrics(
     config: LeadfieldGADemoConfig,
     ti_mesh_path: Path,
 ) -> dict[str, float]:
-    """在与 leadfield 相同的 atlas ROI/Rest 定义下计算直接 FEM 指标。
+    """在与 leadfield 相同的 atlas ROI/non-ROI 下计算直接 FEM 指标。
 
     Parameters
     ----------
     config : LeadfieldGADemoConfig
-        Subject 目录和 atlas mask 配置。
+        Subject 目录以及 atlas ROI/non-ROI 配置。
     ti_mesh_path : pathlib.Path
         包含 ``max_TI`` element field 的直接 FEM mesh。
 
     Returns
     -------
     dict[str, float]
-        SimNIBS focality、ROI 均值、Rest 均值、ratio 和 ROI 最大值。
+        SimNIBS focality、ROI 均值、non-ROI 均值、ratio 和 ROI 最大值。
     """
     mesh = mesh_io.read_msh(str(ti_mesh_path))
     if "max_TI" not in mesh.field:
         raise ValueError(f"直接 FEM mesh 缺少 max_TI 字段: {ti_mesh_path}")
     max_ti = np.asarray(mesh.field["max_TI"].value, dtype=np.float64)
-    region_masks = build_atlas_region_masks(
+    region_masks = build_atlas_roi_non_roi_masks(
         mesh,
         config.head_model_dir,
-        config.atlas_mask_paths,
+        config.roi_mask_paths,
+        config.non_roi_mask_paths,
     )
     roi_mean, rest_mean, ratio, roi_max = calculate_region_metrics(
         max_ti,
@@ -417,6 +430,21 @@ def _comparison_payload(
             "non_roi_threshold_v_per_m": config.ga.non_roi_threshold_v_per_m,
             "roi_threshold_v_per_m": config.ga.roi_threshold_v_per_m,
         },
+        "roi": {
+            "definition": "brainnetome_atlas_union",
+            "anatomy": "right_hippocampus",
+            "mask_paths": [str(path.resolve()) for path in config.roi_mask_paths],
+            "tissues": ["WM", "GM"],
+        },
+        "non_roi": {
+            "definition": "brainnetome_atlas_union",
+            "anatomy": "right_amygdala",
+            "mask_paths": [
+                str(path.resolve()) for path in config.non_roi_mask_paths
+            ],
+            "tissues": ["WM", "GM"],
+            "scope": "selected_region_only_not_whole_brain_rest",
+        },
         "leadfield": {"optimized": fitness_metrics_to_dict(optimized_metrics)},
         "direct_fem": None,
         "validation": validation,
@@ -480,11 +508,16 @@ def _run_demo(config: LeadfieldGADemoConfig, run_started_at: float) -> Path:
     leadfield = load_leadfield(leadfield_path)
     _log_stage_elapsed("[2/7] 加载 leadfield", stage_started_at, run_started_at)
     stage_started_at = time.perf_counter()
-    logger.info("[3/7] 构建完整右海马 ROI 与非 ROI")
-    region_masks = build_atlas_region_masks(
+    logger.info(
+        "[3/7] 构建完整右海马 ROI 与完整右杏仁核 non-ROI: roi=%s, non_roi=%s",
+        [path.name for path in config.roi_mask_paths],
+        [path.name for path in config.non_roi_mask_paths],
+    )
+    region_masks = build_atlas_roi_non_roi_masks(
         leadfield.mesh,
         config.head_model_dir,
-        config.atlas_mask_paths,
+        config.roi_mask_paths,
+        config.non_roi_mask_paths,
     )
     evaluator = LeadfieldFitnessEvaluator(
         leadfield,
@@ -495,7 +528,12 @@ def _run_demo(config: LeadfieldGADemoConfig, run_started_at: float) -> Path:
     _log_stage_elapsed("[3/7] 构建 ROI", stage_started_at, run_started_at)
     stage_started_at = time.perf_counter()
     logger.info(
-        "[4/7] 运行六基因 GA: currents=%s-%s mA, step=%s mA, no_sum_constraint",
+        "[4/7] 运行六基因 GA: population=%s, generations=%s, "
+        "max_iteration_without_improv=%s, currents=%s-%s mA, step=%s mA, "
+        "no_sum_constraint",
+        config.ga.population_size,
+        config.ga.max_num_iteration,
+        config.ga.max_iteration_without_improv,
         config.ga.current_min_ma,
         config.ga.current_max_ma,
         config.ga.current_step_ma,
@@ -531,7 +569,7 @@ def _run_demo(config: LeadfieldGADemoConfig, run_started_at: float) -> Path:
         result_mesh_path,
         config.result_dir,
         config.t1_path,
-        "ernie_nsn_10_10_leadfield_ga",
+        "ernie_nsn_10_10_leadfield_ga_current_0_4_hippocampus_vs_amygdala",
     )
     _log_stage_elapsed("[5/7] 重建与导出", stage_started_at, run_started_at)
     stage_started_at = time.perf_counter()
@@ -573,7 +611,9 @@ def main() -> None:
     Returns
     -------
     None
-        结果写入 ``data/ti_leadfield_ga_ernie_nsn_10_10``，验收失败时抛出异常。
+        结果写入
+        ``data/ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala``，
+        验收失败时抛出异常。
 
     Notes
     -----
@@ -581,7 +621,7 @@ def main() -> None:
     """
     _setup_demo_logging()
     run_started_at = time.perf_counter()
-    logger.info("本次 NSN 10-10 leadfield GA 运行开始")
+    logger.info("本次 NSN 10-10 leadfield GA 右海马/右杏仁核搜索运行开始")
     try:
         config = _build_demo_config()
         _validate_demo_config(config)
@@ -589,7 +629,7 @@ def main() -> None:
     finally:
         total_seconds = time.perf_counter() - run_started_at
         logger.info(
-            "本次 NSN 10-10 leadfield GA 总运行耗时: total_elapsed=%s, "
+            "本次 NSN 10-10 leadfield GA 右海马/右杏仁核搜索总运行耗时: total_elapsed=%s, "
             "total_elapsed_seconds=%.3f",
             _format_elapsed(total_seconds),
             total_seconds,

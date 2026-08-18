@@ -47,8 +47,8 @@ def _current_tick_bounds(settings: GASettings) -> tuple[int, int]:
     ValueError
         电流范围非法或不能由步长精确表示时抛出。
     """
-    if settings.current_step_ma <= 0 or settings.current_min_ma <= 0:
-        raise ValueError("电流下限和步长必须为正数")
+    if settings.current_step_ma <= 0 or settings.current_min_ma < 0:
+        raise ValueError("电流下限不能为负数，步长必须为正数")
     if settings.current_max_ma < settings.current_min_ma:
         raise ValueError("电流上限不能低于下限")
     minimum_tick = round(settings.current_min_ma / settings.current_step_ma)
