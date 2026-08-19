@@ -140,7 +140,15 @@ Julich-Brain 是基于细胞构筑概率图建立的皮层区和皮层下核团�
 4. 将该祖先下能够精确对应到当前本地图谱、且与源 ROI 同侧的全部叶节点作为成员，合并键为官方祖先节点 ID 和侧别。
 5. 名称无法精确命中官方叶节点，或沿父链找不到满足成员数要求的同侧祖先时，自动记为 `unmatched`，不进入人工审核，也不使用 BNA 或模糊名称兜底。
 
-例如，本地 `LB (Amygdala)_lh` 只负责精确定位官方树中的 `LB (Amygdala) - left hemisphere` 节点；它与其他杏仁核分组的关系取自官方树。算法选择满足“同侧且至少 2 个本地 ROI 节点”的最近祖先，因此会优先得到比整个杏仁核更细、同时又比单个 LB 区更大的官方组。最终具体成员必须由固化的 v3.1 树实际遍历得到，不能仅凭这个示例名称预写。
+实际试验结果示例：
+
+| 用户所选细分区 | 合并组 | 成员 | 合并理由 |
+|---|---|---|---|
+| `Area PirTB (PiriformCortexMesial, temporobasal)_lh`（17）或 `Area PirT (PiriformCortexMesial, temporal)_lh`（130） | Julich 官方 `piriform cortex` 左侧组 | 17 + 130 | 两个叶节点精确命中官方树后，最近的同侧有效祖先均为 `piriform cortex` |
+| `Pv (Thalamus, paraventricular Nucleus)_lh`（61） | Julich 官方 `medial group` 左侧组 | 61（Pv）+ 74（MD）+ 138（MV） | 三个左侧丘脑核叶节点位于官方树同一个 `medial group` 祖先下 |
+| `VPM (Thalamus, ventral posterior medial Nucleus)_rh`（385） | Julich 官方 `ventral group` 右侧组 | 238（VA）+ 252（VLP）+ 332（VM）+ 344（VAmc）+ 358（VIM）+ 375（VPL）+ 383（VLA）+ 385（VPM）+ 400（VPMpc）+ 401（VPi） | 这些右侧丘脑核均由固化的 v3.1 区域树遍历到同一个 `ventral group` 祖先，不使用名称模糊匹配 |
+
+表中成员来自 `roi_merge_report.json` 的实际自动遍历结果。本地名称只负责精确定位官方叶节点，分组关系仍完全取自固化的 Julich-Brain v3.1 区域树。
 
 这样合并的理由是：它保留 Julich 自身的细胞构筑语义，允许极小叶节点扩展到官方定义的最近可用父级，同时避免把跨 atlas 空间重叠误当成官方解剖父子关系。
 
@@ -148,14 +156,75 @@ Julich-Brain 是基于细胞构筑概率图建立的皮层区和皮层下核团�
 
 DiFuMo64/128/256/512/1024 是不同分辨率的功能成分集合，并不是保证严格嵌套的解剖树。因此不能把名称前缀相同的 component 直接视为父子，也不能只靠 `anterior/posterior/LH/RH` 等词删除后缀来合并。
 
-demo 的离线/Atlas 阶段采用自动映射：
+demo 的离线/Atlas 阶段采用以下确定性自动映射过程。
 
-1. DiFuMo1024、512、256、128 分别与 DiFuMo512、256、128、64 计算标准化 MNI 空间重叠。
-2. 候选父区只由实际重叠产生，再检查 coverage、Dice、重叠体积、体积放大倍数和候选间差距；标签名称及其侧别后缀不参与筛选。
-3. 每个源 atlas 只使用预先指定的一个参考父区 atlas；离线/Atlas 阶段不递归切换层级。
-4. 父 component 只作为分组参照，不直接替换输入。最终输出始终是同一源 atlas 下、被同一父 component 接纳的细 component 二值并集，并记录实际成员和父级参照。
-5. DiFuMo64 没有更粗的同系列 atlas，且当前最小 ROI 已有 8917 mm³，因此本次直接作为 `keep` 对照基线，不做父区匹配，也不生成合并成员。
-6. DiFuMo128～1024 出现多个候选时继续使用 Dice、重叠体积和父区 index 自动打破平局；没有重叠时自动记为 `unmatched`，不使用名称兜底。
+#### 4.3.1 固定相邻分辨率
+
+每个源 atlas 只使用预先指定的一个较粗参考 atlas，不递归切换层级：
+
+```text
+DiFuMo128  → DiFuMo64
+DiFuMo256  → DiFuMo128
+DiFuMo512  → DiFuMo256
+DiFuMo1024 → DiFuMo512
+```
+
+DiFuMo64 没有更粗的同系列 atlas，且当前最小 ROI 已有 8917 mm³，因此本次直接作为 `keep` 对照基线，不做父区匹配，也不生成合并成员。
+
+#### 4.3.2 计算实际体素重叠候选
+
+对源 atlas 的每一个细 component `S_i`，分别与参考父 atlas 的所有粗 component `P_j` 计算实际重叠。只有重叠体素数大于 0 的父 component 才进入候选列表，并记录：
+
+```text
+overlap_count  = voxel_count(S_i ∩ P_j)
+coverage       = overlap_count / voxel_count(S_i)
+Dice           = 2 × overlap_count / (voxel_count(S_i) + voxel_count(P_j))
+overlap_volume = overlap_count × voxel_volume
+```
+
+标签名称、名称前缀和 `anterior/posterior/LH/RH` 等后缀均不参与候选生成或指标计算。一个名称看似不一致的父 component，只要实际空间重叠排名最高，仍可成为自动选择结果。
+
+#### 4.3.3 为每个源 component 选择唯一父 component
+
+候选列表按照以下固定优先级排序：
+
+1. coverage 从高到低；
+2. Dice 从高到低；
+3. 重叠体积从高到低；
+4. 父 component index 从小到大。
+
+排序后的第一名作为该源 component 的唯一父 component，同时在报告中保存完整 `candidate_rankings` 和第二名 coverage。没有任何正体素重叠时自动记为 `unmatched`，不使用名称或人工选择兜底。
+
+#### 4.3.4 反向分组并决定 merged 或 keep
+
+程序先对源 atlas 的全部 component 完成父 component 选择，再按照所选父 component 反向分组；这一步发生在 demo 选择每个 atlas 的 5 个小 ROI 样本之前。例如：
+
+```text
+父 component 14
+├─ 源 component 33
+├─ 源 component 63
+└─ 源 component 121
+```
+
+同一父 component 下至少有 2 个源 component 时，该组成员全部写入 `member_indices`，每个成员的决策均为 `merged`；只有 1 个源 component 时不能扩大 ROI，决策为 `keep`。
+
+#### 4.3.5 生成同一源 atlas 的成员并集
+
+父 component 只作为分组参照，不直接作为最终 ROI。实际输出始终是同一源 atlas 下所有成员二值 mask 的逻辑并集：
+
+```text
+merged_mask = source_mask_1 OR source_mask_2 OR ... OR source_mask_n
+```
+
+合并过程不做 dilation、closing、凸包填充或跨空隙插值，并在报告中记录源 ROI、参考父 component、实际成员、合并体积和体积放大倍数。
+
+实际试验结果示例：
+
+| 用户所选细分区 | 合并组 | 成员 | 合并理由 |
+|---|---|---|---|
+| DiFuMo128 `Precuneus posterior`（121） | DiFuMo64 `Cingulate gyrus mid-posterior`（14）参照组 | 33（Posterior cingulate cortex）+ 63（Posterior cingulate cortex superior）+ 121（Precuneus posterior） | 源 ROI 与父 component 的实测 coverage 为 0.425、Dice 为 0.287；同一父 component 接纳这 3 个 DiFuMo128 成员 |
+| DiFuMo512 `Precuneus RH`（413） | DiFuMo256 `Precuneus superior`（256）参照组 | 131（Precuneus mid-superior LH）+ 253（Precuneus middle）+ 413（Precuneus RH） | 源 ROI 与父 component 的实测 coverage 为 0.719、Dice 为 0.431，并按固定重叠排序选为第一父候选 |
+| DiFuMo1024 `Superior parietal lobule posterior LH`（998） | DiFuMo512 `Superior occipital sulcus superior LH`（75）参照组 | 686（Intraparietal sulcus posterior LH）+ 998（Superior parietal lobule posterior LH） | 源 ROI 与父 component 的实测 coverage 为 0.384、Dice 为 0.231；成员来自相同父 component 的实际空间接纳结果，而不是标签相似性 |
 
 采用多分辨率重叠的理由是：高分辨率 DiFuMo 的小 component 可以在同一 atlas 家族的更粗功能表示中找到更稳健的目标，而实际体素重叠直接反映 component 的空间关系。各分辨率由独立分解得到，因此 demo 必须完整输出匹配指标，不能把自动结果当成已经确认的严格父子关系。
 
@@ -375,6 +444,11 @@ DiFuMo1024
 ### 6.5【Demo 运行时/个体阶段】合并前后 focality 成对优化
 
 新增独立的 `merged_atlas_roi_focality_compare_demo.py`。本试验 Demo 不接收命令行参数，直接固定读取 `data/roi_merge_demo_outputs/20260817_110807_8c9b0ef7/roi_merge_report.json`，使用 `data/m2m_ernie`，并从第 6.2 节的 35 个离线样本中只保留当前实际判定为 `merged` 的 25 个 ROI。10 个 `keep` 样本不写入比较 Demo 的固定清单，也不进入优化队列。报告内容与硬编码参数共同计算 SHA-256 指纹；已有队列与当前输入不一致时直接停止，避免把不同实验条件续写进同一份结果。
+
+这 10 个 `keep` 包含两类：
+
+1. 5 个 DiFuMo64 固定 `keep` 对照：DiFuMo64 没有更粗一级的同系列 atlas，因此不执行父区匹配。
+2. 5 个自动匹配后形成的单成员 `keep`：DiFuMo128 index 52、72、16，DiFuMo512 index 47，以及 DiFuMo1024 index 621。它们虽然找到了实际重叠的父 component，但该父 component 最终只接纳当前 ROI，`member_indices` 只有自身，输出体积与源 ROI 相同，无法形成至少两个成员的有效并集，因此按确定性规则保留原 ROI，并在离线报告中记录 `expected_merged_got_keep`。
 
 每个 `decision=merged` 样本排入两个任务：
 
