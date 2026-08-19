@@ -33,7 +33,7 @@ from neuracle.ti_leadfield_optimization import (
     load_leadfield,
     run_genetic_optimization,
 )
-from neuracle.ti_leadfield_optimization.models import FitnessMetrics
+from neuracle.ti_leadfield_optimization.models import FitnessMetrics, GASettings
 from neuracle.ti_leadfield_optimization.result import (
     export_result_nifti,
     fitness_metrics_to_dict,
@@ -52,7 +52,8 @@ from simnibs import mesh_io
 
 logger = logging.getLogger(__name__)
 LOG_DIRECTORY_NAME = (
-    "ti_leadfield_ga_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_demo"
+    "ti_leadfield_ga_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_"
+    "roi_threshold_0_1_demo"
 )
 
 
@@ -150,7 +151,8 @@ def _build_demo_config() -> LeadfieldGADemoConfig:
     leadfield_root = DATA_ROOT / "ti_leadfield_ga_ernie_nsn_10_10"
     output_root = (
         DATA_ROOT
-        / "ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala"
+        / "ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_"
+        "amygdala_roi_threshold_0_1"
     )
     return LeadfieldGADemoConfig(
         head_model_id="ernie",
@@ -174,6 +176,7 @@ def _build_demo_config() -> LeadfieldGADemoConfig:
         electrode_radius_mm=ELECTRODE_RADIUS,
         electrode_thickness_mm=2.0,
         n_workers=8,
+        ga=GASettings(roi_threshold_v_per_m=0.1),
         run_direct_fem_validation=True,
     )
 

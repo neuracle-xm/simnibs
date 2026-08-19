@@ -690,3 +690,84 @@ atlas 映射也出现 `invalid value encountered in dot` RuntimeWarning。这些
 日志位于
 `log/ti_leadfield_ga_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_demo`，与此前
 实验相互独立。
+
+## 13. 右海马 ROI 阈值降至 0.1 V/m 实验
+
+本轮保持第 12 节的完整右海马 ROI、完整右杏仁核 non-ROI、`0.00–4.00 mA`
+独立电流搜索、GA 参数、montage、leadfield、导电率和直接 FEM 验收规则不变，仅把
+ROI 阈值从 `0.2 V/m` 降为 `0.1 V/m`。non-ROI 阈值仍为 `0.1 V/m`，因此本轮
+SimNIBS focality 使用的阈值顺序为 `[0.1, 0.1] V/m`。日志和结果均写入带有
+`roi_threshold_0_1` 后缀的独立目录，避免复用阈值不同的直接 FEM 缓存。
+
+### 13.1 实际耗时与最优解
+
+2026 年 8 月 19 日已完成本轮完整 demo。运行复用了现有 NSN 10-10 leadfield，
+成功运行总耗时为 **11 分 29.286 秒**（689.286 秒）。此前一次写入旧结果目录的尝试
+因直接 FEM 缓存配置与新阈值不一致而终止，不计入下表；下表只统计改用独立结果目录后
+从头完成的成功运行。
+
+| 阶段 | 耗时 |
+| --- | ---: |
+| 复用并校验 leadfield | 0.092 秒 |
+| 加载完整 float64 leadfield | 6.543 秒 |
+| 映射右海马 ROI 与右杏仁核 non-ROI | 2 分 18.013 秒 |
+| 六基因 GA 优化 | 4 分 23.566 秒 |
+| 重建并导出最优 TI 电场 | 50.810 秒 |
+| 直接 FEM 对照与 atlas 区域统计 | 3 分 50.203 秒 |
+| 写入结果并验收 | 0.002 秒 |
+
+映射后的 ROI/non-ROI 与第 12 节一致：完整右海马包含 5,370 个 WM/GM 四面体，
+体积为 6,646.374 mm³；完整右杏仁核包含 835 个四面体，体积为
+1,895.335 mm³。两者没有重叠。
+
+GA 共执行 1,529 个不重复适应度计算，等价解缓存命中 164 次。最终最优值首次出现在
+第 23 代，搜索完成配置的 30 代。最优解为：
+
+| 通道 | 正极 | 负极 | 电流 |
+| --- | --- | --- | ---: |
+| A | CP4 | Pz | 2.05 mA |
+| B | P8 | P4 | 2.15 mA |
+
+两路电流均满足各自独立 `0.00–4.00 mA`、步长 `0.05 mA` 和无总和约束的配置。
+
+### 13.2 Leadfield 与直接 FEM 验证
+
+本轮 ROI sensitivity 与 non-ROI false-positive rate 均以 `max_TI >= 0.1 V/m`
+统计，分别作用于完整右海马和完整右杏仁核。结果如下：
+
+| 指标 | Leadfield | 直接 FEM | 相对误差 |
+| --- | ---: | ---: | ---: |
+| focality score | 116.530877 | 116.525549 | 0.0046% |
+| ROC distance | 0.248905 | 0.248958 | 0.0214% |
+| ROI sensitivity | 81.825% | 83.017% | 1.436% |
+| 右杏仁核 false-positive rate | 17.006% | 18.204% | 6.579% |
+| ROI mean | 0.124145 V/m | 0.125312 V/m | 0.931% |
+| 右杏仁核 mean | 0.090231 V/m | 0.089548 V/m | 0.757% |
+| ROI/non-ROI mean ratio | 1.375854 | 1.399386 | 1.682% |
+| ROI max | 0.345998 V/m | 0.336425 V/m | 2.767% |
+
+focality score 相对误差为 **0.0046%**，小于 5%，因此
+`leadfield_fem_focality_score_relative_error_within_5_percent=true` 且
+`passed=true`。这说明 Leadfield 与直接 FEM 对本轮目标函数的计算结果高度一致。
+
+直接 FEM 中，83.017% 的右海马 element 达到 `0.1 V/m`，右杏仁核中达到同一阈值
+的比例为 18.204%。在本轮指定的两个 atlas 区域和阈值下，ROI threshold coverage
+明显高于 non-ROI false-positive rate；但 non-ROI 仍只代表右杏仁核，不能据此推断
+其余皮层或全脑区域的场强受控。由于本轮改变了 ROI 阈值和 objective 定义，focality
+score 的绝对值也不能与第 12 节的 `0.2 V/m` 结果直接作为同一标尺比较。
+
+直接 FEM 的 SimNIBS 日志显示，通道 A 的 current calibration error 为 **19.38%**，
+超过 10% 警戒值；通道 B 为 5.0%。当前验收只检查 Leadfield/直接 FEM focality score
+相对误差，不检查电流校准误差，因此 `passed=true` 不消除该质量风险。将该结果用于
+实际刺激方案或绝对场强判断前，需要进一步检查 CP4/Pz 电极放置、网格质量和电流校准。
+
+本轮主要结果位于：
+
+- `data/ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_roi_threshold_0_1/results/optimization_result.json`；
+- `data/ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_roi_threshold_0_1/results/convergence.csv`；
+- `data/ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_roi_threshold_0_1/results/ti_leadfield_ga_result.msh`；
+- `data/ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_roi_threshold_0_1/results/final_validation/optimized/ernie_TI.msh`；
+- `data/ti_leadfield_ga_ernie_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_roi_threshold_0_1/results/final_validation/comparison.json`。
+
+日志位于
+`log/ti_leadfield_ga_nsn_10_10_ga_current_0_4_hippocampus_vs_amygdala_roi_threshold_0_1_demo`。
