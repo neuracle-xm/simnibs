@@ -103,6 +103,7 @@ Brainnetome atlas 中 `rHipp_R` 与 `cHipp_R` 的并集，即完整右侧海马�
 | 非 ROI mean | 0.193906 V/m | 0.194680 V/m | 0.397% |
 | ROI/Rest ratio | 1.042533 | 1.046079 | 0.339% |
 | ROI max | 0.481246 V/m | 0.484483 V/m | 0.668% |
+| 非 ROI max | 1.478868 V/m | 1.493410 V/m | 0.974% |
 
 验证规则只检查 Leadfield 与直接 FEM 的 focality score 相对误差是否不超过 5%。
 本次误差为 **1.567%**，因此 `comparison.json` 中：
@@ -215,6 +216,7 @@ Leadfield 与直接 FEM 的验证结果如下：
 | 非 ROI mean | 0.139335 V/m | 0.173456 V/m | 19.672% |
 | ROI/Rest ratio | 1.546649 | 1.416625 | 8.407% |
 | ROI max | 0.561982 V/m | 0.688759 V/m | 18.407% |
+| 非 ROI max | 1.170062 V/m | 1.890877 V/m | 38.121% |
 
 focality score 相对误差为 **2.871%**，小于 5%，因此一致性验收
 `passed=true`。但直接 FEM 的非 ROI false-positive rate 为 68.969%，ROI/Rest
@@ -282,6 +284,7 @@ GA 完成了配置的 50 代搜索，共执行 3740 个不重复适应度计算�
 | 非 ROI mean | 0.148481 V/m | 0.158156 V/m | 6.117% |
 | ROI/Rest ratio | 1.422108 | 1.422119 | 0.00081% |
 | ROI max | 0.537457 V/m | 0.572787 V/m | 6.168% |
+| 非 ROI max | 2.827708 V/m | 3.014342 V/m | 6.192% |
 
 验收程序只判断 focality score 的 Leadfield/直接 FEM 相对误差是否不超过 5%。本轮
 误差为 **3.203%**，因此 `comparison.json` 中
@@ -367,6 +370,7 @@ GA 共执行 1442 个不重复适应度计算，等价解缓存命中 246 次。
 | 非 ROI mean | 0.149849 V/m | 0.155890 V/m | 3.875% |
 | ROI/Rest ratio | 1.357459 | 1.357402 | 0.00424% |
 | ROI max | 0.499067 V/m | 0.531874 V/m | 6.168% |
+| 非 ROI max | 2.625729 V/m | 2.799032 V/m | 6.192% |
 
 focality score 相对误差为 **0.03785%**，小于 5%，因此
 `leadfield_fem_focality_score_relative_error_within_5_percent=true` 且
@@ -457,6 +461,7 @@ GA 共执行 1526 个不重复适应度计算，等价解缓存命中 150 次。
 | 非 ROI mean | 0.091907 V/m | 0.099895 V/m | 7.996% |
 | ROI/Rest ratio | 1.306676 | 1.308329 | 0.126% |
 | ROI max | 0.383645 V/m | 0.423344 V/m | 9.377% |
+| 非 ROI max | 1.111181 V/m | 1.189582 V/m | 6.591% |
 
 focality score 相对误差为 **1.389%**，小于 5%，因此
 `leadfield_fem_focality_score_relative_error_within_5_percent=true` 且
@@ -549,6 +554,7 @@ GA 共执行 1503 个不重复适应度计算，等价解缓存命中 190 次。
 | 非 ROI mean | 0.176526 V/m | 0.184445 V/m | 4.293% |
 | ROI/Rest ratio | 1.309667 | 1.308556 | 0.0848% |
 | ROI max | 0.400631 V/m | 0.418495 V/m | 4.269% |
+| 非 ROI max | 4.614528 V/m | 4.825926 V/m | 4.380% |
 
 focality score 相对误差为 **1.718%**，小于 5%，因此
 `leadfield_fem_focality_score_relative_error_within_5_percent=true` 且
@@ -656,6 +662,7 @@ rate 按右杏仁核 `max_TI >= 0.1 V/m` 统计。结果如下：
 | 右杏仁核 mean | 0.093186 V/m | 0.095400 V/m | 2.320% |
 | ROI/non-ROI mean ratio | 1.371718 | 1.374865 | 0.229% |
 | ROI max | 0.380202 V/m | 0.393893 V/m | 3.476% |
+| 右杏仁核 max | 0.144388 V/m | 0.214250 V/m | 32.608% |
 
 focality score 相对误差为 **0.166%**，小于 5%，因此
 `leadfield_fem_focality_score_relative_error_within_5_percent=true` 且
@@ -745,6 +752,7 @@ GA 共执行 1,529 个不重复适应度计算，等价解缓存命中 164 次�
 | 右杏仁核 mean | 0.090231 V/m | 0.089548 V/m | 0.757% |
 | ROI/non-ROI mean ratio | 1.375854 | 1.399386 | 1.682% |
 | ROI max | 0.345998 V/m | 0.336425 V/m | 2.767% |
+| 右杏仁核 max | 0.144388 V/m | 0.149013 V/m | 3.104% |
 
 focality score 相对误差为 **0.0046%**，小于 5%，因此
 `leadfield_fem_focality_score_relative_error_within_5_percent=true` 且
