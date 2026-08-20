@@ -88,6 +88,7 @@ def run_ti_inverse(
     anisotropy: AnisotropyType,
     n_workers: int = 8,
     electrode_radius: float = ELECTRODE_RADIUS,
+    optimizer_options: dict[str, int] | None = None,
 ) -> None:
     """
     运行 TI 逆向优化，生成失败则抛出异常。
@@ -129,6 +130,9 @@ def run_ti_inverse(
         并行工作进程数
     electrode_radius : float
         实心圆电极半径，单位 mm
+    optimizer_options : dict[str, int] | None
+        TesFlex 优化器覆盖参数，支持 ``maxiter``、``popsize`` 和 ``seed``。
+        为 None 时使用 SimNIBS 默认参数。
     """
     roi_info = (
         f"atlas={roi_param.atlas_param}"
@@ -207,6 +211,10 @@ def run_ti_inverse(
         cond=cond_dict_to_list(conductivity_config),
         fname_tensor=dti_file_path,
     )
+    if optimizer_options is not None:
+        opt.optimizer_options = optimizer_options
+        if "seed" in optimizer_options:
+            opt.seed = optimizer_options["seed"]
     logger.info("优化器初始化完成")
 
     # ===== 步骤 2：目标设置 =====

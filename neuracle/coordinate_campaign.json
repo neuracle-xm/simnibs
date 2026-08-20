@@ -1,0 +1,62 @@
+{
+  "campaign": {
+    "name": "single_xyz_20_e01",
+    "description": "目标场强0.1下，对MNI坐标(20,20,20)进行三轮可复现重复实验",
+    "_notes": [
+      "coordinates 可直接写 [x,y,z]，也可写带 name 和 center 的对象。",
+      "name 只用于任务筛选、状态索引和输出目录命名；center 才是实际 MNI ROI 中心。",
+      "本轮为1个目标场强 × 1个位点 × 3个固定seed，共3个任务。",
+      "默认只生成计划；必须显式传入 --execute 才会启动 SimNIBS。"
+    ],
+    "state_dir": "%LOCALAPPDATA%\\NSN-F\\data\\simulations\\campaigns\\single_xyz_20_e01",
+    "repetitions": [
+      {"index": 1, "seed": 2026081701},
+      {"index": 2, "seed": 2026081702},
+      {"index": 3, "seed": 2026081703}
+    ],
+    "coordinates": [
+      {"name": "xyz_p020_p020_p020", "center": [20.0, 20.0, 20.0]}
+    ],
+    "parameter_sets": [
+      {
+        "name": "default_i2_e01_r10",
+        "overrides": {}
+      }
+    ]
+  },
+  "runtime": {
+    "head_model_dir": "%LOCALAPPDATA%\\NSN-F\\data\\head_models\\m2m_ernie",
+    "head_model_id": "ernie",
+    "output_root": "%LOCALAPPDATA%\\NSN-F\\data\\simulations",
+    "run_name_prefix": "ti_inverse",
+    "n_workers": 8
+  },
+  "base_params": {
+    "montage": "EEG10-10_NSN",
+    "current_A": [2.0, -2.0],
+    "current_B": [2.0, -2.0],
+    "roi_type": "mni_pos",
+    "roi_param": {
+      "mni_param": {
+        "center": [0.0, 0.0, 0.0],
+        "radius": 10.0
+      },
+      "atlas_param": null
+    },
+    "target_threshold": 0.1,
+    "anisotropy_type": "scalar",
+    "electrode_radius": 6.0,
+    "conductivity_config": {
+      "GM": 0.275,
+      "WM": 0.126,
+      "CSF": 1.654,
+      "Bone": 0.01,
+      "Eyes": 0.5,
+      "Blood": 0.6,
+      "Scalp": 0.465,
+      "Muscle": 0.16,
+      "SpongyBone": 0.025,
+      "CompactBone": 0.008
+    }
+  }
+}
