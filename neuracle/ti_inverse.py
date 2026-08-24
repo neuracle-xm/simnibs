@@ -38,6 +38,11 @@ from typing import Literal
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from neuracle.atlas.julich_vpm_merge import (
+    build_julich_vpm_rh_merged_mask,
+    get_julich_vpm_rh_merged_mask_path,
+    is_julich_vpm_rh,
+)
 from neuracle.atlas.standardized import get_standardized_roi_path
 from neuracle.logger import setup_logging
 from neuracle.parameters.schemas import (
@@ -72,6 +77,39 @@ from neuracle.utils.find_nifty import find_optional_nifti_file
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger("neuracle.ti_inverse")
+
+
+def _resolve_atlas_roi_mask_path(
+    atlas_name: str,
+    area_name: str,
+) -> Path:
+    """解析 TI 逆向优化实际使用的 atlas ROI mask。
+
+    Parameters
+    ----------
+    atlas_name : str
+        atlas 名称。
+    area_name : str
+        atlas 脑区名称。
+    Returns
+    -------
+    Path
+        原始标准化 ROI 或 VPM 右侧合并 ROI 的路径。
+
+    Notes
+    -----
+    只有 Julich VPM 右侧同时精确命中 atlas 和脑区名称时才使用离线合并
+    mask 的固定路径；文件缺失时自动生成一次。其他选择继续使用现有
+    标准化单 ROI 解析逻辑。
+    """
+    if is_julich_vpm_rh(atlas_name, area_name):
+        merged_path = get_julich_vpm_rh_merged_mask_path()
+        if not merged_path.exists():
+            logger.info("Julich VPM 右侧离线合并 ROI 不存在，开始生成: %s", merged_path)
+            merged_path = build_julich_vpm_rh_merged_mask(merged_path)
+        logger.info("逆向仿真使用 Julich VPM 右侧合并 ROI: %s", merged_path)
+        return merged_path
+    return get_standardized_roi_path(atlas_name, area_name)
 
 
 def run_ti_inverse(
@@ -185,10 +223,12 @@ def run_ti_inverse(
     )
 
     if roi_type == "atlas" and roi_param.atlas_param:
+        atlas_name = roi_param.atlas_param.name
+        area_name = roi_param.atlas_param.area
         roi_mask_path = str(
-            get_standardized_roi_path(
-                roi_param.atlas_param.name,
-                roi_param.atlas_param.area,
+            _resolve_atlas_roi_mask_path(
+                atlas_name,
+                area_name,
             )
         )
         if not os.path.exists(roi_mask_path):
