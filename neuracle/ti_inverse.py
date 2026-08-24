@@ -180,6 +180,9 @@ def run_ti_inverse(
     roi_mask_path = None
     roi_mask_space = None
     roi_threshold = target_threshold
+    non_roi_threshold = (
+        roi_threshold if roi_threshold < 0.1 else NON_ROI_THRESHOLD
+    )
 
     if roi_type == "atlas" and roi_param.atlas_param:
         roi_mask_path = str(
@@ -213,7 +216,7 @@ def run_ti_inverse(
     setup_goal(
         opt=opt,
         goal="focality",
-        focality_threshold=[NON_ROI_THRESHOLD, roi_threshold],
+        focality_threshold=[non_roi_threshold, roi_threshold],
         net_electrode_file=net_electrode_file,
     )
     logger.info("优化目标设置完成")
