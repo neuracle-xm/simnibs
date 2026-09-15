@@ -24,6 +24,7 @@ from neuracle.parameters.schemas import (
     InverseParams,
     MNIParam,
     ModelParams,
+    OptimizationMethod,
     ROIParam,
 )
 from neuracle.utils.constants import ELECTRODE_RADIUS
@@ -146,8 +147,9 @@ def dict_to_inverse_params(data: dict) -> InverseParams:
         head_model_dir=data["head_model_dir"],
         T1_file_path=t1_file_path,
         montage=data["montage"],
-        current_A=data["current_A"],
-        current_B=data["current_B"],
+        optimization_method=OptimizationMethod(data["optimization_method"]),
+        current_A=data.get("current_A"),
+        current_B=data.get("current_B"),
         roi_type=data["roi_type"],
         roi_param=roi_param,
         target_threshold=data["target_threshold"],

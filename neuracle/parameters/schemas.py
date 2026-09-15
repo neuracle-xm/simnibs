@@ -22,6 +22,13 @@ from typing import Literal
 from neuracle.utils.constants import ELECTRODE_RADIUS
 
 
+class OptimizationMethod(str, Enum):
+    """必须由请求显式选择的逆向优化方法。"""
+
+    LEADFIELD_FREE = "leadfield_free"
+    LEADFIELD_BASED = "leadfield_based"
+
+
 class AnisotropyType(str, Enum):
     """各向异性类型枚举
 
@@ -100,12 +107,13 @@ class InverseParams:
     head_model_dir: str
     T1_file_path: str
     montage: str
-    current_A: list[float]
-    current_B: list[float]
+    optimization_method: OptimizationMethod
     roi_type: Literal["atlas", "mni_pos"]
     roi_param: ROIParam
     target_threshold: float
     conductivity_config: dict[str, float]
     anisotropy: AnisotropyType
+    current_A: list[float] | None = None
+    current_B: list[float] | None = None
     electrode_radius: float = ELECTRODE_RADIUS
     DTI_file_path: str | None = None

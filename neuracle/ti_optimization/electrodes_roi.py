@@ -19,10 +19,9 @@ TI Optimization 电极和 ROI 配置模块
 
 import logging
 
-from simnibs import opt_struct
-from simnibs.utils.mesh_element_properties import ElementTags
-
 from neuracle.utils.constants import ELECTRODE_RADIUS
+from neuracle.utils.optimization_roi import build_optimization_rois
+from simnibs import opt_struct
 
 logger = logging.getLogger(__name__)
 
@@ -108,60 +107,18 @@ def setup_electrodes_and_roi(
     electrode_layout2.radius = electrode_radius
     electrode_layout2.current = electrode_current2
 
-    # 配置 ROI
-    logger.info("配置 ROI")
-    roi = opt.add_roi()
-    roi.method = "volume"
-    roi.mesh = str(mesh_file_path)
-    roi.subpath = opt.subpath
-    roi.tissues = [ElementTags.WM, ElementTags.GM]  # 只保留白质和灰质
-    if roi_mask_path:
-        roi.mask_path = roi_mask_path
-        roi.mask_space = roi_mask_space or "mni"
-        roi.mask_value = 1
-        logger.info("使用 atlas ROI mask: %s (space=%s)", roi_mask_path, roi.mask_space)
-    else:
-        roi.roi_sphere_center_space = roi_center_space
-        roi.roi_sphere_center = roi_center
-        roi.roi_sphere_radius = roi_radius
-        logger.info(
-            "使用体积球形 ROI: 中心=%s, 半径=%s, space=%s",
-            roi_center,
-            roi_radius,
-            roi_center_space,
-        )
-
-    # focality 目标的第二个 ROI 表示"除目标 ROI 外的其余体积"
-    if goal in ["focality", "focality_inv"]:
-        non_roi = opt.add_roi()
-        non_roi.method = "volume"
-        non_roi.mesh = str(mesh_file_path)
-        non_roi.subpath = opt.subpath
-        non_roi.tissues = [ElementTags.WM, ElementTags.GM]  # 只保留白质和灰质
-        if roi_mask_path:
-            non_roi.mask_path = roi_mask_path
-            non_roi.mask_space = roi_mask_space or "mni"
-            non_roi.mask_value = 1
-            non_roi.mask_operator = ["difference"]
-            logger.info(
-                "配置 Non-ROI: 使用 atlas ROI 差集 (mask=%s, space=%s)",
-                roi_mask_path,
-                non_roi.mask_space,
-            )
-        else:
-            if non_roi_center is None:
-                non_roi_center = roi_center
-            if non_roi_radius is None:
-                non_roi_radius = 25.0
-            non_roi.roi_sphere_center_space = roi_center_space
-            non_roi.roi_sphere_center = non_roi_center
-            non_roi.roi_sphere_radius = non_roi_radius
-            non_roi.roi_sphere_operator = ["difference"]
-            logger.info(
-                "配置 Non-ROI: 中心=%s, 半径=%s, space=%s",
-                non_roi_center,
-                non_roi_radius,
-                roi_center_space,
-            )
-
+    regions = build_optimization_rois(
+        subject_dir=opt.subpath,
+        mesh=str(mesh_file_path),
+        goal=goal,
+        roi_center=roi_center,
+        roi_radius=roi_radius,
+        roi_center_space=roi_center_space,
+        roi_mask_path=roi_mask_path,
+        roi_mask_space=roi_mask_space,
+        non_roi_center=non_roi_center,
+        non_roi_radius=non_roi_radius,
+    )
+    for region in regions:
+        opt.add_roi(region)
     logger.info("电极对和 ROI 配置完成")
