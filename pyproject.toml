@@ -18,6 +18,8 @@ requires-python = ">=3.11"
 # python-mumps - only works automatically via conda
 # mpfr, gmp - from conda
 dependencies = [
+  "geneticalgorithm==1.0.2",
+  "filelock>=3.13,<4",
 ]
 
 [project.urls] # Optional

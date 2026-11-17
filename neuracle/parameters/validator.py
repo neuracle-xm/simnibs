@@ -18,6 +18,7 @@
 """
 
 import logging
+import math
 from typing import Any
 
 from neuracle.utils.constants import CONDUCTIVITY_TISSUE_NAMES, ELECTRODE_RADIUS
@@ -75,8 +76,7 @@ def _validate_conductivity_config(params: dict[str, Any]) -> None:
             f"conductivity_config 包含未知组织: {', '.join(unknown_tissues)}"
         )
     if not all(
-        isinstance(value, (int, float))
-        for value in conductivity_config.values()
+        isinstance(value, (int, float)) for value in conductivity_config.values()
     ):
         logger.error("[conductivity_config] conductivity_config 值必须是数字")
         raise ValidationError("conductivity_config 值必须是数字")
@@ -206,6 +206,8 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
     验证规则
     -------
     - montage: 非空字符串
+    - optimization_method: 必须显式指定 leadfield_free 或 leadfield_based
+    - based 禁止 current_A/current_B；以下电流约束仅适用 free
     - current_A: 包含两个数字的列表，顺序为正、负且总和必须为 0
     - current_B: 包含两个数字的列表，顺序为正、负且总和必须为 0
     - electrode_radius: 大于 0 的数字，默认 6 mm
@@ -227,50 +229,28 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
         logger.error("[montage] montage 必须是字符串")
         raise ValidationError("montage 验证失败")
 
-    current_A = params.get("current_A")
-    if not current_A or not isinstance(current_A, list):
-        logger.error("[current_A] current_A 必须是列表")
-        raise ValidationError("current_A 验证失败")
-    if len(current_A) != 2:
-        logger.error("[current_A] current_A 必须包含两个电流值")
-        raise ValidationError("current_A 必须包含两个电流值")
-    if not all(isinstance(current, (int, float)) for current in current_A):
-        logger.error("[current_A] current_A 元素必须是数字")
-        raise ValidationError("current_A 元素必须是数字")
-    if current_A[0] <= 0 or current_A[1] >= 0:
-        logger.error("[current_A] current_A 必须按正电流、负电流顺序传入")
-        raise ValidationError("current_A 必须按正电流、负电流顺序传入")
-
-    current_B = params.get("current_B")
-    if not current_B or not isinstance(current_B, list):
-        logger.error("[current_B] current_B 必须是列表")
-        raise ValidationError("current_B 验证失败")
-    if len(current_B) != 2:
-        logger.error("[current_B] current_B 必须包含两个电流值")
-        raise ValidationError("current_B 必须包含两个电流值")
-    if not all(isinstance(current, (int, float)) for current in current_B):
-        logger.error("[current_B] current_B 元素必须是数字")
-        raise ValidationError("current_B 元素必须是数字")
-    if current_B[0] <= 0 or current_B[1] >= 0:
-        logger.error("[current_B] current_B 必须按正电流、负电流顺序传入")
-        raise ValidationError("current_B 必须按正电流、负电流顺序传入")
-
-    if current_A and abs(sum(current_A)) > 1e-6:
-        logger.error("[current_A] 电流总和必须为 0，当前为: %s", sum(current_A))
-        raise ValidationError("current_A 电流总和必须为 0")
-
-    if current_B and abs(sum(current_B)) > 1e-6:
-        logger.error("[current_B] 电流总和必须为 0，当前为: %s", sum(current_B))
-        raise ValidationError("current_B 电流总和必须为 0")
-
+    method = params.get("optimization_method")
+    if method not in ("leadfield_free", "leadfield_based"):
+        raise ValidationError(
+            "optimization_method 必须显式指定 leadfield_free 或 leadfield_based"
+        )
+    if method == "leadfield_based":
+        if "current_A" in params or "current_B" in params:
+            raise ValidationError(
+                "leadfield_based 禁止传入 current_A/current_B，包括 null"
+            )
+    else:
+        validate_inverse_currents(params)
     electrode_radius = params.get("electrode_radius", ELECTRODE_RADIUS)
     if not isinstance(electrode_radius, (int, float)) or isinstance(
         electrode_radius, bool
     ):
         raise ValidationError("electrode_radius 必须是数字")
-    if electrode_radius <= 0:
+    if not math.isfinite(electrode_radius) or electrode_radius <= 0:
         raise ValidationError("electrode_radius 必须大于 0")
 
+    if method == "leadfield_based" and electrode_radius != ELECTRODE_RADIUS:
+        raise ValidationError("leadfield_based 电极半径固定为 6 mm，不允许外部覆盖")
     _validate_conductivity_config(params)
 
     anisotropy = params.get("anisotropy")
@@ -319,10 +299,57 @@ def validate_inverse_params(params: dict[str, Any]) -> None:
             logger.error("[roi_param.mni_param.radius] radius 必须是正数")
             raise ValidationError("radius 必须是正数")
 
+    inactive_roi = "mni_param" if roi_type == "atlas" else "atlas_param"
+    if roi_param.get(inactive_roi) is not None:
+        raise ValidationError("atlas_param 与 mni_param 必须互斥")
+    if roi_type == "atlas":
+        if any(
+            not isinstance(atlas_param[key], str) or not atlas_param[key].strip()
+            for key in ("name", "area")
+        ):
+            raise ValidationError("atlas 名称与区域必须是非空字符串")
+    else:
+        if any(isinstance(value, bool) or not math.isfinite(value) for value in center):
+            raise ValidationError("MNI 坐标必须是有限数字")
+        if isinstance(radius, bool) or not math.isfinite(radius):
+            raise ValidationError("MNI 半径必须是有限正数")
+    if any(
+        isinstance(value, bool) or not math.isfinite(value) or value <= 0
+        for value in params["conductivity_config"].values()
+    ):
+        raise ValidationError("电导率必须是有限正数")
     threshold = params.get("target_threshold")
     if not isinstance(threshold, (int, float)):
         logger.error("[target_threshold] target_threshold 必须是数字")
         raise ValidationError("target_threshold 必须是数字")
-    if threshold < 0:
+    if isinstance(threshold, bool) or not math.isfinite(threshold) or threshold < 0:
         logger.error("[target_threshold] target_threshold 必须 >= 0")
         raise ValidationError("target_threshold 必须 >= 0")
+
+
+def validate_inverse_currents(params: dict[str, Any]) -> None:
+    """单独校验 free 的 mA 电流，确保映射顺序为正、负且总和为零。
+
+    Parameters
+    ----------
+    params : dict[str, Any]
+        含 current_A/current_B 的 free 参数。
+
+    Raises
+    ------
+    ValidationError
+        电流不是有限数字、非成对或不满足正负平衡时抛出。
+    """
+    for key in ("current_A", "current_B"):
+        currents = params.get(key)
+        if not isinstance(currents, list) or len(currents) != 2:
+            raise ValidationError(f"{key} 必须包含两个电流值")
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            for value in currents
+        ):
+            raise ValidationError(f"{key} 必须是有限数字")
+        if currents[0] <= 0 or currents[1] >= 0 or abs(sum(currents)) > 1e-6:
+            raise ValidationError(f"{key} 必须按正、负顺序传入且总和为 0")

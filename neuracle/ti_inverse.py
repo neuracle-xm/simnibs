@@ -27,9 +27,9 @@ TI 逆向优化入口
 """
 
 import argparse
+import importlib
 import json
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Literal
@@ -38,12 +38,6 @@ from typing import Literal
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from neuracle.atlas.julich_vpm_merge import (
-    build_julich_vpm_rh_merged_mask,
-    get_julich_vpm_rh_merged_mask_path,
-    is_julich_vpm_rh,
-)
-from neuracle.atlas.standardized import get_standardized_roi_path
 from neuracle.logger import setup_logging
 from neuracle.parameters.schemas import (
     AnisotropyType,
@@ -74,42 +68,13 @@ from neuracle.utils.constants import (
 )
 from neuracle.utils.error_message import clear_error_message, write_error_message
 from neuracle.utils.find_nifty import find_optional_nifti_file
+from neuracle.utils.optimization_result import write_electrode_mapping
+from neuracle.utils.optimization_roi import (
+    resolve_roi_settings,
+)
 from neuracle.utils.ti_export import export_ti_to_nifti
 
 logger = logging.getLogger("neuracle.ti_inverse")
-
-
-def _resolve_atlas_roi_mask_path(
-    atlas_name: str,
-    area_name: str,
-) -> Path:
-    """解析 TI 逆向优化实际使用的 atlas ROI mask。
-
-    Parameters
-    ----------
-    atlas_name : str
-        atlas 名称。
-    area_name : str
-        atlas 脑区名称。
-    Returns
-    -------
-    Path
-        原始标准化 ROI 或 VPM 右侧合并 ROI 的路径。
-
-    Notes
-    -----
-    只有 Julich VPM 右侧同时精确命中 atlas 和脑区名称时才使用离线合并
-    mask 的固定路径；文件缺失时自动生成一次。其他选择继续使用现有
-    标准化单 ROI 解析逻辑。
-    """
-    if is_julich_vpm_rh(atlas_name, area_name):
-        merged_path = get_julich_vpm_rh_merged_mask_path()
-        if not merged_path.exists():
-            logger.info("Julich VPM 右侧离线合并 ROI 不存在，开始生成: %s", merged_path)
-            merged_path = build_julich_vpm_rh_merged_mask(merged_path)
-        logger.info("逆向仿真使用 Julich VPM 右侧合并 ROI: %s", merged_path)
-        return merged_path
-    return get_standardized_roi_path(atlas_name, area_name)
 
 
 def run_ti_inverse(
@@ -212,34 +177,9 @@ def run_ti_inverse(
     if not mesh_path.exists():
         raise FileNotFoundError(f"头模 mesh 文件不存在: {mesh_path}")
 
-    roi_center = None
-    roi_radius = None
-    roi_center_space = "subject"
-    roi_mask_path = None
-    roi_mask_space = None
+    roi_settings = resolve_roi_settings(roi_type, roi_param)
     roi_threshold = target_threshold
-    non_roi_threshold = (
-        roi_threshold if roi_threshold < 0.1 else NON_ROI_THRESHOLD
-    )
-
-    if roi_type == "atlas" and roi_param.atlas_param:
-        atlas_name = roi_param.atlas_param.name
-        area_name = roi_param.atlas_param.area
-        roi_mask_path = str(
-            _resolve_atlas_roi_mask_path(
-                atlas_name,
-                area_name,
-            )
-        )
-        if not os.path.exists(roi_mask_path):
-            raise FileNotFoundError(
-                f"标准化 ROI 不存在: {roi_mask_path}。请先运行 atlas 标准化和 ROI 生成脚本。"
-            )
-        roi_mask_space = "mni"
-    elif roi_type == "mni_pos" and roi_param.mni_param:
-        roi_center = roi_param.mni_param.center
-        roi_radius = roi_param.mni_param.radius
-        roi_center_space = "mni"
+    non_roi_threshold = roi_threshold if roi_threshold < 0.1 else NON_ROI_THRESHOLD
 
     # ===== 步骤 1：优化器初始化 =====
     opt = init_optimization(
@@ -269,11 +209,7 @@ def run_ti_inverse(
         electrode_current1=[c / 1000 for c in current_A],
         electrode_current2=[c / 1000 for c in current_B],
         electrode_radius=[electrode_radius],
-        roi_center=roi_center,
-        roi_radius=roi_radius,
-        roi_center_space=roi_center_space,
-        roi_mask_path=roi_mask_path,
-        roi_mask_space=roi_mask_space,
+        **roi_settings,
     )
     logger.info("电极与 ROI 配置完成")
 
@@ -297,6 +233,13 @@ def run_ti_inverse(
     )
     logger.info("NIfTI 导出完成: %s", ti_nifti_path)
 
+    write_electrode_mapping(
+        output_dir_path,
+        "leadfield_free",
+        electrode_A + electrode_B,
+        current_A,
+        current_B,
+    )
     logger.info("TI 逆向优化完成")
 
 
@@ -382,8 +325,7 @@ def load_ti_inverse_params(
     params_dict = {
         "head_model_dir": str(head_model_dir_path),
         "montage": params_data.get("montage"),
-        "current_A": params_data.get("current_A"),
-        "current_B": params_data.get("current_B"),
+        "optimization_method": params_data.get("optimization_method"),
         "roi_type": params_data.get("roi_type"),
         "roi_param": params_data.get("roi_param"),
         "target_threshold": params_data.get("target_threshold"),
@@ -391,6 +333,27 @@ def load_ti_inverse_params(
         "anisotropy": params_data.get("anisotropy_type"),
         "electrode_radius": params_data.get("electrode_radius", ELECTRODE_RADIUS),
     }
+    for key in ("current_A", "current_B"):
+        if key in params_data:
+            params_dict[key] = params_data[key]
+    forbidden = set(params_data) & {
+        "ga",
+        "ga_settings",
+        "cache_dir",
+        "cache_key",
+        "leadfield_dir",
+        "random_seed",
+        "population_size",
+        "max_num_iteration",
+        "current_min_ma",
+        "current_max_ma",
+        "current_step_ma",
+    }
+    if forbidden:
+        raise ValidationError(
+            f"参数文件不允许覆盖内部算法/缓存设置: {sorted(forbidden)}"
+        )
+    validate_inverse_params(params_dict)
     return params_dict, str(simulation_dir_path)
 
 
@@ -398,8 +361,8 @@ def build_inverse_params(
     params_dict: dict,
 ) -> tuple[
     str,
-    list[float],
-    list[float],
+    list[float] | None,
+    list[float] | None,
     Literal["atlas", "mni_pos"],
     ROIParam,
     float,
@@ -417,9 +380,10 @@ def build_inverse_params(
 
     Returns
     -------
-    tuple[str, list[float], list[float], Literal["atlas", "mni_pos"], ROIParam, float, dict[str, float], AnisotropyType, float]
-        montage、电流组 A、电流组 B、ROI 类型、ROI 参数、目标阈值、电导率、各向异性、电极半径
+    tuple[str, list[float] | None, list[float] | None, Literal["atlas", "mni_pos"], ROIParam, float, dict[str, float], AnisotropyType, float]
+        montage、电流组 A/B（based 为 None）、ROI 类型/参数、阈值、电导率、各向异性、电极半径
     """
+    validate_inverse_params(params_dict)
     roi_param_data = params_dict["roi_param"]
     roi_param = ROIParam()
     if roi_param_data.get("mni_param"):
@@ -434,8 +398,8 @@ def build_inverse_params(
         )
     return (
         params_dict["montage"],
-        params_dict["current_A"],
-        params_dict["current_B"],
+        params_dict.get("current_A"),
+        params_dict.get("current_B"),
         params_dict["roi_type"],
         roi_param,
         params_dict["target_threshold"],
@@ -487,21 +451,28 @@ def main(argv: list[str] | None = None) -> int:
             anisotropy,
             electrode_radius,
         ) = build_inverse_params(params_dict)
-        run_ti_inverse(
-            head_model_id=args.head_model_id,
-            head_model_dir=params_dict["head_model_dir"],
-            output_dir=simulation_dir,
-            montage=montage,
-            current_A=current_a,
-            current_B=current_b,
-            roi_type=roi_type,
-            roi_param=roi_param,
-            target_threshold=target_threshold,
-            conductivity_config=conductivity_config,
-            anisotropy=anisotropy,
-            electrode_radius=electrode_radius,
-            n_workers=N_WORKERS,
-        )
+        common = {
+            "head_model_id": args.head_model_id,
+            "head_model_dir": params_dict["head_model_dir"],
+            "output_dir": simulation_dir,
+            "montage": montage,
+            "roi_type": roi_type,
+            "roi_param": roi_param,
+            "target_threshold": target_threshold,
+            "conductivity_config": conductivity_config,
+            "anisotropy": anisotropy,
+            "n_workers": N_WORKERS,
+        }
+        if params_dict["optimization_method"] == "leadfield_free":
+            run_ti_inverse(
+                **common,
+                current_A=current_a,
+                current_B=current_b,
+                electrode_radius=electrode_radius,
+            )
+        else:
+            based = importlib.import_module("neuracle.ti_leadfield_optimization.run")
+            based.run_ti_leadfield_inverse(**common, data_root=args.data_root)
     except ValidationError as exc:
         logger.exception("TI 逆向优化参数校验失败: %s", exc)
         if log_dir is not None:
