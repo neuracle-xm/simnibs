@@ -144,11 +144,15 @@ def evaluate(case: FieldCase, out: Path, artifacts: list[dict[str, str]]) -> Res
     if not native_path.is_file():
         warp_volume(str(source_mask), subject.subpath, str(native_path), transformation_direction="mni2subject",
                     transformation_type="nonl", reference=subject.reference_volume, order=0, binary=True)
-    native = nib.load(native_path)
+    native = nib.squeeze_image(nib.load(native_path))
+    tissues = nib.squeeze_image(nib.load(subject.final_labels))
+    if len(native.shape) != 3 or len(tissues.shape) != 3:
+        raise ValueError("原生 ROI 和组织标签需要三维体素数据")
     mask = np.asanyarray(native.dataobj) == 1
     if not mask.any():
         raise ValueError("原生 T1 网格上的 ROI 为空")
-    tissues = resample_from_to(nib.load(subject.final_labels), native, order=0)
+    if tissues.shape != native.shape or not np.array_equal(tissues.affine, native.affine):
+        tissues = resample_from_to(tissues, native, order=0)
     brain = np.isin(np.asanyarray(tissues.dataobj), [1, 2])
     part = mask & brain
     if not part.any():
