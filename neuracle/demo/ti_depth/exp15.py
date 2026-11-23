@@ -18,7 +18,7 @@ import numpy as np
 from neuracle.demo.ti_depth.exp02 import PILOT_TARGETS
 from neuracle.demo.ti_depth.exp03 import FORWARD_OUTPUTS, align_common_forward
 from neuracle.ti_depth_study import restart_budget
-from neuracle.ti_depth_study.baseline import content_id, forward_config, run_task
+from neuracle.ti_depth_study.baseline import FIELD_MODEL, content_id, forward_config, run_task
 from neuracle.ti_depth_study.diagnostics import FieldCase, load_case
 from neuracle.ti_depth_study.metrics import measure_field
 from neuracle.ti_depth_study.pool import compare_endpoints
@@ -135,7 +135,7 @@ def natural(study: Path, out: Path, baseline_id: str, method: str) -> dict[str, 
         n_init_valid_unique=initial, B=budget if result["status"] == "ok" and budget >= 3 and budget // 3 >= initial else "NA")
 
 
-def forward_winner(study: Path, out: Path, common: FieldCase, winner: dict[str, Any]) -> dict[str, Any]:
+def forward_winner(study: Path, out: Path, common: FieldCase, winner: dict[str, Any], witness_plan: Path) -> dict[str, Any]:
     """只对本臂原目标最优起点执行 03 同口径复算，并回填物理读数。
 
     Parameters
@@ -146,6 +146,8 @@ def forward_winner(study: Path, out: Path, common: FieldCase, winner: dict[str, 
         03 通过核验的参考几何和目标。
     winner : dict
         已选起点，含按载波排列的帽位及配对标识。
+    witness_plan : Path
+        同运行号的 23 共同正向计划，如已存在则尝试复用完全相同的任务。
 
     Returns
     -------
@@ -155,7 +157,17 @@ def forward_winner(study: Path, out: Path, common: FieldCase, winner: dict[str, 
     subject = winner["subject"]
     pair = [CURRENT_MA, -CURRENT_MA]
     config = forward_config(winner["labels"].split(";"), (pair, pair))
-    task = f"15_{subject}_{content_id(dict(config=config, mesh=common.native['mesh_hash']))[:20]}"
+    mesh_hash = common.native["mesh_hash"]
+    task = f"15_{subject}_{content_id(dict(config=config, mesh=mesh_hash))[:20]}"
+    planned = read_csv(witness_plan) if witness_plan.is_file() else ()
+    cap = study / "head_models" / f"m2m_{subject}" / "eeg_positions" / f"{config['montage']}.csv"
+    cap_hash = digest(cap) if planned else None
+    for row in planned:
+        if ((row["subject"], row["mesh_hash"], row["cap_hash"], row["witness_layout"], row["model_id"])
+                == (subject, mesh_hash, cap_hash, winner["labels"], FIELD_MODEL)
+                and float(row["IA_mA"]) == float(row["IB_mA"]) == CURRENT_MA):
+            task = row["task_id"]
+            break
     directory = run_task(study, "ti_forward", subject, task, config, out / "commands.ps1", FORWARD_OUTPUTS)
     field_dir = out / "fields"
     field_dir.mkdir(exist_ok=True)
@@ -184,6 +196,7 @@ def compare_case(study: Path, out: Path, baseline_id: str, case: dict[str, Any],
     subject, target, method, case_id = (case[key] for key in ("subject", "target", "method", "case_id"))
     directory = out / "search/compare" / case_id
     directory.mkdir(parents=True, exist_ok=True)
+    witness_plan = study / "results/23" / out.name / "common_forward/plan.csv"
     started = perf_counter()
     restarts, traces, pairs, fields, evidence = [], [], [], [], []
     result = dict(case=case, restarts=restarts, traces=traces, pairs=pairs, fields=fields, evidence=evidence)
@@ -225,7 +238,7 @@ def compare_case(study: Path, out: Path, baseline_id: str, case: dict[str, Any],
             winner["selected"] = True
             identity = conditions | dict(arm=arm, restart_id=winner["restart_id"], labels=winner["labels"])
             try:
-                field = forward_winner(study, directory, common, winner)
+                field = forward_winner(study, directory, common, winner, witness_plan)
                 evidence.append(artifact(study, case_id, "对齐共同场", study / field["field_path"]))
                 evidence.append(artifact(study, case_id, "正向执行清单", study / field["forward_task"] / "study_execution.json"))
                 winner.update({key: field.get(key, "NA") for key in ("D_hot_mm", "Cov010")})
