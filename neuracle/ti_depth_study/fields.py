@@ -128,13 +128,15 @@ def _key_rows(connectivity: IntArray, tissues: IntArray) -> NDArray:
     return columns.view(np.dtype([(f"c{i}", np.int64) for i in range(columns.shape[1])])).ravel()
 
 
-def align_carrier(mesh: Msh, geometry: Geometry, tissues: IntArray) -> tuple[FloatArray, BoolArray]:
-    """将一份单频 E 向量映射到参考四面体。
+def align_element_values(mesh: Msh, field: FloatArray, geometry: Geometry, tissues: IntArray) -> tuple[FloatArray, BoolArray]:
+    """将已有逐元素标量或向量映射到参考四面体。
 
     Parameters
     ----------
     mesh : Msh
-        包含元素向量 E 的载波网格。
+        定义读数顺序的求解网格。
+    field : ndarray
+        原网格逐元素值，第一维对应其元素行。
     geometry : Geometry
         共同参考元素 ID、连通关系和重心。
     tissues : ndarray
@@ -143,12 +145,11 @@ def align_carrier(mesh: Msh, geometry: Geometry, tissues: IntArray) -> tuple[Flo
     Returns
     -------
     aligned, exact : tuple of ndarray
-        同序 E 向量及是否按节点与组织精确匹配。其余位置尝试在同组织
+        同序场及是否按节点与组织精确匹配。其余位置尝试在同组织
         的载波四面体内以参考重心取分片常量，不可匹配位置保留 NaN。
     """
-    field = mesh.field["E"].value
-    if field.shape != (mesh.elm.nr, 3):
-        raise ValueError("单频网格缺少逐元素三维向量 E")
+    if field.shape[0] != mesh.elm.nr:
+        raise ValueError("场读数与求解网格行数不符")
     rows = brain_rows(mesh)
     conn = mesh.elm.node_number_list[rows] - 1
     reference = geometry.connectivity
@@ -168,7 +169,7 @@ def align_carrier(mesh: Msh, geometry: Geometry, tissues: IntArray) -> tuple[Flo
     pos = np.searchsorted(sorted_keys, ref_keys)
     exact = pos < len(order)
     exact[exact] &= sorted_keys[pos[exact]] == ref_keys[exact]
-    aligned = np.full((len(reference), 3), np.nan)
+    aligned = np.full((len(reference), *field.shape[1:]), np.nan)
     aligned[exact] = field[rows[order[pos[exact]]]]
     missing = np.flatnonzero(~exact)
     if missing.size:
@@ -178,6 +179,27 @@ def align_carrier(mesh: Msh, geometry: Geometry, tissues: IntArray) -> tuple[Flo
         same_tissue[inside] = mesh.elm.tag1[elements[inside] - 1] == tissues[missing[inside]]
         aligned[missing[same_tissue]] = field[elements[same_tissue] - 1]
     return aligned, exact
+
+
+def align_carrier(mesh: Msh, geometry: Geometry, tissues: IntArray) -> tuple[FloatArray, BoolArray]:
+    """将载波网格的三维元素 E 向量映射到参考四面体。
+
+    Parameters
+    ----------
+    mesh : Msh
+        包含元素 E 向量的载波网格。
+    geometry, tissues : Geometry and ndarray
+        共同参考网格及其对应的组织标签。
+
+    Returns
+    -------
+    aligned, exact : tuple of ndarray
+        对齐的 E 向量及精确匹配标志。
+    """
+    field = mesh.field["E"].value
+    if field.shape != (mesh.elm.nr, 3):
+        raise ValueError("单频网格缺少逐元素三维向量 E")
+    return align_element_values(mesh, field, geometry, tissues)
 
 
 def prepare_field(mesh_a: Path, mesh_b: Path, geometry_path: Path, output: Path) -> dict[str, float]:
