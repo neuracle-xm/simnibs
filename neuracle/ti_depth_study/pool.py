@@ -115,9 +115,10 @@ def _measure_candidates(study: Path, geometry: Geometry, target: BoolArray, rows
 
 
 def run_pool_experiment(
-    study: Path, experiment: str, run_id: str, baselines: str, stage: str, score: ScoreFunction,
+    study: Path, experiment: str, run_id: str, baselines: str, stage: str, score: ScoreFunction | None,
     table: str, columns: tuple[str, ...], config: dict[str, Any],
     table_transform: Callable[[list[dict[str, Any]]], list[dict[str, Any]]] | None = None,
+    score_factory: Callable[[str, str], ScoreFunction] | None = None,
 ) -> None:
     """按 02 的约定执行同池评分、排名、配对及状态交接。
 
@@ -127,14 +128,16 @@ def run_pool_experiment(
         含 02、03 产物的本地研究目录。
     experiment, run_id, baselines, stage : str
         实验编号、本次运行号、03 运行号及 pilot/development。
-    score : callable
-        在同一头模、靶、候选上输出臂、损失和专属诊断。参照臂为 roc0。
+    score : callable or None
+        在同一头模、靶、候选上输出臂、损失和专属诊断；按病例准备评分时为 None。
     table, columns : str and tuple
         执行单要求的结果文件和专属字段。
     config : dict
         本次评分规则、阈值、尺度和实证阶段配置。
     table_transform : callable, optional
         将同一候选的多臂行合为专属表需要的单行结构。
+    score_factory : callable, optional
+        按头模和靶返回装载了该病例额外掩膜的评分实现。
     """
     started = timestamp()
     upstream = study / "results/03" / baselines
@@ -172,7 +175,10 @@ def run_pool_experiment(
                 if not candidates:
                     raise ValueError("共同候选库没有可作绝对定位的有限非零场")
                 by_id = {candidate.identifier: candidate for candidate in candidates}
-                scored = score(geo, targets[key], candidates)
+                evaluator = score_factory(subject, key) if score_factory is not None else score
+                if evaluator is None:
+                    raise ValueError("实验缺少候选评分")
+                scored = evaluator(geo, targets[key], candidates)
                 arms = dict.fromkeys(row["arm"] for row in scored)
                 for arm in arms:
                     ranks = sorted((row for row in scored if row["arm"] == arm),
