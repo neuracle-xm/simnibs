@@ -5,6 +5,7 @@ from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
+from time import sleep
 from typing import Any
 
 from filelock import FileLock
@@ -55,6 +56,29 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(stream))
 
 
+def _replace_record(temp: Path, path: Path) -> None:
+    """原子发布结果表，容忍 Windows 上短暂的文件占用。
+
+    Parameters
+    ----------
+    temp, path : Path
+        同目录中已经写完的临时文件和最终目标。
+
+    Raises
+    ------
+    PermissionError
+        目标经过有界重试仍无法原子替换，或错误不属于 Windows 文件占用。
+    """
+    for attempt in range(21):
+        try:
+            temp.replace(path)
+            return
+        except PermissionError as error:
+            if attempt == 20 or getattr(error, "winerror", None) not in (5, 32, 33):
+                raise
+            sleep(min(0.05 * (2 ** attempt), 0.5))
+
+
 def write_csv(path: Path, rows: list[dict[str, Any]], columns: tuple[str, ...] | None = None) -> None:
     """先写临时文件，再替换研究表，以便中断后读取完整状态。
 
@@ -73,7 +97,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]], columns: tuple[str, ...] |
         writer = csv.DictWriter(stream, fieldnames=fields, restval="NA")
         writer.writeheader()
         writer.writerows(rows)
-    temp.replace(path)
+    _replace_record(temp, path)
 
 
 def write_json(path: Path, content: dict[str, Any]) -> None:
@@ -88,7 +112,7 @@ def write_json(path: Path, content: dict[str, Any]) -> None:
     """
     temp = path.with_suffix(path.suffix + ".tmp")
     temp.write_text(json.dumps(content, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    temp.replace(path)
+    _replace_record(temp, path)
 
 
 def artifact(study: Path, case_id: str, role: str, path: Path) -> dict[str, str]:
