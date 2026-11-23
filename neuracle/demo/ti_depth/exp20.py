@@ -35,7 +35,7 @@ ROBUST_COLUMNS = ("mask_id", "split", "dx_mm", "dy_mm", "dz_mm", "roi_mm3", "sho
 
 
 def find_geometry(study: Path, upstream: Path, subjects: tuple[str, ...]) -> dict[str, Path]:
-    """优先使用冻结 03 几何；候选冻结前可借用已验收原生场的参考几何。
+    """定位 03 几何的 ROI 来源，并与冻结的候选网格复核散列。
 
     Parameters
     ----------
@@ -51,19 +51,26 @@ def find_geometry(study: Path, upstream: Path, subjects: tuple[str, ...]) -> dic
     """
     fixed = upstream / "shared_inputs.csv"
     native = upstream / "baseline_fields.csv"
-    paths = {}
+    paths: dict[str, Path] = {}
+    frozen: dict[str, str] = {}
     if fixed.is_file():
         for row in read_csv(fixed):
             if row["role"] == "geometry" and row["subject"] in subjects:
                 source = study / row["path"]
                 if digest(source) != row["sha256"]:
                     raise ValueError(f"03 冻结几何散列已改变: {source}")
-                paths[row["subject"]] = source
+                # 候选包只复制 geometry.npz，位移还需原参考目录的个体 ROI 和变换清单。
+                frozen[row["subject"]] = row["sha256"]
+                if source.with_name("geometry_inputs.json").is_file():
+                    paths[row["subject"]] = source
     if native.is_file():
         for row in read_csv(native):
             subject = row["subject"]
             if subject in subjects and subject not in paths and row["status"] == "ok":
-                paths[subject] = load_case(study, row).geometry_path
+                source = load_case(study, row).geometry_path
+                if subject in frozen and digest(source) != frozen[subject]:
+                    raise ValueError(f"{subject} 的原生 ROI 几何与冻结候选网格不一致")
+                paths[subject] = source
     return paths
 
 
