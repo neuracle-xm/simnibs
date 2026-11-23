@@ -117,6 +117,7 @@ def _measure_candidates(study: Path, geometry: Geometry, target: BoolArray, rows
 def run_pool_experiment(
     study: Path, experiment: str, run_id: str, baselines: str, stage: str, score: ScoreFunction,
     table: str, columns: tuple[str, ...], config: dict[str, Any],
+    table_transform: Callable[[list[dict[str, Any]]], list[dict[str, Any]]] | None = None,
 ) -> None:
     """按 02 的约定执行同池评分、排名、配对及状态交接。
 
@@ -132,6 +133,8 @@ def run_pool_experiment(
         执行单要求的结果文件和专属字段。
     config : dict
         本次评分规则、阈值、尺度和实证阶段配置。
+    table_transform : callable, optional
+        将同一候选的多臂行合为专属表需要的单行结构。
     """
     started = timestamp()
     upstream = study / "results/03" / baselines
@@ -143,7 +146,7 @@ def run_pool_experiment(
     cases, details, paired, artifacts = [], [], [], []
     data_ids = {}
     expected_subjects = ("sub1",) if stage == "pilot" else ("sub1", "sub2")
-    expected_targets = ("stn295",) if stage == "pilot" else tuple(groups)
+    expected_targets = tuple(config.get("pilot_targets", ("stn295",))) if stage == "pilot" else tuple(config.get("development_targets", groups))
     for subject in expected_subjects:
         inputs = {row["role"]: row for row in sources if row["subject"] == subject}
         if inputs and inputs["geometry"]["data_id"] != inputs["candidate_index"]["data_id"]:
@@ -198,6 +201,9 @@ def run_pool_experiment(
             except (OSError, ValueError, KeyError) as error:
                 case.update(status="failed", reason=str(error))
     known = ["case_id", "subject", "target", "arm", "candidate_id", "returned_loss", "rank", "field_source", "D_hot_mm", "Cov010", "Q99_Cout", "Vout010"]
+    if table_transform is not None:
+        details = table_transform(details)
+        known = ["case_id", "subject", "target", "candidate_id", "field_source"]
     detail_keys = tuple(dict.fromkeys([*known, *columns, *(key for row in details for key in row)]))
     pair_keys = tuple(dict.fromkeys(["case_id", "reference_case_id", "subject", "target", "method", "arm", "reference_arm", "seed",
                                    "condition", "stage", "field_source", "delta_D_hot_mm", "delta_Cov010_pp", "decision", "reason",

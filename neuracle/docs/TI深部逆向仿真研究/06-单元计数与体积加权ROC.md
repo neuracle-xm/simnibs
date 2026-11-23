@@ -18,7 +18,7 @@
 
 ## 交给 Codex 的执行单
 
-**输入与启动条件。** 读取 03 的 `shared_inputs.csv`，锁同一 `data_id`、脑域、T、Rest 和各候选的 F/v。先导 sub1/stn295；开发加入 sub2、rhipp216、a4ul58。 本篇需要专用研究分析。按 02 的入口约定实现或复用后，先调 `python -m neuracle.demo.ti_depth.exp06 --study-root "$studyRoot" --run-id run-001 --stage pilot`，再以同一运行号和 `--stage development` 完成下列开发步骤。两条命令是下一轮实现后的调用方式。
+**输入与启动条件。** 读取 03 的 `shared_inputs.csv`，锁同一 `data_id`、脑域、T、Rest 和各候选的 F/v。运行 `python -m neuracle.demo.ti_depth.exp06 --study-root "$studyRoot" --run-id run-001 --stage pilot` 比较 sub1/stn295。开发使用 `--stage development`，加入 sub2、rhipp216、a4ul58。四个体积组的边界在共同脑域定义，各组对本区域超阈比例的贡献之和等于该区域的计数或体积比例。
 
 1. 为每个候选按原阈值生成 T 和 Rest 各自的布尔超阈数组。一次用元素数作分母，一次用体积和作分母，保存四个分子、分母及两种 ROC 距离。
 2. 选一个场，按单元体积四分位分组校验所有组的超阈体积和等于全域超阈体积。对两列分数独立排序，照同一平手规则取首选。
