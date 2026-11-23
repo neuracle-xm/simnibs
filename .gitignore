@@ -154,6 +154,7 @@ miniconda3/
 .claude
 data
 neuracle_backup/*
+/neuracle/TI-study-v1/
 *.env
 neuracle/atlas/manifests/*
 neuracle/atlas/standardized/*
