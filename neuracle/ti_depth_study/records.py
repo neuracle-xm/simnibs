@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from filelock import FileLock
+
 
 def digest(path: Path) -> str:
     """对文件内容计算完整 SHA-256，用于研究产物登记。
@@ -123,6 +125,7 @@ def update_index(study: Path, record: dict[str, Any]) -> None:
     """
     index = study / "results/index.csv"
     key = ("experiment", "run_id", "stage")
-    rows = read_csv(index) if index.exists() else []
-    rows = [row for row in rows if any(row[field] != record[field] for field in key)]
-    write_csv(index, sorted([*rows, record], key=lambda row: tuple(row[field] for field in key)))
+    with FileLock(str(index.with_suffix(".lock"))):
+        rows = read_csv(index) if index.exists() else []
+        rows = [row for row in rows if any(row[field] != record[field] for field in key)]
+        write_csv(index, sorted([*rows, record], key=lambda row: tuple(row[field] for field in key)))

@@ -8,6 +8,7 @@ import sys
 from typing import Any
 
 import numpy as np
+from filelock import FileLock
 from scipy.spatial.distance import pdist
 
 from neuracle.ti_depth_study.records import digest, write_json
@@ -110,6 +111,34 @@ def run_task(
     simulations = study / "simulations"
     simulations.mkdir(exist_ok=True)
     base = simulations / f"{module}_{task}"
+    with FileLock(str(simulations / f".{base.name}.lock")):
+        return _run_task_locked(base, study, module, subject, config, commands, required_globs)
+
+
+def _run_task_locked(
+    base: Path, study: Path, module: str, subject: str, config: dict[str, Any],
+    commands: Path, required_globs: tuple[str, ...],
+) -> Path:
+    """在原生任务锁内复用既有结果或启动新一次求解。
+
+    Parameters
+    ----------
+    base, study : Path
+        该逻辑任务的目录和研究根目录。
+    module, subject : str
+        原生入口模块名和头模 ID。
+    config : dict
+        当前物理任务的配置。
+    commands : Path
+        本任务的独立命令记录。
+    required_globs : tuple of str
+        完成验收必须具备的文件模式。
+
+    Returns
+    -------
+    Path
+        通过配置、退出码和输出散列检查的任务目录。
+    """
     attempt = 1
     directory = base
     while directory.exists():

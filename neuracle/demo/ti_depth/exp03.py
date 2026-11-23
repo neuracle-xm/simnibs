@@ -2,13 +2,17 @@
 
 import argparse
 from collections import Counter
+from collections.abc import Callable, Iterator
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from functools import partial
 import json
 from pathlib import Path
 import subprocess
 import sys
 from time import monotonic
-from typing import Any
+from typing import Any, TypeVar
 
+from filelock import FileLock
 import numpy as np
 
 from neuracle.atlas.registry import ATLAS_STANDARDIZED_DIR
@@ -29,6 +33,8 @@ INVERSE_OUTPUTS = {
 FORWARD_OUTPUTS = ("*_TDCS_1_scalar.msh", "*_TDCS_2_scalar.msh", "*_TI.msh", "*_max_TI.nii.gz")
 CASE_COLUMNS = ("case_id", "subject", "target", "method", "arm", "seed", "condition", "task_id", "status", "reason", "wall_s")
 BASE_COLUMNS = ("case_id", "subject", "target", "method", "inverse_task", "forward_task", "IA_mA", "IB_mA", "mesh_hash", "field_id", "D_hot_mm", "Cov010", "Q50_T", "Q99_Cout", "Vout010", "status")
+T = TypeVar("T")
+SOLVER_ERRORS = (OSError, RuntimeError, ValueError, KeyError)
 
 
 def write_report(study: Path, out: Path, run: dict[str, Any], cases: list[dict[str, Any]], rows: list[dict[str, Any]]) -> None:
@@ -215,7 +221,102 @@ def head_ready(head: Path, subject: str, source_hash: str) -> bool:
             and (not progress.exists() or progress.read_text().strip() == "100"))
 
 
-def run(study: Path, run_id: str, stage: str) -> None:
+def solve_cases(
+    cases: list[dict[str, Any]], jobs: int, commands: Path,
+    solve: Callable[[dict[str, Any], Path], T], publish: Callable[[], None],
+) -> Iterator[tuple[dict[str, Any], Future[T], Path, float]]:
+    """按容量提交独立原生求解，主进程收到结果后继续调度。
+
+    Parameters
+    ----------
+    cases : list of dict
+        已赋予稳定任务 ID 的病例或候选组。
+    jobs : int
+        同时运行的求解子进程上限。
+    commands : Path
+        总命令记录。各任务的调用另记于同级 task_commands。
+    solve, publish : callable
+        工作线程的求解入口和主进程的状态发布入口。
+
+    Yields
+    ------
+    case, future, command_file, started : tuple
+        已完成的任务、可提取结果的 Future、命令文件及其开始时间。
+    """
+    command_dir = commands.parent / "task_commands"
+    command_dir.mkdir(exist_ok=True)
+    pending = iter(cases)
+    active: dict[Future[T], tuple[dict[str, Any], Path, float]] = {}
+    with ThreadPoolExecutor(max_workers=jobs) as executor:
+        while True:
+            while len(active) < jobs and (case := next(pending, None)) is not None:
+                script = command_dir / f"{case['task_id']}.ps1"
+                if not script.exists():
+                    script.write_text("conda activate simnibs_env\n", encoding="utf-8")
+                with commands.open("a", encoding="utf-8") as stream:
+                    stream.write(f'\n& "$PSScriptRoot/task_commands/{script.name}"\n')
+                case["status"] = "running"
+                started = monotonic()
+                active[executor.submit(solve, case, script)] = (case, script, started)
+                publish()
+            if not active:
+                return
+            future = next(as_completed(active))
+            case, script, started = active.pop(future)
+            yield case, future, script, started
+
+
+def solve_native(
+    study: Path, target_table: dict[str, dict[str, str]], qc: dict[str, str], case: dict[str, Any], commands: Path,
+) -> tuple[Path, dict[str, Any], Path | None, Exception | None]:
+    """求解一个原生病例，前向失败时保留已完成的逆向布局。
+
+    Parameters
+    ----------
+    study, commands : Path
+        研究根和此病例的独立命令文件。
+    target_table, qc, case : dict
+        登记的 atlas 靶区表、个体空间质控状态及病例配置。
+
+    Returns
+    -------
+    inverse, mapping, forward, error : tuple
+        已通过验收的逆向目录与电极映射，以及正向目录或失败原因。
+    """
+    subject, target, method, task = (case[key] for key in ("subject", "target", "method", "task_id"))
+    if qc[target] != "ok":
+        raise ValueError(f"个体空间靶区质控: {qc[target]}")
+    inverse = run_task(study, "ti_inverse", subject, task, inverse_config(target_table[target], method), commands, INVERSE_OUTPUTS[method])
+    mapping = json.loads((inverse / "electrode_mapping.json").read_text(encoding="utf-8"))
+    try:
+        config = forward_config(mapping["mapped_labels"], (mapping["current_A"], mapping["current_B"]))
+        forward = run_task(study, "ti_forward", subject, task, config, commands, FORWARD_OUTPUTS)
+    except SOLVER_ERRORS as error:
+        return inverse, mapping, None, error
+    return inverse, mapping, forward, None
+
+
+def solve_candidate(study: Path, layouts: dict[str, tuple[str, ...]], case: dict[str, Any], commands: Path) -> Path:
+    """按候选登记的帽位和统一电流完成一格正向求解。
+
+    Parameters
+    ----------
+    study, commands : Path
+        研究根和此候选的独立命令文件。
+    layouts, case : dict
+        候选键到具名布局的映射及该候选的求解状态。
+
+    Returns
+    -------
+    Path
+        已验收的共同正向任务目录。
+    """
+    labels = layouts[case["case_id"]]
+    config = forward_config(list(labels), ([1., -1.], [1., -1.]))
+    return run_task(study, "ti_forward", case["subject"], case["task_id"], config, commands, FORWARD_OUTPUTS)
+
+
+def run(study: Path, run_id: str, stage: str, jobs: int = 1) -> None:
     """运行已登记阶段的基线和两路各 1 mA 的候选共同正向场。
 
     Parameters
@@ -224,6 +325,8 @@ def run(study: Path, run_id: str, stage: str) -> None:
         含审计、协议及独立头模的研究目录。
     run_id, stage : str
         03 运行号和 pilot 或 development 阶段。
+    jobs : int, optional
+        同一头模的并发求解数，默认 1。
     """
     protocol = study / "results/02/run-001"
     target_table = {row["target"]: row for row in read_csv(protocol / "targets.csv")}
@@ -237,8 +340,8 @@ def run(study: Path, run_id: str, stage: str) -> None:
     if not commands.exists():
         commands.write_text("conda activate simnibs_env\n", encoding="utf-8")
     with commands.open("a", encoding="utf-8") as stream:
-        stream.write(f"\n# {timestamp()} {Path.cwd()}\n# python -m neuracle.demo.ti_depth.exp03 --study-root '{study}' --run-id {run_id} --stage {stage}\n")
-    config = PHYSICS | {"threshold_vpm": 0.10, "candidate_current_mA": [1.0, 1.0]}
+        stream.write(f"\n# {timestamp()} {Path.cwd()}\n# python -m neuracle.demo.ti_depth.exp03 --study-root '{study}' --run-id {run_id} --stage {stage} --jobs {jobs}\n")
+    config = PHYSICS | {"threshold_vpm": 0.10, "candidate_current_mA": [1.0, 1.0], "jobs": jobs}
     run_info: dict[str, Any] = dict(experiment="03", run_id=run_id, stage=stage, git_head=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                                    environment=sys.executable, upstream_runs=["01/run-001", "02/run-001"], data_id={},
                                    config=config, started_at=timestamp(), finished_at=None, status="running")
@@ -248,7 +351,8 @@ def run(study: Path, run_id: str, stage: str) -> None:
     shared_inputs = []
     artifacts = [artifact(study, "run", "implementation", Path(source))
                  for source in (__file__, baseline.__file__, fields.__file__, figures.__file__, metrics.__file__, records.__file__)]
-    write_report(study, out, run_info, cases, rows)
+    publish = partial(write_report, study, out, run_info, cases, rows)
+    publish()
     for subject in dict.fromkeys(row["subject"] for row in matrix):
         selected = [row for row in cases if row["subject"] == subject]
         head = study / "head_models" / f"m2m_{subject}"
@@ -283,19 +387,16 @@ def run(study: Path, run_id: str, stage: str) -> None:
             artifacts.append(artifact(study, f"{subject}_{key}", "roi_overlay", figure))
         stn_fields: dict[str, Path] = {}
         for case in selected:
+            case["task_id"] = f"03_{run_id}_{case['case_id']}_t010_{mesh_hash[:12]}"
+        native_solver = partial(solve_native, study, target_table, qc)
+        for case, future, command_file, started in solve_cases(selected, jobs, commands, native_solver, publish):
             case_id, target, method = (case[key] for key in ("case_id", "target", "method"))
             record: dict[str, Any] = dict(case_id=case_id, subject=subject, target=target, method=method, mesh_hash=mesh_hash)
             rows.append(record)
-            task = f"03_{run_id}_{case_id}_t010_{mesh_hash[:12]}"
-            started = monotonic()
-            case.update(task_id=task, status="running")
-            write_report(study, out, run_info, cases, rows)
+            artifacts.append(artifact(study, case_id, "commands", command_file))
             try:
-                if qc[target] != "ok":
-                    raise ValueError(f"个体空间靶区质控: {qc[target]}")
-                inverse = run_task(study, "ti_inverse", subject, task, inverse_config(target_table[target], method), commands, INVERSE_OUTPUTS[method])
+                inverse, mapping, forward, error = future.result()
                 record["inverse_task"] = inverse.name
-                mapping = json.loads((inverse / "electrode_mapping.json").read_text(encoding="utf-8"))
                 labels = mapping["mapped_labels"]
                 currents = (mapping["current_A"], mapping["current_B"])
                 record.update(IA_mA=currents[0][0], IB_mA=currents[1][0], electrode_names=";".join(labels))
@@ -304,7 +405,9 @@ def run(study: Path, run_id: str, stage: str) -> None:
                     if (inverse / name).is_file():
                         artifacts.append(artifact(study, case_id, "inverse", inverse / name))
                 artifacts.extend(artifact(study, case_id, "inverse_field", path) for path in inverse.rglob("*.msh"))
-                forward = run_task(study, "ti_forward", subject, task, forward_config(labels, currents), commands, FORWARD_OUTPUTS)
+                if error is not None:
+                    raise error
+                assert forward is not None
                 record["forward_task"] = forward.name
                 field, alignment = align_common_forward(forward, geometry_path, geometry_path.parent / "fields")
                 with np.load(field) as data:
@@ -319,13 +422,13 @@ def run(study: Path, run_id: str, stage: str) -> None:
                 if target == "stn295":
                     stn_fields[method] = next(forward.glob(FORWARD_OUTPUTS[-1]))
                 case.update(status="ok", reason="NA")
-            except (OSError, RuntimeError, ValueError, KeyError) as error:
+            except SOLVER_ERRORS as error:
                 case.update(status="failed", reason=str(error))
                 print(str(error), flush=True)
             record.update(status=case["status"], reason=case["reason"])
             case["wall_s"] = round(monotonic() - started, 3)
             write_csv(out / "artifacts.csv", artifacts)
-            write_report(study, out, run_info, cases, rows)
+            publish()
         if stn_fields:
             figure = out / "figures" / f"{subject}_stn295_common_forward.png"
             plot_roi_slices(head / "T1.nii.gz", geometry_path.parent / "roi/stn295.nii.gz", figure, stn_fields)
@@ -345,19 +448,27 @@ def run(study: Path, run_id: str, stage: str) -> None:
             geometry_link.hardlink_to(geometry_path)
         index = pool_dir / "candidates.csv"
         candidates = []
+        pool_cases = []
+        pool_layouts = {}
         for labels, origins in sorted(layouts.items()):
             identifier = content_id({"subject": subject, "mesh": mesh_hash, "cap": pool_config["cap"], "layout": labels,
                                      "field_model": FIELD_MODEL, "physics": PHYSICS, "current": 1.0})[:20]
             case = dict(case_id=identifier, subject=subject, target="NA", method="shared_pool", arm="candidate_pool", seed="NA", condition="1+1mA",
-                        task_id=f"03_{run_id}_{subject}_pool_{identifier}", status="running", reason="NA", wall_s="NA")
-            cases.append(case)
-            write_report(study, out, run_info, cases, rows)
-            started = monotonic()
+                        task_id=f"03_{run_id}_{subject}_pool_{identifier}", status="pending", reason="NA", wall_s="NA")
+            pool_cases.append(case)
+            pool_layouts[identifier] = labels
+        cases.extend(pool_cases)
+        candidate_solver = partial(solve_candidate, study, pool_layouts)
+        for case, future, command_file, started in solve_cases(pool_cases, jobs, commands, candidate_solver, publish):
+            identifier = case["case_id"]
+            labels = pool_layouts[identifier]
+            origins = layouts[labels]
+            artifacts.append(artifact(study, identifier, "commands", command_file))
             row: dict[str, Any] = dict(candidate_id=identifier, origin_methods=";".join(sorted(origins)), montage=PHYSICS["montage"],
                         A_plus=labels[0], A_minus=labels[1], B_plus=labels[2], B_minus=labels[3], IA_mA=1.0, IB_mA=1.0,
                         field_id="NA", geometry_hash=geometry_hash, field_model=FIELD_MODEL, field_path="NA", status="pending", reason="NA")
             try:
-                forward = run_task(study, "ti_forward", subject, case["task_id"], forward_config(list(labels), ([1., -1.], [1., -1.])), commands, FORWARD_OUTPUTS)
+                forward = future.result()
                 field, alignment = align_common_forward(forward, geometry_path, geometry_path.parent / "fields")
                 row.update(field_id=field.stem, field_path=field.relative_to(study).as_posix())
                 if "pool_disk_estimate_bytes" not in run_info:
@@ -366,14 +477,14 @@ def run(study: Path, run_id: str, stage: str) -> None:
                     raise ValueError(f"候选场缺失 {alignment['missing_mm3']} mm³")
                 case.update(status="ok")
                 artifacts.append(artifact(study, identifier, "candidate_field", field))
-            except (OSError, RuntimeError, ValueError, KeyError) as error:
+            except SOLVER_ERRORS as error:
                 case.update(status="failed", reason=str(error))
                 print(str(error), flush=True)
             case["wall_s"] = round(monotonic() - started, 3)
             row.update(status=case["status"], reason=case["reason"])
             candidates.append(row)
-            write_csv(index, candidates)
-            write_report(study, out, run_info, cases, rows)
+            write_csv(index, sorted(candidates, key=lambda item: item["candidate_id"]))
+            publish()
         run_info["data_id"][subject] = data_id
         for role, path in (("geometry", geometry_link), ("candidate_index", index)):
             shared_inputs.append(dict(subject=subject, data_id=data_id, role=role, path=path.relative_to(study).as_posix(), sha256=digest(path)))
@@ -389,8 +500,15 @@ def main() -> None:
     parser.add_argument("--study-root", type=Path, required=True)
     parser.add_argument("--run-id", default="run-001")
     parser.add_argument("--stage", choices=("pilot", "development"), default="pilot")
+    parser.add_argument("--jobs", type=int, default=1)
     args = parser.parse_args()
-    run(args.study_root.resolve(), args.run_id, args.stage)
+    if args.jobs < 1:
+        parser.error("--jobs 必须至少为 1")
+    study = args.study_root.resolve()
+    out = study / "results/03" / args.run_id
+    out.mkdir(parents=True, exist_ok=True)
+    with FileLock(str(out / ".scheduler.lock"), timeout=0):
+        run(study, args.run_id, args.stage, args.jobs)
 
 
 if __name__ == "__main__":
