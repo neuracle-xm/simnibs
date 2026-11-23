@@ -193,12 +193,7 @@ def _hotspot(
     order = np.lexsort((geometry.element_id, -field))
     count = np.searchsorted(np.cumsum(geometry.volume_mm3[order]), requested_mm3) + 1
     hot = order[:count]
-    _, inverse, face_counts = _face_indices(geometry.connectivity[hot])
-    if np.any(face_counts > 2):
-        raise ValueError("热点中存在三个或更多四面体共用的三角面")
-    shared = np.argsort(inverse.ravel())[np.repeat(face_counts == 2, face_counts)].reshape(-1, 2) // 4
-    adjacency = coo_matrix((np.ones(len(shared)), (shared[:, 0], shared[:, 1])), shape=(len(hot), len(hot)))
-    n_clusters, labels = connected_components(adjacency.tocsr(), directed=False)
+    n_clusters, labels = tetrahedron_components(geometry.connectivity[hot])
     volumes = geometry.volume_mm3[hot]
     cluster_volumes = np.bincount(labels, weights=volumes)
     integrals = np.bincount(labels, weights=volumes * field[hot])
@@ -216,6 +211,27 @@ def _hotspot(
         "main_overlap_mm3": overlap, "main_overlap": overlap / float(volumes[main].sum()),
         "absolute_hit": distance == 0.0 and overlap > 0,
     }
+
+
+def tetrahedron_components(connectivity: IntArray) -> tuple[int, IntArray]:
+    """将共享完整三角面的四面体归为同一连通簇。
+
+    Parameters
+    ----------
+    connectivity : ndarray
+        要分簇的每个四面体的四个节点下标。
+
+    Returns
+    -------
+    count, labels : tuple
+        簇数和每个输入单元对应的零基簇标签。
+    """
+    _, inverse, face_counts = _face_indices(connectivity)
+    if np.any(face_counts > 2):
+        raise ValueError("热点中存在三个或更多四面体共用的三角面")
+    shared = np.argsort(inverse.ravel())[np.repeat(face_counts == 2, face_counts)].reshape(-1, 2) // 4
+    adjacency = coo_matrix((np.ones(len(shared)), (shared[:, 0], shared[:, 1])), shape=(len(connectivity), len(connectivity)))
+    return connected_components(adjacency.tocsr(), directed=False)
 
 
 def measure_field(
