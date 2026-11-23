@@ -9,7 +9,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
 
-def plot_roi_slices(t1_path: Path, roi_path: Path, output: Path, field_paths: dict[str, Path]) -> None:
+def plot_roi_slices(t1_path: Path, roi_path: Path, output: Path, field_paths: dict[str, Path], hotspots: dict[str, list[float]] | None = None) -> None:
     """用相同个体空间三切面与色标绘制 ROI 和可选场。
 
     Parameters
@@ -20,6 +20,8 @@ def plot_roi_slices(t1_path: Path, roi_path: Path, output: Path, field_paths: di
         PNG 输出。没有场时输出几何核验图。
     field_paths : dict
         标签到共同正向 NIfTI 的映射。全部使用同一 V/m 色标。
+    hotspots : dict, optional
+        每份场的个体物理空间主热点坐标，标在相同切面上的正交投影。
     """
     roi_image = nib.as_closest_canonical(nib.load(roi_path))
     t1_image = resample_from_to(nib.load(t1_path), roi_image, order=1)
@@ -47,6 +49,12 @@ def plot_roi_slices(t1_path: Path, roi_path: Path, output: Path, field_paths: di
                                    cmap="inferno", origin="lower", alpha=0.62, vmin=0.0, vmax=vmax)
             if slice_roi.any():
                 ax.contour(slice_roi, levels=[0.5], colors=["cyan"], linewidths=0.8)
+            if hotspots and label in hotspots:
+                voxel = nib.affines.apply_affine(np.linalg.inv(roi_image.affine), hotspots[label])
+                point = np.delete(voxel, dim)
+                ax.scatter(point[0], point[1], marker="x", s=18, color="#2de5d1", label="Hotspot projection")
+                if dim == 0:
+                    ax.legend(loc="lower right", fontsize=6)
             ax.set_title(f"{label} | {name}")
             ax.set_axis_off()
     if legend is not None:

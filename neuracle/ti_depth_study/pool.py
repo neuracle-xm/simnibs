@@ -192,7 +192,8 @@ def run_pool_experiment(
                             row["rank"] = "NA"
                         candidate = by_id[row["candidate_id"]]
                         row.update(case_id=unique, subject=subject, target=key, field_source="common_forward", D_hot_mm=candidate.absolute["D_hot_mm"],
-                                   Cov010=candidate.absolute["Cov010"], Q99_Cout=candidate.absolute["Q99_Cout"], Vout010=candidate.absolute["Vout010"])
+                                   Cov010=candidate.absolute["Cov010"], Q99_Cout=candidate.absolute["Q99_Cout"], Vout010=candidate.absolute["Vout010"],
+                                   hot_center_mm=candidate.absolute["hot_center_mm"])
                 winners = {row["arm"]: by_id[row["candidate_id"]] for row in scored if row["rank"] == 1}
                 reference_arm = config.get("comparison_arm", "roc0")
                 reference = winners[reference_arm]
