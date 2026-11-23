@@ -35,7 +35,7 @@ ENDPOINTS = ("D_hot_mm", "Cov010", "Q50_T", "Q99_Cout", "Vout010", "absolute_hit
 OFFSET_COLUMNS = ("layout_id", "electrode_role", "tangent", "sign", "requested_mm", "actual_mm", "cap_file", "geometry_valid",
                   "forward_task", "D_hot_mm", "Cov010", "Q50_T", "Q99_Cout", "Vout010", "absolute_hit", "hot_overlap",
                   "cap_sha256", "field_path", "field_sha256", "electrode", "nominal_xyz_mm", "shifted_xyz_mm", "min_center_mm")
-GROUPS = {row[0]: row[3] for row in TARGETS}
+GROUPS = {target: group for target, _, _, _, group in TARGETS}
 
 
 def shifted_positions(mesh: Msh, centers: FloatArray) -> FloatArray:
