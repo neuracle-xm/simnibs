@@ -190,6 +190,31 @@ def real_metric_check(study: Path, protocol: Path, record: dict[str, Any], geome
         raise ValueError("真实共同场的覆盖体积或坐标复核失败")
 
 
+def head_ready(head: Path, subject: str, source_hash: str) -> bool:
+    """用 CHARM 的最终产物和原始扫描散列验收现有头模。
+
+    Parameters
+    ----------
+    head, subject : Path and str
+        CHARM 的 m2m 输出目录和头模 ID。
+    source_hash : str
+        01 审计登记的原始 T1 SHA-256。
+
+    Returns
+    -------
+    bool
+        原扫描一致、必需产物齐全且 CHARM 已完成。正常成功后 CHARM 会删除续跑标记。
+    """
+    required = (f"{subject}.msh", "T1.nii.gz", "final_tissues.nii.gz", "surface.gii.gz",
+                "eeg_positions/EEG10-10_NSN.csv", "toMNI/Conform2MNI_nonl.nii.gz", "toMNI/MNI2Conform_nonl.nii.gz")
+    if not all((head / name).is_file() and (head / name).stat().st_size for name in required):
+        return False
+    marker = head / "study_source_sha256.txt"
+    progress = head / ".progress.txt"
+    return (marker.is_file() and marker.read_text(encoding="utf-8-sig").strip() == source_hash
+            and (not progress.exists() or progress.read_text().strip() == "100"))
+
+
 def run(study: Path, run_id: str, stage: str) -> None:
     """运行已登记阶段的基线和两路各 1 mA 的候选共同正向场。
 
@@ -228,11 +253,8 @@ def run(study: Path, run_id: str, stage: str) -> None:
         selected = [row for row in cases if row["subject"] == subject]
         head = study / "head_models" / f"m2m_{subject}"
         main_mesh = head / f"{subject}.msh"
-        marker = head / "study_source_sha256.txt"
         expected_hash = next(row["raw_T1_sha256"] for row in matrix if row["subject"] == subject)
-        completion = head / ".progress.txt"
-        if (not main_mesh.is_file() or not completion.is_file() or completion.read_text().strip() != "100"
-                or not marker.is_file() or marker.read_text(encoding="utf-8-sig").strip() != expected_hash):
+        if not head_ready(head, subject, expected_hash):
             for case in selected:
                 case.update(reason="等待当前原始 T1 散列对应的独立头模")
             continue
