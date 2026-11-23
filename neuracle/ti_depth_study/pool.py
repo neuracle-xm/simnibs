@@ -188,13 +188,14 @@ def run_pool_experiment(
                         row.update(case_id=unique, subject=subject, target=key, field_source="common_forward", D_hot_mm=candidate.absolute["D_hot_mm"],
                                    Cov010=candidate.absolute["Cov010"], Q99_Cout=candidate.absolute["Q99_Cout"], Vout010=candidate.absolute["Vout010"])
                 winners = {row["arm"]: by_id[row["candidate_id"]] for row in scored if row["rank"] == 1}
-                reference = winners["roc0"]
+                reference_arm = config.get("comparison_arm", "roc0")
+                reference = winners[reference_arm]
                 for arm, winner in winners.items():
-                    if arm == "roc0":
+                    if arm == reference_arm:
                         continue
                     result = compare_endpoints(winner.absolute, reference.absolute, groups[key])
                     paired.append(dict(case_id=f"{unique}:{winner.identifier}", reference_case_id=f"{unique}:{reference.identifier}",
-                                       subject=subject, target=key, method="shared_pool", arm=arm, reference_arm="roc0", seed="NA",
+                                       subject=subject, target=key, method="shared_pool", arm=arm, reference_arm=reference_arm, seed="NA",
                                        condition="1+1mA", stage=stage, field_source="common_forward", **result))
                 details.extend(scored)
                 case.update(status="ok", reason=f"有效场 {len(candidates)} / 共同池 {len(pool_rows)}")
