@@ -18,12 +18,12 @@ from scipy import __version__ as SCIPY_VERSION
 
 from neuracle.demo.ti_depth.exp15 import SEARCH_ERRORS, TRACES, forward_winner, input_id, registered_case
 from neuracle.demo.ti_depth.exp16 import FixedDonor, leadfield_names, read_fixed_donor
-from neuracle.ti_depth_study import matched_initialization
+from neuracle.ti_depth_study import matched_initialization, restart_budget
 from neuracle.ti_depth_study.baseline import content_id
 from neuracle.ti_depth_study.diagnostics import FieldCase, load_case
-from neuracle.ti_depth_study.matched_initialization import SEED_ATOL, MatchedTrace, guarded_ga, search
+from neuracle.ti_depth_study.matched_initialization import FREE_RESTART_POLICY, SEED_ATOL, MatchedTrace, guarded_ga, search
 from neuracle.ti_depth_study.pool import compare_endpoints
-from neuracle.ti_depth_study.records import artifact, digest, read_csv, timestamp, write_csv, write_json
+from neuracle.ti_depth_study.records import artifact, digest, read_csv, timestamp, update_index, write_csv, write_json
 from neuracle.ti_depth_study.restart_budget import BASED_SETTINGS, CURRENT_MA, INITIAL_REQUESTS, METHODS, THRESHOLD, FloatArray, prepare_case
 
 
@@ -47,6 +47,7 @@ class Inputs:
     budget_id: str
     signature: str
     evidence: list[dict[str, str]]
+    repair: dict[str, Any] | None = None
 
 
 def read_inputs(study: Path, matched: Path, budget_id: str) -> Inputs:
@@ -80,7 +81,16 @@ def read_inputs(study: Path, matched: Path, budget_id: str) -> Inputs:
         if encodings[receiver]["donor_case_id"] != donor_id(budget_id, donor):
             raise ValueError("16 供体编号与接收路线不一致")
     evidence = [artifact(study, "run", "matched_input", path) for path in (report, table, *donor_files, *references)]
-    return Inputs(donors, encodings, budget_id, signature, evidence)
+    repair = None
+    repair_path = matched / "cross_repair.json"
+    if repair_path.is_file():
+        if checks.get(repair_path.relative_to(study).as_posix()) != digest(repair_path):
+            raise ValueError("16 几何修复收据散列不一致")
+        repair = json.loads(repair_path.read_text(encoding="utf-8"))
+        if repair["donor_case_id"] != donor_id(budget_id, METHODS[0]):
+            raise ValueError("16 几何修复的供体编号不一致")
+        evidence.append(artifact(study, "run", "cross_geometry_repair", repair_path))
+    return Inputs(donors, encodings, budget_id, signature, evidence, repair)
 
 
 def donor_id(budget_id: str, method: str) -> str:
@@ -91,11 +101,14 @@ def donor_id(budget_id: str, method: str) -> str:
 def declared_arms(receiver: str, inputs: Inputs | None) -> list[dict[str, Any]]:
     """冻结每个接收方的共同预算、首个个体和编码失败状态。"""
     peer = next(method for method in METHODS if method != receiver)
+    donor_arms = list(zip(ARMS, (None, receiver, peer)))
+    if inputs is not None and receiver == METHODS[1] and inputs.repair is not None and inputs.repair["status"] != "not_needed":
+        donor_arms.append(("cross_repaired", peer))
     rows = []
-    for arm, donor_method in zip(ARMS, (None, receiver, peer)):
+    for arm, donor_method in donor_arms:
         row = dict(case_id=f"{SUBJECT}_{TARGET}_{receiver}_{arm}", subject=SUBJECT, target=TARGET, receiver=receiver,
                    arm=arm, status="pending", reason="等待两个同条件供体及 03 共评场", donor_case_id="NA", valid_encoding="NA",
-                   donor_s=0.0, B_planned="NA", seed=SEED, candidate=None)
+                   donor_s=0.0, repair_s=0.0, B_planned="NA", seed=SEED, candidate=None)
         if inputs is not None:
             row["B_planned"] = inputs.donors[receiver].unique // 3 * 3
             if donor_method is not None:
@@ -104,6 +117,15 @@ def declared_arms(receiver: str, inputs: Inputs | None) -> list[dict[str, Any]]:
                            donor_n_valid_unique=donor.unique, donor_n_requests=donor.requests, valid_encoding=True)
                 if arm == "own":
                     row["candidate"] = donor.parameters.tolist()
+                elif arm == "cross_repaired":
+                    repair = inputs.repair
+                    accepted = repair["status"] == "ok"
+                    row.update(valid_encoding=accepted, repair_s=repair["repair_s"], repair_electrode=repair.get("electrode", "NA"),
+                               displacement_mm=repair.get("displacement_mm", "NA"), max_roundtrip_mm=repair.get("max_roundtrip_mm", "NA"))
+                    if accepted:
+                        row["candidate"] = repair["encoded"]
+                    else:
+                        row.update(status="failed", reason=repair["reason"])
                 else:
                     encoded = inputs.encodings[receiver]
                     accepted = encoded["valid_encoding"] == "True"
@@ -132,7 +154,7 @@ def run_search(
     method, budget = row["receiver"], row["B_planned"]
     configuration = dict(input=signature, method=method, seed=row["seed"], budget=budget, candidate=candidate,
                          expected_rest=content_id({"rows": expected_rest.tolist()}) if expected_rest is not None else None,
-                         duration_s=duration_s)
+                         duration_s=duration_s, free_restart_policy=FREE_RESTART_POLICY if method == METHODS[1] else None)
     if result_path.is_file() and trace_path.is_file():
         recorded = json.loads(result_path.read_text(encoding="utf-8"))
         if (recorded["configuration"] == configuration and recorded["trace_sha256"] == digest(trace_path)
@@ -149,7 +171,7 @@ def run_search(
         if len(trace.rows) < initial or len(labels) != 4 or len(set(labels)) != 4:
             raise ValueError("搜索未完成原生初始化或无四个互异胜者帽位")
         if duration_s is None and trace.new_evals != budget:
-            status, reason = "cost_unmatched", f"有效评价 {trace.new_evals} / {budget}"
+            status, reason = "cost_unmatched", f"有效评价 {trace.new_evals} / {budget}，停止原因 {trace.search_stop}"
     except SEARCH_ERRORS as error:
         status, reason = "failed", str(error)
     initial_scores = [item["objective"] for item in trace.rows[:initial] if item["status"] != "invalid"]
@@ -159,7 +181,10 @@ def run_search(
                   cache_hits=trace.cache_hits, invalid=trace.invalid, receiver_s=perf_counter() - start, duration_hit=trace.duration_hit,
                   initial_requests=min(initial, len(trace.rows)), init_score=min(initial_scores) if initial_scores else "NA",
                   injected_score=trace.rows[0]["objective"] if candidate is not None and trace.rows and trace.rows[0]["status"] != "invalid" else "NA",
-                  final_score=trace.best_score if trace.best_parameters is not None else "NA")
+                  final_score=trace.best_score if trace.best_parameters is not None else "NA",
+                  search_stop=trace.search_stop, restart_count=len(trace.restart_events),
+                  restart_geometry_checks=trace.restart_geometry_checks, restart_geometry_s=trace.restart_geometry_s,
+                  restart_events=trace.restart_events)
     write_json(result_path, result)
     return result, trace_path
 
@@ -202,7 +227,7 @@ def run_zero_cost(
     restarted, trace = run_search(prepared, out / row["case_id"], row, signature, duration_s=remaining)
     evidence = [artifact(study, row["case_id"], "cold_cost_restart", path) for path in (trace, trace.with_name("result.json"))]
     total = random["receiver_s"] + restarted["receiver_s"]
-    row.update({key: value for key, value in restarted.items() if key not in ("configuration", "trace_sha256")})
+    row.update({key: value for key, value in restarted.items() if key not in ("configuration", "trace_sha256", "restart_events")})
     row.update(total_s=total, delta_s=total - warm["total_s"], source="random")
     if restarted["status"] != "ok" or not restarted["duration_hit"]:
         return row | dict(status="cost_unmatched", reason=restarted["reason"] if restarted["status"] != "ok" else "未达到预登记的时间边界"), None, evidence
@@ -243,7 +268,7 @@ def run_receiver(
                 row.update(reason=str(error))
         return dict(arms=arms, comparisons=comparisons, controls=controls, evidence=evidence)
     search_id = content_id(dict(study_case=signature, initialization=digest(Path(matched_initialization.__file__)),
-                                implementation=digest(Path(__file__)), scipy=SCIPY_VERSION))
+                                implementation=digest(Path(__file__)), search=digest(Path(restart_budget.__file__)), scipy=SCIPY_VERSION))
     evidence.append(artifact(study, method, "geometry", common.geometry_path))
     population = None
     witness_plan = study / "results/23" / budget_id / "witness_forward_plan.csv"
@@ -256,8 +281,9 @@ def run_receiver(
             continue
         result, trace = run_search(prepared, directory / arm, row, search_id, None if population is None else population[1:])
         evidence.extend(artifact(study, row["case_id"], "search", path) for path in (trace, trace.with_name("result.json")))
-        row.update({key: value for key, value in result.items() if key not in ("configuration", "trace_sha256")})
-        row["total_s"] = row["receiver_s"] + row["donor_s"]
+        row.update({key: value for key, value in result.items() if key not in ("configuration", "trace_sha256", "restart_events")})
+        row["cached_donor_s"] = row["receiver_s"] + row["repair_s"]
+        row["total_s"] = row["cached_donor_s"] + row["donor_s"]
         if arm == "random" and row["initial_requests"] == INITIAL_REQUESTS[method]:
             population = initial_rows(trace, INITIAL_REQUESTS[method])
         if row["status"] not in ("ok", "cost_unmatched"):
@@ -293,18 +319,18 @@ def plot_cost(out: Path, arms: list[dict[str, Any]], controls: list[dict[str, An
     FigureCanvasAgg(figure)
     left, right = figure.subplots(1, 2)
     colours = dict(zip(METHODS, ("#1169a0", "#aa5524")))
-    styles = dict(random="o", own="s", cross="^", restart="x")
+    styles = dict(random="o", own="s", cross="^", cross_repaired="D", restart="x")
     for row in valid:
         colour, symbol = colours[row["receiver"]], styles[row["arm"]]
-        left.scatter(row["receiver_s"], row["D_hot_mm"], color=colour, marker=symbol)
+        left.scatter(row["cached_donor_s"], row["D_hot_mm"], color=colour, marker=symbol)
         right.scatter(row["total_s"], row["D_hot_mm"], color=colour, marker=symbol,
                       label=f"{row['receiver']} {row['arm']}")
     for row in controls:
         if row.get("D_hot_mm", "NA") != "NA":
             right.scatter(row["total_s"], row["D_hot_mm"], color=colours[row["receiver"]], marker=styles["restart"],
                           label=f"{row['receiver']} {row['arm']} restart")
-    left.set(title="Cached donor", xlabel="Receiver search (s)", ylabel="Hotspot distance (mm)")
-    right.set(title="From zero", xlabel="Donor and receiver search (s)", ylabel="Hotspot distance (mm)")
+    left.set(title="Cached donor", xlabel="Repair and receiver search (s)", ylabel="Hotspot distance (mm)")
+    right.set(title="From zero", xlabel="Total search and repair (s)", ylabel="Hotspot distance (mm)")
     right.legend(fontsize=7)
     path = out / "figures/warm_start_cost.png"
     path.parent.mkdir(exist_ok=True)
@@ -338,8 +364,9 @@ def write_report(
     pending = len(arms) - good - failed
     lines = ["# 16 同条件互供先导对照", "", f"sub1/STN 的共同正向合格臂 {good}/{len(arms)}，失败或成本不匹配 {failed}，待处理 {pending}。",
              "", "每条接收路线的各臂使用同一个体、靶位、ROC0、等幅电流和有效评价预算。"
-             "随机臂的初始种群为参照，两个供体臂各替换一个个体。", "",
-             "已有供体的成本取接收方搜索时间。从零成本包含供体实际搜索和接收方搜索。"
+             "随机臂的初始种群为参照，各供体臂只替换首个个体。free 各臂使用同一停滞重启规则。"
+             "几何修复供体另设独立对照臂。", "",
+             "已有供体的成本计入接收方搜索和几何修复。从零成本另计供体实际搜索。"
              "可选独立重启在达到接收方时间边界的下一次请求前停止，记录实际总耗时、超差和有效次数。"
              "共评耗时单列。", ""]
     for row in arms:
@@ -355,11 +382,15 @@ def write_report(
     write_csv(out / "artifacts.csv", [*evidence, *(row for result in results for row in result["evidence"]),
                                       *(artifact(study, "run", "output", path) for path in outputs)])
     write_json(out / "run.json", info | dict(passed=good, failed=failed, pending=pending))
+    update_index(study, dict(experiment="16", run_id=info["run_id"], stage="pilot", run_status=info["status"],
+                             scientific_decision="等预算互供初值先导", ok_cases=good, failed_cases=failed,
+                             pending_cases=pending, report_path=report.relative_to(study).as_posix()))
 
 
 def run(study: Path, out: Path, baseline_id: str, budget_id: str, run_id: str, execute: bool, zero_cost: bool, jobs: int) -> None:
     """冻结先导对照计划，并在显式执行时运行已具备条件的接收路线。"""
-    implementation = [artifact(study, "run", "implementation", Path(path)) for path in (__file__, matched_initialization.__file__)]
+    implementation = [artifact(study, "run", "implementation", Path(path))
+                      for path in (__file__, matched_initialization.__file__, restart_budget.__file__)]
     reason, inputs = "NA", None
     try:
         guarded_ga()
@@ -388,7 +419,8 @@ def run(study: Path, out: Path, baseline_id: str, budget_id: str, run_id: str, e
                 git_head=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(), environment=sys.executable,
                 upstream_runs=[f"03/{baseline_id}", f"15/{budget_id}", f"16/{run_id}/matched"], started_at=timestamp(), finished_at=None,
                 config=dict(seed=SEED, restart_seed=RESTART_SEED, current_mA=[CURRENT_MA, CURRENT_MA], threshold_vpm=THRESHOLD,
-                            initial_population=INITIAL_REQUESTS, zero_cost_control=zero_cost, jobs=jobs), status="ready" if ready else "blocked")
+                            initial_population=INITIAL_REQUESTS, free_restart_policy=FREE_RESTART_POLICY,
+                            zero_cost_control=zero_cost, jobs=jobs), status="ready" if ready else "blocked")
     write_json(out / "plan.json", info | dict(arms=arms))
     print(f"16 同预算对照 {info['status']}，计划 {out / 'plan.json'}，原因 {reason}", flush=True)
     if not execute:

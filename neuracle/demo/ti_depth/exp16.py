@@ -35,6 +35,7 @@ from simnibs.utils.mesh_element_properties import ElementTags
 ROLES = ("A+", "A−", "B+", "B−")
 ROUNDTRIP_MM = 0.001
 CLEARANCE_MM = 5.0
+REPAIR_RADIUS_MM = 12.0
 SUMMARY_COLUMNS = ("donor_case_id", "receiver", "arm", "valid_encoding", "max_roundtrip_mm", "init_score", "final_score",
                    "donor_s", "receiver_s", "total_s", "case_id", "donor_IA_mA", "donor_IB_mA", "condition_matched",
                    "original_min_center_mm", "encoding_s", "encoded", "reason")
@@ -283,6 +284,76 @@ def encode_free(optimizer: TesFlexOptimization, positions: FloatArray) -> Encodi
     return Encoding(angles.tolist(), points, reason, legal)
 
 
+def repair_free_encoding(
+    optimizer: TesFlexOptimization, labels: list[str], positions: FloatArray, original: Encoding,
+) -> dict[str, Any]:
+    """按真实头皮三角形重心依次修复被原生检查拒绝的电极。
+
+    Parameters
+    ----------
+    optimizer, labels, positions, original
+        原生放置检查器、供体帽位、四极坐标及严格编码结果。
+
+    Returns
+    -------
+    dict
+        修复状态、位移、实际试探成本及可供独立实验臂使用的参数。
+    """
+    started = monotonic()
+    record = dict(status="not_needed", reason=original.reason, max_displacement_mm=REPAIR_RADIUS_MM,
+                  attempts=0, candidates=0)
+    if original.reason == "NA":
+        return record | dict(repair_s=0.0)
+    if "valid skin region" not in original.reason or len(original.parameters) != len(labels):
+        return record | dict(status="failed", repair_s=monotonic() - started)
+    skin = optimizer._skin_surface
+    centers = skin.nodes.node_coord[skin.elm.node_number_list[:, :3] - 1].mean(axis=1)
+    bounds = optimizer.get_bounds(optimizer.constrain_electrode_locations, optimizer.overlap_factor)
+    record.update(status="failed", original_reason=original.reason)
+    moves = []
+    repaired = positions.copy()
+    current = original
+    for index, label in enumerate(labels):
+        if current.reason == "NA":
+            break
+        if current.electrode_legal[index] is not False:
+            continue
+        distances = np.linalg.norm(centers - positions[index], axis=1)
+        nearby = np.flatnonzero(distances <= REPAIR_RADIUS_MM)
+        record["candidates"] += int(nearby.size)
+        record["blocked_electrode"] = label
+        record["reason"] = f"{label} 局部头皮候选均未通过原生放置和反算"
+        for candidate in nearby[np.argsort(distances[nearby], kind="stable")]:
+            repaired[index] = centers[candidate]
+            record["attempts"] += 1
+            encoded = encode_free(optimizer, repaired)
+            if (encoded.reason != "NA" and "valid skin region" not in encoded.reason
+                    or not all(legal is True for legal in encoded.electrode_legal[:index + 1])
+                    or any(point is None for point in encoded.roundtrip)):
+                continue
+            parameters = np.asarray(encoded.parameters).ravel()
+            actual = np.asarray(encoded.roundtrip)
+            errors = np.linalg.norm(actual - repaired, axis=1)
+            displacement = float(np.linalg.norm(actual[index] - positions[index]))
+            if (displacement > REPAIR_RADIUS_MM or np.any(errors > ROUNDTRIP_MM)
+                    or np.any(parameters < bounds.lb) or np.any(parameters > bounds.ub)):
+                continue
+            moves.append(dict(electrode=label, role=ROLES[index], original_reason=current.reason,
+                              original_xyz_mm=positions[index].tolist(), repaired_xyz_mm=actual[index].tolist(),
+                              displacement_mm=displacement))
+            current = encoded
+            record.pop("blocked_electrode")
+            if current.reason == "NA":
+                record.update(status="ok", reason="NA", encoded=parameters.tolist(), positions_xyz_mm=actual.tolist(),
+                              max_roundtrip_mm=float(errors.max()))
+            break
+        else:
+            break
+    return record | dict(moves=moves, electrode=";".join(move["electrode"] for move in moves),
+                         displacement_mm=max((move["displacement_mm"] for move in moves), default=None),
+                         repair_s=monotonic() - started)
+
+
 def verify_free_mapping(optimizer: TesFlexOptimization, donor: FixedDonor, cap_path: Path, mapping_path: Path) -> None:
     """从 15 胜者原参数重放 free 几何与帽位指派，核对供体标签。
 
@@ -345,12 +416,13 @@ def run_matched(study: Path, out: Path, baseline_id: str, budget_id: str, run_id
     info = dict(experiment="16", stage="pilot", phase="matched_preflight", run_id=run_id, environment=sys.executable,
                 upstream_runs=sources, git_head=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                 data_id={}, started_at=timestamp(), config=dict(current_mA=[CURRENT_MA, CURRENT_MA], threshold_vpm=THRESHOLD,
-                                                              roundtrip_mm=ROUNDTRIP_MM), status="running")
+                                                              roundtrip_mm=ROUNDTRIP_MM, repair_radius_mm=REPAIR_RADIUS_MM), status="running")
     write_json(out / "run.json", info)
     evidence = [artifact(study, "run", "implementation", Path(__file__))]
     summaries = []
     electrodes = []
     optimizer = None
+    repair = None
     pair = [CURRENT_MA, -CURRENT_MA]
     radius = float(PHYSICS["electrode_radius"])
     for case, method in zip(cases, METHODS):
@@ -397,6 +469,9 @@ def run_matched(study: Path, out: Path, baseline_id: str, budget_id: str, run_id
         good = encoded.reason == "NA"
         elapsed = round(monotonic() - encoding_start, 3)
         case.update(status="ok" if good else "failed", reason=encoded.reason, wall_s=round(monotonic() - started, 3))
+        if case["method"] == free:
+            repair = repair_free_encoding(optimizer, donor.labels, positions, encoded)
+            repair["donor_case_id"] = f"15/{budget_id}/natural/{subject}/{target}/{method}"
         summaries.append(dict(donor_case_id=f"15/{budget_id}/natural/{subject}/{target}/{method}", receiver=case["method"],
                               arm=case["arm"], valid_encoding=good, condition_matched=True,
                               max_roundtrip_mm=max(errors) if all(error is not None for error in errors) else "NA",
@@ -434,6 +509,11 @@ def run_matched(study: Path, out: Path, baseline_id: str, budget_id: str, run_id
              "随机、同路、跨路的等预算对照待执行。", ""]
     for case in cases:
         lines.append(f"- `{case['case_id']}` 的状态为 `{case['status']}`，原因 `{case['reason']}`。")
+    if repair is not None:
+        repair_path = out / "cross_repair.json"
+        write_json(repair_path, repair)
+        evidence.append(artifact(study, "run", "cross_geometry_repair", repair_path))
+        lines.extend(("", f"独立几何修复状态为 `{repair['status']}`。[修复位置与耗时](cross_repair.json)"))
     lines.extend(("", "[双向明细](warm_start.csv) · [逐电极反算](encoding_electrodes.csv) · [病例](cases.csv) · [命令](commands.ps1)", ""))
     report.write_text("\n".join(lines), encoding="utf-8")
     write_csv(out / "artifacts.csv", [*evidence, *(artifact(study, "run", "output", out / file) for file in (

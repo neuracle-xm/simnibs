@@ -10,14 +10,17 @@ from types import FunctionType
 from typing import Any, Callable
 
 import numpy as np
+from scipy.optimize import Bounds, OptimizeResult
 
 from neuracle.ti_depth_study import restart_budget
-from neuracle.ti_depth_study.restart_budget import BudgetReached, FloatArray, Trace
+from neuracle.ti_depth_study.restart_budget import BudgetReached, CachedFreeObjective, FloatArray, FreeOptimization, Trace
 
 
 GA_VERSION = "1.0.2"
 GA_RUN_SHA256 = "de0b0f6c7d61d35934cd9a146571b93a70208a39758e06e5da9dfacc7219cfc3"
 SEED_ATOL = 1e-14
+FREE_RESTART_POLICY = dict(stall_generations=8, max_restarts=4, replacement_count=34,
+                           geometry_attempts=416, max_requests=16000)
 
 
 def _bind(function: Callable[..., Any], name: str, replacement: Any) -> Callable[..., Any]:
@@ -102,22 +105,6 @@ def seeded_ga(candidate: FloatArray) -> type:
     return SeededGA
 
 
-def with_free_seed(candidate: FloatArray) -> Callable[..., Any]:
-    """使用 SciPy 自带 x0 替换差分进化初始种群的首行。"""
-    if candidate.shape != (restart_budget.FREE_N_DIMENSIONS,) or not np.isfinite(candidate).all():
-        raise ValueError("free 供体连续参数形状或值不合法")
-    solver = restart_budget.differential_evolution
-
-    def start(objective: Callable[..., Any], **options: Any) -> Any:
-        """核对 15 的 LHS 入口，沿用原随机种子、规模及搜索设置。"""
-        if ("x0" not in options or "seed" not in options or options.get("init", "latinhypercube") != "latinhypercube"
-                or options["popsize"] != restart_budget.FREE_POPSIZE):
-            raise RuntimeError("free 原生初始化接口或规模变化")
-        return solver(objective, **(options | {"x0": candidate.copy()}))
-
-    return start
-
-
 @dataclass
 class MatchedTrace(Trace):
     """逐项核对保护的种群成员，并复用 15 的有效评价计数。"""
@@ -128,11 +115,22 @@ class MatchedTrace(Trace):
     duration_s: float | None = None
     started: float = field(default_factory=perf_counter)
     duration_hit: bool = False
+    limit_free_requests: bool = False
+    search_stop: str = "NA"
+    restart_geometry_checks: int = 0
+    restart_geometry_s: float = 0.0
+    restart_events: list[dict[str, Any]] = field(default_factory=list)
 
     def check_budget(self) -> None:
         """在独立重启达到附加时长后停机，并保留实际评价次数。"""
         if self.duration_s is not None and perf_counter() - self.started >= self.duration_s:
             self.duration_hit = True
+            self.search_stop = "duration_limit"
+            raise BudgetReached
+        if self.budget is not None and self.new_evals >= self.budget:
+            self.search_stop = "effective_budget"
+        elif self.limit_free_requests and len(self.rows) + self.restart_geometry_checks >= FREE_RESTART_POLICY["max_requests"]:
+            self.search_stop = "request_limit"
             raise BudgetReached
         super().check_budget()
 
@@ -152,6 +150,116 @@ class MatchedTrace(Trace):
         return value
 
 
+def refresh_population(
+    optimizer: FreeOptimization, trace: MatchedTrace, result: OptimizeResult, bounds: Bounds, rng: np.random.Generator,
+) -> tuple[FloatArray, int]:
+    """用原生头皮放置检查筛出新节点激励并替换分数最低的个体。
+
+    Parameters
+    ----------
+    optimizer, trace, result, bounds, rng
+        同一个原生求解器、臂内轨迹、最近种群、搜索边界及本段随机流。
+
+    Returns
+    -------
+    tuple
+        保留最好个体的新种群，以及实际替换的数量。
+    """
+    population = result.population.copy()
+    worst = np.argsort(-result.population_energies[1:], kind="stable") + 1
+    replacements = 0
+    accepted = set()
+    for _ in range(FREE_RESTART_POLICY["geometry_attempts"]):
+        trace.check_budget()
+        trace.restart_geometry_checks += 1
+        parameters = rng.uniform(bounds.lb, bounds.ub)
+        optimizer.configuration_id = None
+        try:
+            geometry = optimizer.get_nodes_electrode(optimizer.get_electrode_pos_from_array(parameters))
+        except CachedFreeObjective:
+            continue
+        key = optimizer.configuration_id
+        if isinstance(geometry, tuple) or key is None or key in accepted:
+            continue
+        accepted.add(key)
+        population[worst[replacements]] = parameters
+        replacements += 1
+        if replacements == min(FREE_RESTART_POLICY["replacement_count"], len(worst)):
+            break
+    return population, replacements
+
+
+def with_free_restarts(trace: MatchedTrace) -> Callable[..., Any]:
+    """在原生 free 求解调用之间按新增 FEM 停滞重启。
+
+    Parameters
+    ----------
+    trace : MatchedTrace
+        跨阶段共享的预算、缓存、最佳布局和可追溯的重启记录。
+
+    Returns
+    -------
+    callable
+        保留原始初始化首批个体规则的差分进化入口。
+    """
+    candidate = trace.expected_first
+    if candidate is not None and (candidate.shape != (restart_budget.FREE_N_DIMENSIONS,) or not np.isfinite(candidate).all()):
+        raise ValueError("free 供体连续参数形状或值不合法")
+    solver = restart_budget.differential_evolution
+
+    def start(objective: Callable[..., Any], **options: Any) -> OptimizeResult:
+        """保存首批 LHS 初始化，阶段间保留预算并重新引入布局变化。"""
+        if ("x0" not in options or "seed" not in options or options.get("init", "latinhypercube") != "latinhypercube"
+                or options["popsize"] != restart_budget.FREE_POPSIZE):
+            raise RuntimeError("free 原生初始化接口或规模变化")
+        seed = options["seed"]
+        if candidate is not None:
+            options["x0"] = candidate.copy()
+        for restart in range(FREE_RESTART_POLICY["max_restarts"] + 1):
+            last_count = trace.new_evals
+            idle_generations = 0
+
+            def stop_on_stall(intermediate_result: OptimizeResult) -> bool:
+                """在整代结束后检查是否仍生成未缓存的有效 FEM。"""
+                nonlocal last_count, idle_generations
+                idle_generations = idle_generations + 1 if trace.new_evals == last_count else 0
+                last_count = trace.new_evals
+                return idle_generations >= FREE_RESTART_POLICY["stall_generations"]
+
+            result = solver(objective, **(options | {"callback": stop_on_stall}))
+            if trace.new_evals == trace.budget:
+                trace.search_stop = "effective_budget"
+                return result
+            trace.search_stop = "stalled_restart_limit" if idle_generations >= FREE_RESTART_POLICY["stall_generations"] else "iteration_limit"
+            if restart == FREE_RESTART_POLICY["max_restarts"] or idle_generations < FREE_RESTART_POLICY["stall_generations"]:
+                return result
+            refresh_seed, search_seed = np.random.SeedSequence([seed, restart + 1]).spawn(2)
+            event = dict(restart=restart + 1, trigger="no_new_fem", generations=result.nit,
+                         n_valid_unique=trace.new_evals, n_requests=len(trace.rows),
+                         best_score=trace.best_score if trace.best_parameters is not None else "NA",
+                         seed=int(search_seed.generate_state(1)[0]), replacements=0)
+            trace.restart_events.append(event)
+            print(f"16 free 停滞，准备重启 {restart + 1}，有效 FEM {trace.new_evals}/{trace.budget}", flush=True)
+            before, started = trace.restart_geometry_checks, perf_counter()
+            try:
+                population, replacements = refresh_population(objective.__self__, trace, result, options["bounds"],
+                                                               np.random.default_rng(refresh_seed))
+            finally:
+                spent = perf_counter() - started
+                trace.restart_geometry_s += spent
+                event.update(geometry_checks=trace.restart_geometry_checks - before, geometry_s=spent)
+            event["replacements"] = replacements
+            print(f"16 free 重启 {restart + 1}，置换 {replacements} 个体，评估 {event['geometry_checks']} 个候选几何", flush=True)
+            if not replacements:
+                trace.search_stop = "no_new_legal_restart_candidate"
+                return result
+            best = np.asarray(trace.best_parameters) if trace.best_parameters is not None else None
+            options.update(init=population, x0=best, seed=event["seed"])
+        raise RuntimeError("free 重启阶段未返回")
+
+    return start
+
+
 def search(
     prepared: dict[str, Any], trace: MatchedTrace, method: str, seed: int, output: Path,
 ) -> list[str]:
@@ -163,7 +271,6 @@ def search(
             ga = seeded_ga(candidate)
             based = _bind(based, "_require_genetic_algorithm", lambda: ga)
         return based(prepared, trace, seed)
-    free = restart_budget.search_free
-    if candidate is not None:
-        free = _bind(free, "differential_evolution", with_free_seed(candidate))
+    trace.limit_free_requests = True
+    free = _bind(restart_budget.search_free, "differential_evolution", with_free_restarts(trace))
     return free(prepared, trace, seed, output)
